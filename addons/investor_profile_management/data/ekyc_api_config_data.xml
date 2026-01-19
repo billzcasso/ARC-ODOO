@@ -3,10 +3,10 @@
     <!-- Default VNPT eKYC API Configuration -->
     <record id="ekyc_api_config_default" model="ekyc.api.config">
         <field name="name">Default Configuration</field>
-        <field name="token_id">4454b0b5-cb14-62fa-e063-62199f0ab40b</field>
-        <field name="token_key">MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBALlzLZ/MkL89AA1a34lamXMce/GLbfCdltABRhpPjve+v5wy9amxCY0nyuGnLdMfOiVqCmTwUaRp5jKnlChV9NECAwEAAQ==</field>
-        <field name="access_token">eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0cmFuc2FjdGlvbl9pZCI6IjE4ZDExYWQzLWI0MzUtNGJiZS1iY2Q1LTVkMDg5ZDYxMzlhNCIsInN1YiI6ImZhNzhmNWQ5LWM5MTYtMTFmMC1hNzY5LTg1NjY4N2U5ODMwYSIsImF1ZCI6WyJyZXN0c2VydmljZSJdLCJ1c2VyX25hbWUiOiJuaGFudnYyazRAZ21haWwuY29tIiwic2NvcGUiOlsicmVhZCJdLCJpc3MiOiJodHRwczovL2xvY2FsaG9zdCIsIm5hbWUiOiJuaGFudnYyazRAZ21haWwuY29tIiwiZXhwIjoxNzY0MzE0OTExLCJ1dWlkX2FjY291bnQiOiJmYTc4ZjVkOS1jOTE2LTExZjAtYTc2OS04NTY2ODdlOTgzMGEiLCJhdXRob3JpdGllcyI6WyJVU0VSIl0sImp0aSI6IjBkNDkxZmZmLWY3ZTUtNGU4ZS05NTQxLTZiOWZmNzFhZGExYiIsImNsaWVudF9pZCI6ImNsaWVudGFwcCJ9.RpKpFlNky_KVOsWPx4EEWFdvWHUrJdnqsT6Ja9jeE8hrKRzwqfBEomKsu9ekwepIBZVeabtawQ7P0K-5oDHaOf1C-PSvnaYRXjgJWgnOlOUfTA2OLBsaHwuuYRH9XK228LdgV82DzvxY3_PbmGkXJxLbwgCQMXTVE5A98Y7jE01pktZbKjBYUjVEQIK2rL-51klhLKZ0WKt2RkX8BLTGu0G4C5YqbAPZUHt3bOByyqYzFg4qJqIOq-wo2XD47OnJbYdF5DTgdmE6YRoYhU6Id1-XPUl3H48Ds2U6OYjLDZJKBATi_k01Cs56X-SQfTX3aChme2HLsJYxwdrs4XeUHQ</field>
-        <field name="public_key_ca">MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAIMTEFLtDPRRl9oJw8li/MnajhlrTyQN6b8N34g9zwYPvfEutL0ClPFxaZJp89KhxEBLdBoJb/5Wo+ZhMdDZI58CAwEAAQ==</field>
+        <field name="token_id">48b4f669-70d7-2698-e063-63199f0ad73f</field>
+        <field name="token_key">MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAO9GJq7hFtgViBY4IQBC6y5rCxhCDbXfUSL3h/SYe8DmRiVCfidg/AcGhAzkIKm3Y3FR12tO9bz0lAxilWyCsBkCAwEAAQ==</field>
+        <field name="access_token">eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0cmFuc2FjdGlvbl9pZCI6IjljNzBhZWQ4LWFkZjAtNGVkOS05NTlkLTJkMjVlMmMzZGI3MSIsInN1YiI6IjQ4YjRmM2VhLWQ0YTMtMzZjYS1lMDYzLTYyMTk5ZjBhMDBiNyIsImF1ZCI6WyJyZXN0c2VydmljZSJdLCJ1c2VyX25hbWUiOiJ0cnVvbmdwaGF0dDMwM0BnbWFpbC5jb20iLCJzY29wZSI6WyJyZWFkIl0sImlzcyI6Imh0dHBzOi8vbG9jYWxob3N0IiwibmFtZSI6InRydW9uZ3BoYXR0MzAzQGdtYWlsLmNvbSIsImV4cCI6MTc2ODgxNjQzMCwidXVpZF9hY2NvdW50IjoiNDhiNGYzZWEtZDRhMy0zNmNhLWUwNjMtNjIxOTlmMGEwMGI3IiwiYXV0aG9yaXRpZXMiOlsiVVNFUiJdLCJqdGkiOiI1YzNlY2E3Ni05MjE2LTQyZTItODQ3Mi05M2JhZGYzZmJmMzUiLCJjbGllbnRfaWQiOiI4X2hvdXIifQ.iQoAvwW9SQM4wR1AwcdAjcDhVG2tqGNMChRrYCbYkGeTsOwLGUcBS3CmVVf1iiVxkKDGlzOj3_ivYoAVERH3DZwW24ckQ_NrrvDohJezuvYtQGAq4Hc3w4QMJJ9FgnvD1_YRXdHUzZn1vIxTl_v8_fkfG58qj1jmqotV3KKPKc4QdGd9dymvbbaqgpWItlTOKa7z4UaHD2Chn81nt1xHdN6RT4ocpbEJPpP24AtuAX2UJc0iBV1a22WMWKTcxWpLaAo5-UjWlNjNdmHxr2FotTU1_2vsrHkOobrdrSh5v8XY5KIQ83TxIZybzwurlEn0NqeqNCUr2iHuw4EB3cNXbw</field>
+        <field name="public_key_ca">0</field>
         <field name="base_url">https://api.idg.vnpt.vn</field>
         <field name="is_active" eval="True"/>
     </record>

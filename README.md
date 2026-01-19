@@ -1,4 +1,4 @@
-# HDC-FMS (Fund Management System)
+# Fund Management System
 
 **HDC-FMS** là bộ giải pháp quản lý quỹ đầu tư toàn diện xây dựng trên nền tảng Odoo, cung cấp các công cụ mạnh mẽ để quản lý giao dịch chứng chỉ quỹ (CCQ), theo dõi tài sản, khớp lệnh tự động và tích hợp dữ liệu thị trường thực.
 

@@ -1,8 +1,6 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_nav_transaction_user,nav.transaction.user,model_nav_transaction,base.group_user,1,1,1,1
 access_nav_transaction_manager,nav.transaction.manager,model_nav_transaction,base.group_system,1,1,1,1
-access_nav_monthly_user,nav.monthly.user,model_nav_monthly,base.group_user,1,1,1,1
-access_nav_monthly_manager,nav.monthly.manager,model_nav_monthly,base.group_system,1,1,1,1
 access_nav_term_rate_user,nav.term.rate.user,model_nav_term_rate,base.group_user,1,1,1,1
 access_nav_term_rate_manager,nav.term.rate.manager,model_nav_term_rate,base.group_system,1,1,1,1
 access_nav_cap_config_user,nav.cap.config.user,model_nav_cap_config,base.group_user,1,1,1,1

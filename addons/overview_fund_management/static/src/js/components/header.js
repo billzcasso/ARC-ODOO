@@ -10,7 +10,7 @@ export class Header extends Component {
             <div class="container-fluid d-flex align-items-center h-100">
                 <!-- 1. Logo Section -->
                 <a href="/investment_dashboard" class="navbar-brand">
-                    <img src="/overview_fund_management/static/src/img/hdcapital_logo.png" alt="HDCapital Logo"/>
+                    <img src="/overview_fund_management/static/src/img/logo.png" alt="HDCapital Logo"/>
                 </a>
 
                 <!-- 2. Navigation Menu (Desktop & Mobile) -->

@@ -21,13 +21,9 @@ class NavManagementController(http.Controller):
         # Lấy dữ liệu NAV phiên giao dịch
         nav_transactions = request.env['nav.transaction'].search([])
         
-        # Lấy dữ liệu NAV tháng
-        nav_monthly = request.env['nav.monthly'].search([])
-        
         values = {
             'funds': funds,
             'nav_transactions': nav_transactions,
-            'nav_monthly': nav_monthly,
         }
         
         return request.render('nav_management.nav_management_page', values)
@@ -61,28 +57,6 @@ class NavManagementController(http.Controller):
         
         return request.render('nav_management.nav_transaction_page', values)
     
-    @http.route('/nav_management/nav_monthly', type='http', auth='user', website=True)
-    def nav_monthly_page(self, **kwargs):
-        """Trang NAV tháng"""
-        # Lấy danh sách quỹ
-        funds = request.env['portfolio.fund'].search([])
-        
-        # Lấy quỹ được chọn từ parameter
-        selected_fund_id = kwargs.get('fund_id')
-        nav_monthly = []
-        
-        if selected_fund_id:
-            nav_monthly = request.env['nav.monthly'].search([
-                ('fund_id', '=', int(selected_fund_id))
-            ])
-        
-        values = {
-            'funds': funds.read(['id', 'name', 'ticker']),
-            'selected_fund_id': selected_fund_id,
-            'nav_monthly': nav_monthly,
-        }
-        
-        return request.render('nav_management.nav_monthly_page', values)
     
     @http.route('/nav_management/api/funds', type='json', auth='user', methods=['POST'])
     def get_funds(self):
@@ -130,118 +104,7 @@ class NavManagementController(http.Controller):
             _logger.error(f"Error in get_nav_transactions: {str(e)}")
             return {'success': False, 'error': str(e)}
     
-    @http.route('/nav_management/api/nav_monthly/list', type='json', auth='user', methods=['POST'])
-    def get_nav_monthly(self, fund_id=None, from_date=None, to_date=None):
-        """API lấy dữ liệu NAV tháng"""
-        # Hỗ trợ đọc tham số dạng JSON-RPC
-        try:
-            params = request.jsonrequest.get('params') if request.jsonrequest else None
-            if params:
-                fund_id = params.get('fund_id', fund_id)
-                from_date = params.get('from_date', from_date)
-                to_date = params.get('to_date', to_date)
-        except Exception:
-            pass
-        domain = []
-        if fund_id:
-            domain.append(('fund_id', '=', fund_id))
-        
-        if from_date:
-            domain.append(('upload_date', '>=', from_date))
-        
-        if to_date:
-            domain.append(('upload_date', '<=', to_date + ' 23:59:59'))
-        
-        nav_monthly = request.env['nav.monthly'].search(domain)
-        return {
-            'nav_monthly': [{
-                'id': nav.id,
-                'fund_id': nav.fund_id.id,
-                'fund_name': nav.fund_id.name,
-                'period': nav.period,
-                'nav_beginning': nav.nav_beginning,
-                'nav_ending': nav.nav_ending,
-                'nav_change': nav.nav_change,
-                'nav_change_percent': nav.nav_change_percent,
-                'upload_date': nav.upload_date.isoformat() if nav.upload_date else '',
-                'description': nav.description or '',
-                'status': nav.status,
-            } for nav in nav_monthly]
-        }
     
-    @http.route('/nav_management/api/nav_monthly/create', type='json', auth='user', methods=['POST'])
-    def create_nav_monthly(self, fund_id=None, period=None, nav_beginning=None, nav_ending=None, description=''):
-        """API tạo NAV tháng mới"""
-        try:
-            nav_monthly = request.env['nav.monthly'].create({
-                'fund_id': fund_id,
-                'period': period,
-                'nav_beginning': nav_beginning,
-                'nav_ending': nav_ending,
-                'description': description
-            })
-            
-            return {
-                'success': True,
-                'message': 'Tạo NAV tháng thành công',
-                'data': {
-                    'id': nav_monthly.id,
-                    'period': nav_monthly.period,
-                    'nav_beginning': nav_monthly.nav_beginning,
-                    'nav_ending': nav_monthly.nav_ending,
-                }
-            }
-        except Exception as e:
-            return {
-                'success': False,
-                'message': str(e)
-            }
-    
-    @http.route('/nav_management/api/nav_monthly/<int:nav_id>', type='json', auth='user', methods=['PUT'])
-    def update_nav_monthly(self, nav_id, **kwargs):
-        """API cập nhật NAV tháng"""
-        try:
-            nav_monthly = request.env['nav.monthly'].browse(nav_id)
-            if not nav_monthly.exists():
-                return {
-                    'success': False,
-                    'message': 'Không tìm thấy NAV tháng'
-                }
-            
-            nav_monthly.write(kwargs)
-            
-            return {
-                'success': True,
-                'message': 'Cập nhật NAV tháng thành công'
-            }
-        except Exception as e:
-            return {
-                'success': False,
-                'message': str(e)
-            }
-    
-    @http.route('/nav_management/api/nav_monthly/<int:nav_id>', type='json', auth='user', methods=['DELETE'])
-    def delete_nav_monthly(self, nav_id):
-        """API xóa NAV tháng"""
-        try:
-            nav_monthly = request.env['nav.monthly'].browse(nav_id)
-            if not nav_monthly.exists():
-                return {
-                    'success': False,
-                    'message': 'Không tìm thấy NAV tháng'
-                }
-            
-            nav_monthly.unlink()
-            
-            return {
-                'success': True,
-                'message': 'Xóa NAV tháng thành công'
-            }
-        except Exception as e:
-            return {
-                'success': False,
-                'message': str(e)
-            }
     
     @http.route('/nav_management/export_nav_transaction/<int:fund_id>', type='http', auth='user')
     def export_nav_transaction(self, fund_id):
@@ -273,36 +136,6 @@ class NavManagementController(http.Controller):
         
         return response
     
-    @http.route('/nav_management/export_nav_monthly/<int:fund_id>', type='http', auth='user')
-    def export_nav_monthly(self, fund_id):
-        """Xuất file CSV NAV tháng"""
-        nav_monthly = request.env['nav.monthly'].search([
-            ('fund_id', '=', fund_id)
-        ])
-        
-        output = io.StringIO()
-        writer = csv.writer(output)
-        
-        # Header
-        writer.writerow(['No', 'NAV đầu kỳ', 'NAV cuối kỳ', 'Thời gian', 'Ngày upload'])
-        
-        # Data
-        for i, nav in enumerate(nav_monthly, 1):
-            writer.writerow([
-                i,
-                nav.nav_beginning,
-                nav.nav_ending,
-                nav.period,
-                nav.upload_date.strftime('%d/%m/%Y, %H:%M') if nav.upload_date else ''
-            ])
-        
-        output.seek(0)
-        
-        response = request.make_response(output.getvalue())
-        response.headers['Content-Type'] = 'text/csv; charset=utf-8'
-        response.headers['Content-Disposition'] = f'attachment; filename="nav_tháng_{fund_id}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
-        
-        return response
     
     @http.route('/nav_management/api/term_rates', type='http', auth='user', methods=['GET'])
     def get_term_rates(self):
@@ -462,59 +295,6 @@ class NavManagementController(http.Controller):
                 'message': str(e)
             }
     
-    @http.route('/nav_management/api/calculate_nav_monthly', type='json', auth='user', methods=['POST'])
-    def calculate_nav_monthly(self, fund_id):
-        """API tính toán NAV tháng"""
-        try:
-            # Lấy dữ liệu NAV tháng theo quỹ
-            nav_monthly = request.env['nav.monthly'].search([
-                ('fund_id', '=', fund_id),
-                ('status', '=', 'active')
-            ])
-            
-            if not nav_monthly:
-                return {
-                    'success': False,
-                    'message': 'Không tìm thấy dữ liệu NAV tháng cho quỹ này'
-                }
-            
-            # Tính toán các chỉ số
-            total_monthly_nav = len(nav_monthly)
-            positive_changes = len([nav for nav in nav_monthly if nav.nav_change > 0])
-            negative_changes = len([nav for nav in nav_monthly if nav.nav_change < 0])
-            neutral_changes = len([nav for nav in nav_monthly if nav.nav_change == 0])
-            
-            # Tính tăng trưởng trung bình
-            total_change_percent = sum(nav.nav_change_percent for nav in nav_monthly)
-            average_change_percent = total_change_percent / total_monthly_nav if total_monthly_nav > 0 else 0
-            
-            # Tính tổng thay đổi NAV
-            total_nav_change = sum(nav.nav_change for nav in nav_monthly)
-            
-            # Lấy thông tin quỹ
-            fund = request.env['portfolio.fund'].browse(fund_id)
-            
-            return {
-                'success': True,
-                'message': 'Tính toán NAV tháng thành công',
-                'data': {
-                    'fund_name': fund.name,
-                    'fund_ticker': fund.ticker,
-                    'total_monthly_nav': total_monthly_nav,
-                    'positive_changes': positive_changes,
-                    'negative_changes': negative_changes,
-                    'neutral_changes': neutral_changes,
-                    'average_change_percent': average_change_percent,
-                    'total_nav_change': total_nav_change,
-                    'min_change_percent': min(nav.nav_change_percent for nav in nav_monthly),
-                    'max_change_percent': max(nav.nav_change_percent for nav in nav_monthly)
-                }
-            }
-        except Exception as e:
-            return {
-                'success': False,
-                'message': str(e)
-            }
     
     @http.route('/nav_management/api/daily_inventory/list', type='json', auth='user', methods=['POST'])
     def get_daily_inventory(self, fund_id=None, from_date=None, to_date=None):

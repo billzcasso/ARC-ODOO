@@ -12,7 +12,6 @@ Net Asset Value management for fund certificates.
 
 Key Features:
 - Session NAV: Trading session NAV values with export
-- Monthly NAV: Monthly NAV reporting and input
 - Term rate configuration
 - Upper/lower cap configuration
 - Daily CCQ inventory tracking with cron automation
@@ -42,7 +41,6 @@ Key Features:
         'views/nav_daily_inventory_views.xml',
         # Frontend Pages
         'views/nav_transaction/nav_transaction_page.xml',
-        'views/nav_monthly/nav_monthly_page.xml',
     ],
     'assets': {
         'web.assets_frontend': [
@@ -53,9 +51,6 @@ Key Features:
             # NAV Transaction Widget
             'nav_management/static/src/js/nav_transaction/nav_transaction_widget.js',
             'nav_management/static/src/js/nav_transaction/entrypoint.js',
-            # NAV Monthly Widget
-            'nav_management/static/src/js/nav_monthly/nav_monthly_widget.js',
-            'nav_management/static/src/js/nav_monthly/entrypoint.js',
         ],
     },
     'installable': True,

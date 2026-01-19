@@ -63,11 +63,11 @@ $bo-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0,
     box-shadow: $bo-shadow-md;
     
     .bo-topbar {
-      height: 48px;
+      height: 70px;
     }
     
     .bo-logo__image {
-      height: 32px;
+      height: 50px;
     }
   }
   
@@ -78,10 +78,10 @@ $bo-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0,
 
 // Spacer for fixed header
 .bo-header-spacer {
-  height: 108px; // topbar (56px) + navbar (52px)
+  height: 152px; // topbar (100px) + navbar (52px)
   
   @media (max-width: 767px) {
-    height: 56px; // only topbar on mobile
+    height: 100px; // only topbar on mobile
   }
 }
 
@@ -94,7 +94,7 @@ $bo-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 56px;
+  height: 100px;
   padding: 0 24px;
   background: $bo-bg-white;
   border-bottom: 1px solid $bo-border-light;
@@ -114,7 +114,7 @@ $bo-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0,
   
   &__image {
     transition: height 0.3s ease;
-    height: 36px;
+    height: 80px;
     width: auto;
     object-fit: contain;
   }

@@ -12,7 +12,7 @@ export class GlobalLoader extends Component {
         <div id="global-loader" t-att-class="state.isVisible ? '' : 'hidden'">
             <div class="loader-content">
                 <div class="logo-container">
-                    <img src="/overview_fund_management/static/src/img/hdcapital_logo.png" alt="HDC Capital" class="loader-logo"/>
+                    <img src="/overview_fund_management/static/src/img/logo.png" alt="HDC Capital" class="loader-logo"/>
                     <div class="logo-pulse"></div>
                 </div>
                 <!-- <div class="loader-text">Đang tải dữ liệu...</div> -->

@@ -19,7 +19,7 @@ $shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
 $radius-md: 0.75rem;
 $radius-lg: 1rem;
 $transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-$header-height: 80px;
+$header-height: 140px;
 $z-index-fixed: 1030;
 
 /* Main Header Container */
@@ -66,7 +66,7 @@ $z-index-fixed: 1030;
     &.scrolled {
         background: $header-gradient; // Use same gradient
         box-shadow: $shadow-md;
-        height: 70px; // Shrink slightly on scroll
+        height: 100px; // Shrink slightly on scroll
     }
 
     /* Navbar Brand */
@@ -78,7 +78,7 @@ $z-index-fixed: 1030;
         margin-right: 3rem;
         
         img {
-            height: 64px; // Increased to 64px for visibility
+            height: 120px; // Increased to 120px for visibility
             width: auto;
             object-fit: contain;
             transition: $transition;
@@ -98,7 +98,7 @@ $z-index-fixed: 1030;
     }
     
     &.scrolled .navbar-brand img {
-        height: 50px; // Maintain visibility on scroll
+        height: 80px; // Maintain visibility on scroll
     }
 
     /* Navigation Menu */

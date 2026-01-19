@@ -9,7 +9,7 @@ export class Header extends Component {
       <div class="bo-topbar">
         <!-- Logo -->
         <a href="/fund-management-dashboard" class="bo-logo">
-          <img t-att-src="'/investor_list/static/src/img/hdcapital_logo.png'" alt="HDCapital Logo" class="bo-logo__image"/>
+          <img t-att-src="'/investor_list/static/src/img/logo.png'" alt="HDCapital Logo" class="bo-logo__image"/>
         </a>
         
         <!-- Header Actions -->
@@ -110,7 +110,7 @@ export class Header extends Component {
           
           <!-- NAV Dropdown -->
           <div t-att-class="'bo-nav-item dropdown ' + (state.isNavDropdownOpen ? 'active' : '')">
-            <button t-att-class="'bo-nav-link ' + (state.currentPage === 'nav-transaction' || state.currentPage === 'nav-monthly' ? 'active' : '')" t-on-click="toggleNavDropdown">
+            <button t-att-class="'bo-nav-link ' + (state.currentPage === 'nav-transaction' ? 'active' : '')" t-on-click="toggleNavDropdown">
               <i class="fas fa-chart-line"></i>
               <span>NAV</span>
               <i class="fas fa-chevron-down chevron"></i>
@@ -125,13 +125,6 @@ export class Header extends Component {
                   <div class="bo-nav-dropdown__text">
                     <div class="title">NAV Phiên giao dịch</div>
                     <div class="desc">Quản lý NAV theo phiên giao dịch</div>
-                  </div>
-                </a>
-                <a href="/nav_management/nav_monthly" class="bo-nav-dropdown__item" t-att-class="state.currentPage === 'nav-monthly' ? 'active' : ''" t-on-click="closeNavDropdown">
-                  <div class="bo-nav-dropdown__icon bo-nav-dropdown__icon--green"><i class="fas fa-calendar-alt"></i></div>
-                  <div class="bo-nav-dropdown__text">
-                    <div class="title">NAV Tháng</div>
-                    <div class="desc">Quản lý NAV theo tháng</div>
                   </div>
                 </a>
               </div>
@@ -160,50 +153,15 @@ export class Header extends Component {
                 <a href="/report-transaction" class="bo-nav-dropdown__item" t-att-class="state.currentPage === 'report-transaction' ? 'active' : ''" t-on-click="closeReportDropdown">
                   <div class="bo-nav-dropdown__icon bo-nav-dropdown__icon--green"><i class="fas fa-exchange-alt"></i></div>
                   <div class="bo-nav-dropdown__text">
-                    <div class="title">Report Transaction</div>
-                    <div class="desc">Báo cáo giao dịch</div>
-                  </div>
-                </a>
-                <a href="/report-order-history" class="bo-nav-dropdown__item" t-att-class="state.currentPage === 'report-order-history' ? 'active' : ''" t-on-click="closeReportDropdown">
-                  <div class="bo-nav-dropdown__icon bo-nav-dropdown__icon--blue"><i class="fas fa-history"></i></div>
-                  <div class="bo-nav-dropdown__text">
-                    <div class="title">Report Order History</div>
-                    <div class="desc">Sổ lệnh lịch sử giao dịch</div>
-                  </div>
-                </a>
-                <a href="/report-contract-statistics" class="bo-nav-dropdown__item" t-att-class="state.currentPage === 'report-contract-statistics' ? 'active' : ''" t-on-click="closeReportDropdown">
-                  <div class="bo-nav-dropdown__icon bo-nav-dropdown__icon--purple"><i class="fas fa-chart-pie"></i></div>
-                  <div class="bo-nav-dropdown__text">
-                    <div class="title">Contract Statistics</div>
-                    <div class="desc">Thống kê HĐ theo kỳ hạn</div>
-                  </div>
-                </a>
-                <a href="/report-early-sale" class="bo-nav-dropdown__item" t-att-class="state.currentPage === 'report-early-sale' ? 'active' : ''" t-on-click="closeReportDropdown">
-                  <div class="bo-nav-dropdown__icon bo-nav-dropdown__icon--orange"><i class="fas fa-clock"></i></div>
-                  <div class="bo-nav-dropdown__text">
-                    <div class="title">Report Early Sale</div>
-                    <div class="desc">Báo cáo bán trước hạn</div>
-                  </div>
-                </a>
-                <a href="/aoc_report" class="bo-nav-dropdown__item" t-att-class="state.currentPage === 'aoc-report' ? 'active' : ''" t-on-click="closeReportDropdown">
-                  <div class="bo-nav-dropdown__icon bo-nav-dropdown__icon--blue"><i class="fas fa-user-plus"></i></div>
-                  <div class="bo-nav-dropdown__text">
-                    <div class="title">Báo cáo Mở/Đóng TK</div>
-                    <div class="desc">Tình hình mở và đóng tài khoản</div>
+                    <div class="title">Báo cáo Giao dịch</div>
+                    <div class="desc">Report Transaction</div>
                   </div>
                 </a>
                 <a href="/investor_report" class="bo-nav-dropdown__item" t-att-class="state.currentPage === 'investor-report' ? 'active' : ''" t-on-click="closeReportDropdown">
-                  <div class="bo-nav-dropdown__icon bo-nav-dropdown__icon--green"><i class="fas fa-users"></i></div>
+                  <div class="bo-nav-dropdown__icon bo-nav-dropdown__icon--purple"><i class="fas fa-users"></i></div>
                   <div class="bo-nav-dropdown__text">
                     <div class="title">Danh sách Nhà đầu tư</div>
                     <div class="desc">Quản lý thông tin nhà đầu tư</div>
-                  </div>
-                </a>
-                <a href="/user_list" class="bo-nav-dropdown__item" t-att-class="state.currentPage === 'user-list' ? 'active' : ''" t-on-click="closeReportDropdown">
-                  <div class="bo-nav-dropdown__icon bo-nav-dropdown__icon--purple"><i class="fas fa-user-cog"></i></div>
-                  <div class="bo-nav-dropdown__text">
-                    <div class="title">Danh sách Người dùng</div>
-                    <div class="desc">Quản lý người dùng hệ thống</div>
                   </div>
                 </a>
                 <a href="/list_tenors_interest_rates" class="bo-nav-dropdown__item" t-att-class="state.currentPage === 'list-tenors-interest-rates' ? 'active' : ''" t-on-click="closeReportDropdown">
@@ -446,16 +404,10 @@ export class Header extends Component {
         if (path.includes('/order-book')) return 'order-book';
         if (path.includes('/transaction-list')) return 'transaction';
         if (path.includes('/nav_management/nav_transaction')) return 'nav-transaction';
-        if (path.includes('/nav_management/nav_monthly')) return 'nav-monthly';
         if (path.includes('/fund_widget') || path.includes('/nav')) return 'nav';
         if (path.includes('/report-balance')) return 'report-balance';
         if (path.includes('/report-transaction')) return 'report-transaction';
-        if (path.includes('/report-order-history')) return 'report-order-history';
-        if (path.includes('/report-contract-statistics')) return 'report-contract-statistics';
-        if (path.includes('/report-early-sale')) return 'report-early-sale';
-        if (path.includes('/aoc_report')) return 'aoc-report';
         if (path.includes('/investor_report')) return 'investor-report';
-        if (path.includes('/user_list')) return 'user-list';
         if (path.includes('/list_tenors_interest_rates')) return 'list-tenors-interest-rates';
         if (path.includes('/asset-management')) return 'report';
         if (path.includes('/personal_profile')) return 'utils';

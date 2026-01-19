@@ -103,7 +103,7 @@ export class SidebarPanel extends Component {
                 <t t-esc="state.collapsed ? '&gt;' : '&lt;'"/>
             </button>
             <div class="sidebar-logo">
-                <img src="/fund_management_dashboard/static/src/img/hdcapital_logo.png" alt="Logo" class="sidebar-logo-img"/>
+                <img src="/fund_management_dashboard/static/src/img/logo.png" alt="Logo" class="sidebar-logo-img"/>
             </div>
             <div class="sidebar-menu">
                 <p class="sidebar-group">Danh mục</p>

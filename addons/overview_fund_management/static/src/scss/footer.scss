@@ -1,7 +1,7 @@
 // Footer Component Styles
 // =========================
 
-.hd-footer {
+.main-footer {
     background: #f5f0e8;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     margin-top: auto;
@@ -19,65 +19,26 @@
         margin-bottom: 16px;
         
         .footer-logo {
-            height: 40px;
+            height: 120px;
             margin-bottom: 4px;
         }
-        
-        .footer-slogan {
-            font-size: 0.65rem;
-            color: #666;
-            letter-spacing: 0.5px;
-            margin: 0;
-        }
     }
     
-    // Company Info
-    .footer-company-info {
-        h6 {
-            font-size: 0.9rem;
-            color: #1a1a1a;
-            margin-bottom: 8px;
-        }
-        
-        p {
-            font-size: 0.8rem;
-            color: #666;
-            line-height: 1.5;
-        }
+    .footer-desc {
+        font-size: 0.9rem;
+        color: #64748b;
+        line-height: 1.6;
+        max-width: 300px;
     }
-    
-    .footer-contact {
-        margin-top: 16px;
-        
-        .text-primary {
-            color: #f97316 !important;
-        }
-        
-        p {
-            font-size: 0.8rem;
-            color: #666;
-            
-            a {
-                color: #f97316;
-                text-decoration: none;
-                
-                &:hover {
-                    text-decoration: underline;
-                }
-            }
-        }
-    }
-    
-    // Section Headings
+
+    // Headings
     .footer-heading {
-        font-size: 0.95rem;
+        font-size: 1rem;
         font-weight: 600;
         color: #1a1a1a;
-        margin-bottom: 16px;
-        padding-bottom: 8px;
-        position: relative;
+        margin-bottom: 1.25rem;
     }
-    
+
     // Links
     .footer-links {
         list-style: none;
@@ -85,13 +46,13 @@
         margin: 0;
         
         li {
-            margin-bottom: 10px;
+            margin-bottom: 0.75rem;
             
             a {
-                font-size: 0.85rem;
-                color: #666;
+                color: #64748b;
                 text-decoration: none;
-                transition: color 0.2s ease;
+                font-size: 0.9rem;
+                transition: color 0.2s;
                 
                 &:hover {
                     color: #f97316;
@@ -99,78 +60,61 @@
             }
         }
     }
-    
-    // Social Icons
+
+    // Contact
+    .footer-contact {
+        margin-bottom: 1.25rem;
+        
+        p {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            
+            i {
+                color: #f97316;
+                width: 20px;
+            }
+        }
+    }
+
+    // Social
     .footer-social {
         display: flex;
-        gap: 10px;
-        margin-top: 16px;
+        gap: 1rem;
         
         .social-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #ffffff;
+            color: #64748b;
+            border: 1px solid rgba(0,0,0,0.1);
+            transition: all 0.2s;
             text-decoration: none;
-            font-size: 14px;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
             
             &:hover {
+                background: #f97316;
+                color: #ffffff;
+                border-color: #f97316;
                 transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            }
-            
-            &.facebook {
-                background: #1877f2;
-            }
-            
-            &.youtube {
-                background: #ff0000;
-            }
-            
-            &.zalo {
-                background: #0068ff;
-                font-size: 10px;
-                font-weight: bold;
             }
         }
     }
     
     // Footer Bottom
     .footer-bottom {
-        padding: 16px 24px;
+        padding: 24px;
         background: #f5f0e8;
         border-top: 1px solid rgba(0, 0, 0, 0.08);
         
         p {
-            font-size: 0.8rem;
-            color: #666;
-        }
-        
-        .footer-policy-link {
-            font-size: 0.8rem;
-            color: #666;
-            text-decoration: none;
-            transition: color 0.2s ease;
-            
-            &:hover {
-                color: #f97316;
-            }
-        }
-        
-        @media (max-width: 767px) {
-            text-align: center;
-            
-            .col-md-4 {
-                margin-bottom: 8px;
-                
-                &.text-end {
-                    text-align: center !important;
-                }
-            }
+            font-size: 0.85rem;
+            color: #64748b;
         }
     }
 }
