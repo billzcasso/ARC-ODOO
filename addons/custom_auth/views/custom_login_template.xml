@@ -25,7 +25,7 @@
                         <div class="auth-row">
                             <!-- Left side - Illustration -->
                             <div class="auth-illustration">
-                                <img src="/custom_auth/static/src/img/hdc-logo.png" alt="HDC Logo" class="hdc-logo"/>
+                                <img src="/custom_auth/static/src/img/logo.png" alt="HDC Logo" class="hdc-logo"/>
                                 <img src="/custom_auth/static/src/img/login.png" alt="Login Illustration" class="auth-img"/>
                             </div>
 

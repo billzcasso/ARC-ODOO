@@ -14,21 +14,21 @@
                     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
                     <!-- FontAwesome CDN -->
                     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-                    
+
                     <!-- Odoo SCSS Assets -->
                     <t t-call-assets="web.assets_frontend" t-css="true" t-js="false"/>
                 </t>
-                
+
                 <!-- Page Content -->
                 <div class="auth-page">
                     <div class="signup-card auth-card-wide">
                         <div class="auth-row">
                             <!-- Left side - Illustration -->
                             <div class="auth-illustration">
-                                <img src="/custom_auth/static/src/img/hdc-logo.png" alt="HDC Logo" class="hdc-logo"/>
+                                <img src="/custom_auth/static/src/img/logo.png" alt="HDC Logo" class="hdc-logo"/>
                                 <img src="/custom_auth/static/src/img/signup.png" alt="Signup Illustration" class="auth-img"/>
                             </div>
-                            
+
                             <!-- Right side - Form -->
                             <div class="auth-form-section">
                                 <!-- Title -->
@@ -36,66 +36,81 @@
                                     <h1 class="signup-title">Đăng ký tài khoản</h1>
                                     <p class="signup-subtitle">Tạo tài khoản để truy cập hệ thống</p>
                                 </div>
-                                
+
                                 <!-- Form -->
                                 <form class="signup-form" id="signup-form" action="javascript:void(0);">
                                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                                    
+
                                     <div class="form-row">
                                         <div class="form-group">
-                                            <label class="form-label" for="name">Họ và tên <span style="color:#ef4444">*</span></label>
+                                            <label class="form-label" for="name">Họ và tên <span style="color:#ef4444">*</span>
+                                            </label>
                                             <input type="text" class="form-control" id="name" name="name" placeholder="Nguyễn Văn A" required="required"/>
                                         </div>
                                         <div class="form-group">
-                                            <label class="form-label" for="phone">Số điện thoại <span style="color:#ef4444">*</span></label>
+                                            <label class="form-label" for="phone">Số điện thoại <span style="color:#ef4444">*</span>
+                                            </label>
                                             <input type="tel" class="form-control" id="phone" name="phone" placeholder="0909123456" pattern="[0-9]{10}" maxlength="10" required="required"/>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="form-group">
-                                        <label class="form-label" for="email">Email <span style="color:#ef4444">*</span></label>
+                                        <label class="form-label" for="email">Email <span style="color:#ef4444">*</span>
+                                        </label>
                                         <input type="email" class="form-control" id="email" name="login" placeholder="email@domain.com" required="required"/>
                                     </div>
-                                    
+
                                     <div class="form-row">
                                         <div class="form-group">
-                                            <label class="form-label" for="password">Mật khẩu <span style="color:#ef4444">*</span></label>
+                                            <label class="form-label" for="password">Mật khẩu <span style="color:#ef4444">*</span>
+                                            </label>
                                             <div class="password-wrapper">
                                                 <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required="required" minlength="8"/>
-                                                <button type="button" class="password-toggle-btn" id="togglePassword1"><i class="fas fa-eye-slash"></i></button>
+                                                <button type="button" class="password-toggle-btn" id="togglePassword1">
+                                                    <i class="fas fa-eye-slash"></i>
+                                                </button>
                                             </div>
                                             <div class="password-requirements">
-                                                <div class="req-item" id="req-length"><i class="fa fa-circle"></i>Tối thiểu 8 ký tự</div>
-                                                <div class="req-item" id="req-uppercase"><i class="fa fa-circle"></i>Có chữ in hoa</div>
-                                                <div class="req-item" id="req-number"><i class="fa fa-circle"></i>Có chữ số</div>
-                                                <div class="req-item" id="req-special"><i class="fa fa-circle"></i>Có ký tự đặc biệt</div>
+                                                <div class="req-item" id="req-length">
+                                                    <i class="fa fa-circle"></i>Tối thiểu 8 ký tự</div>
+                                                <div class="req-item" id="req-uppercase">
+                                                    <i class="fa fa-circle"></i>Có chữ in hoa</div>
+                                                <div class="req-item" id="req-number">
+                                                    <i class="fa fa-circle"></i>Có chữ số</div>
+                                                <div class="req-item" id="req-special">
+                                                    <i class="fa fa-circle"></i>Có ký tự đặc biệt</div>
                                             </div>
                                         </div>
                                         <div class="form-group">
-                                            <label class="form-label" for="confirm_password">Xác nhận mật khẩu <span style="color:#ef4444">*</span></label>
+                                            <label class="form-label" for="confirm_password">Xác nhận mật khẩu <span style="color:#ef4444">*</span>
+                                            </label>
                                             <div class="password-wrapper">
                                                 <input type="password" class="form-control" id="confirm_password" name="confirm_password" placeholder="••••••••" required="required"/>
-                                                <button type="button" class="password-toggle-btn" id="togglePassword2"><i class="fas fa-eye-slash"></i></button>
+                                                <button type="button" class="password-toggle-btn" id="togglePassword2">
+                                                    <i class="fas fa-eye-slash"></i>
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="form-check mb-3" style="font-size:0.85rem;">
                                         <input type="checkbox" class="form-check-input" id="terms" name="terms" required="required"/>
-                                        <label class="form-check-label" for="terms">Tôi đồng ý với <a href="#" style="color:var(--primary-end)">điều khoản sử dụng</a></label>
+                                        <label class="form-check-label" for="terms">Tôi đồng ý với <a href="#" style="color:var(--primary-end)">điều khoản sử dụng</a>
+                                        </label>
                                     </div>
-                                    
+
                                     <button type="submit" class="btn-signup" id="signup-submit">
                                         <i class="fas fa-user-plus me-2"></i>Đăng ký
                                     </button>
                                 </form>
-                                
-                                <div class="signup-footer">Đã có tài khoản? <a href="/web/login">Đăng nhập</a></div>
+
+                                <div class="signup-footer">Đã có tài khoản? <a href="/web/login">Đăng nhập</a>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- OTP Modal -->
                 <div class="modal fade otp-modal" id="otp-modal" tabindex="-1" data-bs-backdrop="static">
                     <div class="modal-dialog modal-dialog-centered">
@@ -107,7 +122,7 @@
                             <div class="modal-body p-4">
                                 <p class="text-muted mb-3">Nhập mã 6 số đã được gửi đến:</p>
                                 <p id="otp-phone" class="fw-medium text-dark mb-4"></p>
-                                
+
                                 <div class="d-flex gap-2 justify-content-center mb-3">
                                     <input type="text" maxlength="1" class="otp-input" data-index="0"/>
                                     <input type="text" maxlength="1" class="otp-input" data-index="1"/>
@@ -117,20 +132,22 @@
                                     <input type="text" maxlength="1" class="otp-input" data-index="5"/>
                                 </div>
                                 <p id="otp-error" class="text-danger small d-none text-center"></p>
-                                <p class="text-center text-muted small mb-4">Hết hạn sau <span id="otp-timer" class="fw-medium" style="color:var(--primary-end)">05:00</span></p>
-                                
+                                <p class="text-center text-muted small mb-4">Hết hạn sau <span id="otp-timer" class="fw-medium" style="color:var(--primary-end)">05:00</span>
+                                </p>
+
                                 <div class="d-flex gap-2">
                                     <button type="button" id="resend-otp" class="btn btn-outline-secondary flex-fill">Gửi lại</button>
                                     <button type="button" id="verify-otp" class="btn-signup flex-fill" disabled="disabled">Xác nhận</button>
                                 </div>
                                 <div id="otp-loading" class="text-center mt-3 d-none">
-                                    <span class="spinner-border spinner-border-sm text-primary me-2"></span><span class="text-primary">Đang xử lý...</span>
+                                    <span class="spinner-border spinner-border-sm text-primary me-2"></span>
+                                    <span class="text-primary">Đang xử lý...</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Toast -->
                 <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:1100;">
                     <div id="signup-toast" class="toast align-items-center border-0" role="alert">
@@ -140,7 +157,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Scripts -->
                 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
                 <script><![CDATA[
@@ -360,7 +377,7 @@
                             toast.show();
                         }
                     });
-                ]]></script>
+                ]]>                </script>
             </t>
         </xpath>
     </template>
