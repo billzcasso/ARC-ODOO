@@ -10,7 +10,8 @@ export class OverviewFundManagementWidget extends Component {
             <div class="row g-4">
                 <!-- Left Column: Quỹ Đầu Tư sections -->
                 <div class="col-lg-4">
-                    <div class="d-flex flex-column gap-4">
+                    <div class="fund-list-scrollable custom-scrollbar">
+                        <div class="d-flex flex-column gap-4">
                         <t t-if="state.funds and state.funds.length > 0">
                             <t t-foreach="state.funds" t-as="fund" t-key="fund.ticker">
                                 <article class="fund-card p-3">
@@ -66,6 +67,7 @@ export class OverviewFundManagementWidget extends Component {
                                 </div>
                             </article>
                         </t>
+                            </div>
                     </div>
                 </div>
 

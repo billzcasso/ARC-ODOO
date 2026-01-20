@@ -1,6 +1,6 @@
 /** @odoo-module */
 
-import { Component, xml, useState, onMounted, onWillUnmount } from "@odoo/owl";
+import { Component, xml, useState, onMounted, onWillUnmount, useRef } from "@odoo/owl";
 
 export class InvestorListWidget extends Component {
   static template = xml`
@@ -126,11 +126,16 @@ export class InvestorListWidget extends Component {
             </span>
             <!-- Custom Styled Date Picker for dd/mm/yyyy format -->
             <div class="bo-date-picker-wrapper">
-              <div class="bo-date-picker-display">
+              <div class="bo-date-picker-display" t-on-click="openDatePicker">
                 <i class="fas fa-calendar-alt"></i>
-                <t t-esc="this.formatDate(state.dateFrom)"/>
+                <t t-if="state.dateFrom">
+                    <t t-esc="this.formatDate(state.dateFrom)"/>
+                </t>
+                <t t-else="">
+                    <span>Chọn ngày</span>
+                </t>
               </div>
-              <input type="date" class="bo-date-picker-hidden" t-att-value="state.dateFrom" t-on-change="(ev) => this.filterByDate(ev.target.value)" />
+              <input type="date" class="bo-date-picker-hidden" t-ref="dateInput" t-att-value="state.dateFrom" t-on-change="(ev) => this.filterByDate(ev.target.value)" />
             </div>
           </div>
 
@@ -397,6 +402,7 @@ export class InvestorListWidget extends Component {
       pendingCount: 0,
       kycCount: 0,
       vsdCount: 0,
+      vsdCount: 0,
       dateFrom: new Date().toISOString().split('T')[0],
       dateFilter: 'custom', // Use custom date filter
       sortField: 'open_date',
@@ -408,6 +414,8 @@ export class InvestorListWidget extends Component {
       editingInvestor: null,
       bdaUsers: [],
     });
+
+    this.dateInput = useRef("dateInput");
 
     // Listen for bus updates from entrypoint
     this.handleBusEvent = async (event) => {
@@ -711,6 +719,17 @@ export class InvestorListWidget extends Component {
   filterByDate(value) {
     this.state.dateFrom = value;
     this.applyFilters();
+  }
+
+  openDatePicker() {
+      if (this.dateInput.el) {
+          try {
+              this.dateInput.el.showPicker();
+          } catch (error) {
+              console.warn("Browser does not support showPicker or other error:", error);
+              // Fallback or ignore
+          }
+      }
   }
 
 

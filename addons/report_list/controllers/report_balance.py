@@ -84,12 +84,7 @@ class ReportBalanceController(http.Controller):
 
             for row in paginated_rows:
                 row.pop('last_update', None)
-                row.pop('amount', None)  # UI không cần
-                row.pop('status', None)
-                row.pop('account_number', None)
-                row.pop('investor_name', None)
-                row.pop('fund_name', None)
-                row.pop('fund_ticker', None)
+                # Keep all fields needed by frontend
 
             return {
                 'data': paginated_rows,

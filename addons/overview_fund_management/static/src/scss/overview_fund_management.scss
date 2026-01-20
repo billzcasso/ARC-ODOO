@@ -687,3 +687,18 @@ a.text-primary {
     }
   }
 }
+
+// ============================================
+// SCROLLABLE LISTS
+// ============================================
+.fund-list-scrollable {
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  padding-right: 0.5rem; // Avoid content hitting scrollbar
+  margin-right: -0.5rem; // Compensate for padding to align right edge
+  
+  // Ensure cards don't get cut off weirdly
+  padding-bottom: 1rem;
+  padding-top: 4px; // Spacing for top shadow
+  padding-left: 4px; // Spacing for left shadow
+}

@@ -572,6 +572,7 @@ class MatchedOrdersController(http.Controller):
             matched_pairs = []
             handled_buys = []
             handled_sells = []
+            errors = []
 
             # Gom theo fund để lấy opening price 1 lần
             fund_to_ref = {}
@@ -592,6 +593,12 @@ class MatchedOrdersController(http.Controller):
             ]
             pending_txs = Tx.search(pending_domain)
             for tx in pending_txs:
+                # SKIP if order belongs to a Market Maker (prevents self-matching)
+                if getattr(tx, 'source', '') in ['market_maker', 'sale']:
+                    continue
+                if self._is_user_market_maker(tx.user_id):
+                    continue
+                    
                 units = float(getattr(tx, 'units', 0.0) or 0.0)
                 matched = float(getattr(tx, 'matched_units', 0.0) or 0.0)
                 remaining = max(0.0, units - matched)
@@ -606,62 +613,91 @@ class MatchedOrdersController(http.Controller):
             # Xử lý SELL (investor bán) → NTL mua
             for sid in remaining_sells:
                 try:
-                    tx = Tx.browse(int(sid))
-                    if not tx or not tx.exists():
-                        continue
-                    # Kiểm tra remaining - tính toán chính xác từ units - matched_units
-                    units = float(getattr(tx, 'units', 0.0) or 0.0)
-                    matched = float(getattr(tx, 'matched_units', 0.0) or 0.0)
-                    remaining = max(0.0, units - matched)  # Tính toán chính xác từ units - matched_units
-                    if remaining <= 0 or (tx.transaction_type or '').lower() != 'sell':
-                        continue
-                    ref = get_mm_ref(tx.fund_id.id if tx.fund_id else None)
-                    if not ref.get('success'):
-                        continue
-                    opening_with_cap = float(ref.get('opening_price_with_capital_cost') or ref.get('opening_avg_price') or 0.0)
-                    opening_with_cap_rounded = mround(opening_with_cap, 50)
-                    tx_price_raw = float(getattr(tx, 'price', 0.0) or (tx.current_nav or 0.0))
-                    tx_price_mm = mround(tx_price_raw, 50)
-                    # Bỏ kiểm tra lãi - xử lý tất cả giao dịch hợp lệ
-                    counter = self._create_mm_counter_tx(tx, 'buy', remaining, tx_price_mm)
-                    # Investor SELL ↔ NTL BUY
-                    # Giá khớp = giá sell order (investor) - theo chuẩn Stock Exchange
-                    pair = self._persist_pair_and_update(counter, tx, remaining, tx_price_raw)
-                    if pair:
-                        matched_pairs.append(pair)
-                        handled_sells.append(tx.id)
-                except Exception:
+                    with request.env.cr.savepoint():
+                        tx = Tx.browse(int(sid))
+                        if not tx or not tx.exists():
+                            continue
+                        # Kiểm tra remaining - tính toán chính xác từ units - matched_units
+                        units = float(getattr(tx, 'units', 0.0) or 0.0)
+                        matched = float(getattr(tx, 'matched_units', 0.0) or 0.0)
+                        remaining = max(0.0, units - matched)  # Tính toán chính xác từ units - matched_units
+                        if remaining <= 0 or (tx.transaction_type or '').lower() != 'sell':
+                            continue
+                        ref = get_mm_ref(tx.fund_id.id if tx.fund_id else None)
+                        if not ref.get('success'):
+                            errors.append(f"Lỗi lấy giá tham chiếu quỹ {tx.fund_id.name}: {ref.get('message')}")
+                            continue
+                            
+                        opening_with_cap = float(ref.get('opening_price_with_capital_cost') or ref.get('opening_avg_price') or 0.0)
+                        opening_with_cap_rounded = mround(opening_with_cap, 50)
+                        tx_price_raw = float(getattr(tx, 'price', 0.0) or (tx.current_nav or 0.0))
+                        tx_price_mm = mround(tx_price_raw, 50)
+                        
+                        # Bỏ kiểm tra lãi - xử lý tất cả giao dịch hợp lệ
+                        counter = self._create_mm_counter_tx(tx, 'buy', remaining, tx_price_mm)
+                        # Investor SELL ↔ NTL BUY
+                        # Giá khớp = giá sell order (investor) - theo chuẩn Stock Exchange
+                        pair = self._persist_pair_and_update(counter, tx, remaining, tx_price_raw)
+                        
+                        if pair:
+                            matched_pairs.append(pair)
+                            handled_sells.append(tx.id)
+                        else:
+                            # Nếu không tạo được pair, raise exception để rollback counter transaction
+                            raise ValueError("Không thể tạo giao dịch khớp lệnh (persist pair failed).")
+                except Exception as e:
+                    errors.append(f"Lỗi xử lý lệnh SELL #{sid}: {str(e)}")
+                    _logger.error(f"Lỗi xử lý lệnh SELL #{sid}: {str(e)}")
                     continue
 
             # Xử lý BUY (investor mua) → NTL bán
             for bid in remaining_buys:
                 try:
-                    tx = Tx.browse(int(bid))
-                    if not tx or not tx.exists():
-                        continue
-                    # Tính toán remaining_units chính xác từ units - matched_units
-                    units = float(getattr(tx, 'units', 0.0) or 0.0)
-                    matched = float(getattr(tx, 'matched_units', 0.0) or 0.0)
-                    remaining = max(0.0, units - matched)  # Tính toán chính xác từ units - matched_units
-                    if remaining <= 0 or (tx.transaction_type or '').lower() != 'buy':
-                        continue
-                    ref = get_mm_ref(tx.fund_id.id if tx.fund_id else None)
-                    if not ref.get('success'):
-                        continue
-                    opening_with_cap = float(ref.get('opening_price_with_capital_cost') or ref.get('opening_avg_price') or 0.0)
-                    opening_with_cap_rounded = mround(opening_with_cap, 50)
-                    tx_price_raw = float(getattr(tx, 'price', 0.0) or (tx.current_nav or 0.0))
-                    tx_price_mm = mround(tx_price_raw, 50)
-                    # Bỏ kiểm tra lãi - xử lý tất cả giao dịch hợp lệ
-                    counter = self._create_mm_counter_tx(tx, 'sell', remaining, opening_with_cap_rounded)
-                    # Investor BUY ↔ NTL SELL
-                    # Giá khớp = giá sell order (NTL) - theo chuẩn Stock Exchange
-                    pair = self._persist_pair_and_update(tx, counter, remaining, opening_with_cap_rounded)
-                    if pair:
-                        matched_pairs.append(pair)
-                        handled_buys.append(tx.id)
-                except Exception:
+                    with request.env.cr.savepoint():
+                        tx = Tx.browse(int(bid))
+                        if not tx or not tx.exists():
+                            continue
+                        # Tính toán remaining_units chính xác từ units - matched_units
+                        units = float(getattr(tx, 'units', 0.0) or 0.0)
+                        matched = float(getattr(tx, 'matched_units', 0.0) or 0.0)
+                        remaining = max(0.0, units - matched)  # Tính toán chính xác từ units - matched_units
+                        if remaining <= 0 or (tx.transaction_type or '').lower() != 'buy':
+                            continue
+                        ref = get_mm_ref(tx.fund_id.id if tx.fund_id else None)
+                        if not ref.get('success'):
+                            errors.append(f"Lỗi lấy giá tham chiếu quỹ {tx.fund_id.name}: {ref.get('message')}")
+                            continue
+                            
+                        opening_with_cap = float(ref.get('opening_price_with_capital_cost') or ref.get('opening_avg_price') or 0.0)
+                        opening_with_cap_rounded = mround(opening_with_cap, 50)
+                        tx_price_raw = float(getattr(tx, 'price', 0.0) or (tx.current_nav or 0.0))
+                        tx_price_mm = mround(tx_price_raw, 50)
+                        
+                        # Bỏ kiểm tra lãi - xử lý tất cả giao dịch hợp lệ
+                        counter = self._create_mm_counter_tx(tx, 'sell', remaining, opening_with_cap_rounded)
+                        # Investor BUY ↔ NTL SELL
+                        # Giá khớp = giá sell order (NTL) - theo chuẩn Stock Exchange
+                        pair = self._persist_pair_and_update(tx, counter, remaining, opening_with_cap_rounded)
+                        
+                        if pair:
+                            matched_pairs.append(pair)
+                            handled_buys.append(tx.id)
+                        else:
+                            # Nếu không tạo được pair, raise exception để rollback counter transaction
+                            raise ValueError("Không thể tạo giao dịch khớp lệnh (persist pair failed).")
+                except Exception as e:
+                    errors.append(f"Lỗi xử lý lệnh BUY #{bid}: {str(e)}")
+                    _logger.error(f"Lỗi xử lý lệnh BUY #{bid}: {str(e)}")
                     continue
+
+            total_handled = len(handled_buys) + len(handled_sells)
+            
+            # Nếu không xử lý được lệnh nào và có lỗi, trả về lỗi
+            if total_handled == 0 and errors:
+                return request.make_response(json.dumps({
+                    'success': False, 
+                    'message': 'Có lỗi khi xử lý: ' + '; '.join(errors[:3]) + ('...' if len(errors) > 3 else '')
+                }, ensure_ascii=False), headers=[('Content-Type', 'application/json')])
 
             response = {
                 'success': True,
@@ -670,10 +706,13 @@ class MatchedOrdersController(http.Controller):
                     'sells': handled_sells,
                 },
                 'matched_pairs': matched_pairs,
-                'message': 'Đã xử lý Nhà tạo lập (xử lý tất cả giao dịch hợp lệ)'
+                'message': f'Đã xử lý {total_handled} lệnh Nhà tạo lập.' if total_handled > 0 else 'Không tìm thấy lệnh hợp lệ để xử lý.',
+                'errors': errors
             }
             return request.make_response(json.dumps(response, ensure_ascii=False), headers=[('Content-Type', 'application/json')])
         except Exception as e:
+            _logger.error(f"Lỗi hệ thống Market Maker: {str(e)}")
+            _logger.error(traceback.format_exc())
             return request.make_response(json.dumps({'success': False, 'message': str(e)}, ensure_ascii=False), headers=[('Content-Type', 'application/json')], status=500)
 
     # ===== Helpers =====
@@ -708,13 +747,33 @@ class MatchedOrdersController(http.Controller):
             return {'success': False, 'message': str(e)}
 
 
+    def _is_user_market_maker(self, user):
+        """Kiểm tra user có phải là nhà tạo lập không"""
+        try:
+            if not user:
+                return False
+            # Check permission management
+            if hasattr(user, 'permission_management_ids') and user.permission_management_ids:
+                 permission_rec = user.permission_management_ids.filtered(
+                    lambda p: p.permission_type == 'investor_user' and p.is_market_maker
+                )
+                 if permission_rec:
+                     return True
+            return False
+        except Exception:
+            return False
+
     def _get_market_maker_user(self):
         """
-        Lấy user nhà tạo lập được phân quyền (portal user với is_market_maker=True)
-        Thay vì dùng internal user như trước
+        Lấy user nhà tạo lập được phân quyền.
+        Ưu tiên user đang đăng nhập nếu họ là nhà tạo lập.
         """
         try:
-            # Tìm user portal có is_market_maker = True trong permission_management_ids
+            # 1. Ưu tiên user hiện tại nếu là Market Maker
+            if request.env.user and self._is_user_market_maker(request.env.user):
+                return request.env.user
+
+            # 2. Tìm user portal có is_market_maker = True trong permission_management_ids
             PermissionManagement = request.env['user.permission.management'].sudo()
             market_maker_permission = PermissionManagement.search([
                 ('permission_type', '=', 'investor_user'),

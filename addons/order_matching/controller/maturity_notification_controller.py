@@ -176,8 +176,8 @@ class MaturityNotificationController(http.Controller):
             except Exception:
                 payload = {}
             
-            # Gọi method check_maturity_dates để tạo và gửi thông báo
-            result = request.env['transaction.maturity.notification'].sudo().check_maturity_dates()
+            # Gọi method send_maturity_notifications_manual để demo gửi tất cả
+            result = request.env['transaction.maturity.notification'].sudo().send_maturity_notifications_manual()
             
             response_data = {
                 'success': True,
@@ -203,59 +203,7 @@ class MaturityNotificationController(http.Controller):
                 status=500
             )
 
-    @http.route('/api/transaction-list/send-maturity-notifications-test', type='http', auth='user', methods=['POST'], csrf=False)
-    def send_maturity_notifications_test(self, **kwargs):
-        """API TEST: Gửi thông báo đáo hạn cho TẤT CẢ lệnh, không kiểm tra ngày đáo hạn"""
-        try:
-            # Parse JSON từ request body
-            try:
-                payload = json.loads(request.httprequest.data.decode('utf-8') or '{}')
-            except Exception:
-                payload = {}
-            
-            # Gọi method check_maturity_dates_for_test để tạo và gửi thông báo cho tất cả lệnh
-            result = request.env['transaction.maturity.notification'].sudo().check_maturity_dates_for_test()
-            
-            total = result.get('total_transactions', 0)
-            created = result.get('notifications_created', 0)
-            sent = result.get('notifications_sent', 0)
-            skipped_no_user = result.get('skipped_no_user', 0)
-            
-            message_parts = []
-            message_parts.append(f'Tìm thấy {total} lệnh mua đã hoàn thành')
-            if skipped_no_user > 0:
-                message_parts.append(f'{skipped_no_user} lệnh không có user_id (bỏ qua)')
-            message_parts.append(f'Tạo {created} thông báo mới')
-            message_parts.append(f'Gửi {sent} thông báo')
-            
-            response_data = {
-                'success': True,
-                'message': '[TEST] ' + '. '.join(message_parts) + '.',
-                'notifications_created': created,
-                'notifications_sent': sent,
-                'total_transactions': total,
-                'skipped_no_user': skipped_no_user,
-                'skipped_existing': 0
-            }
-            return request.make_response(
-                json.dumps(response_data, ensure_ascii=False),
-                headers=[('Content-Type', 'application/json')]
-            )
-        except Exception as e:
-            _logger.error(f"Lỗi khi gửi thông báo đáo hạn (TEST): {str(e)}", exc_info=True)
-            response_data = {
-                'success': False,
-                'message': f'Lỗi khi gửi thông báo đáo hạn: {str(e)}',
-                'notifications_created': 0,
-                'notifications_sent': 0,
-                'total_transactions': 0,
-                'skipped_no_user': 0
-            }
-            return request.make_response(
-                json.dumps(response_data, ensure_ascii=False),
-                headers=[('Content-Type', 'application/json')],
-                status=500
-            )
+
 
     @http.route('/api/transaction-list/delete-maturity-notification', type='json', auth='user')
     def delete_maturity_notification(self, notification_id, **kwargs):

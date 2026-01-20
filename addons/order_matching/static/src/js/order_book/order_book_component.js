@@ -78,12 +78,6 @@ export class OrderBookComponent extends Component {
                                     <span>Gửi thông báo đáo hạn</span>
                                 </button>
                             </li>
-                            <li>
-                                <button class="dropdown-item text-warning" t-on-click="sendMaturityNotificationsTest">
-                                    <i class="fas fa-vial"></i>
-                                    <span>[TEST] Gửi thông báo cho tất cả lệnh</span>
-                                </button>
-                            </li>
                         </ul>
                     </div>
                     <div class="hero-fund-card">

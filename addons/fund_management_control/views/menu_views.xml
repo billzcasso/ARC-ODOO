@@ -248,7 +248,7 @@
 
         <!-- Sync Wizard Action is defined in wizard/wizard_sync_fund_view.xml with ID: action_wizard_sync_fund_certificate -->
         <!-- Sync Wizard Action - Moved to Root Level as requested -->
-        <menuitem id="menu_fmc_sync_wizard" name="Đồng bộ từ Stock Data" parent="menu_fmc_root" action="action_wizard_sync_fund_certificate" sequence="5"/>
-        <menuitem id="menu_fmc_sync_portfolio" name="Sync to Portfolio" parent="menu_fmc_root" action="action_sync_all_certs_to_portfolio" sequence="6"/>
+        <menuitem id="menu_fmc_sync_wizard" name="Đồng bộ từ Stock Data" parent="menu_fmc_root" action="action_wizard_sync_fund_certificate" sequence="90"/>
+        <menuitem id="menu_fmc_sync_portfolio" name="Sync to Portfolio" parent="menu_fmc_root" action="action_sync_all_certs_to_portfolio" sequence="91"/>
     </data>
 </odoo>

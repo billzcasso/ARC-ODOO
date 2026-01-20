@@ -29,20 +29,9 @@ export class ReportTransactionWidget extends Component {
                          </div>
                     </div>
                     <div class="report-contract-statistics-filter-group" style="flex: 0 0 auto; display: flex; align-items: flex-end;">
-                        <div class="dropdown" t-ref="exportDropdown">
-                            <button class="report-contract-statistics-btn report-contract-statistics-btn-success dropdown-toggle" type="button" t-on-click="toggleExportDropdown">
-                                <i class="fas fa-download"></i> Xuất dữ liệu
-                                <i class="fas fa-chevron-down ms-2"></i>
-                            </button>
-                            <div class="dropdown-menu" t-if="state.showExportDropdown" style="display: block; position: absolute; top: 100%; right: 0; z-index: 1000; min-width: 180px; margin-top: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 1px solid #eee; border-radius: 8px;">
-                                <a class="dropdown-item" href="#" t-on-click.prevent="exportPdf" style="padding: 10px 15px; display: flex; align-items: center; gap: 10px; color: #495057; text-decoration: none; transition: background 0.2s;">
-                                    <i class="fas fa-file-pdf text-danger"></i> Xuất PDF
-                                </a>
-                                <a class="dropdown-item" href="#" t-on-click.prevent="exportXlsx" style="padding: 10px 15px; display: flex; align-items: center; gap: 10px; color: #495057; text-decoration: none; transition: background 0.2s;">
-                                    <i class="fas fa-file-excel text-success"></i> Xuất Excel
-                                </a>
-                            </div>
-                        </div>
+                        <button class="report-contract-statistics-btn report-contract-statistics-btn-success" t-on-click="exportXlsx">
+                            <i class="fas fa-file-excel"></i> Xuất Excel
+                        </button>
                     </div>
                 </div>
 

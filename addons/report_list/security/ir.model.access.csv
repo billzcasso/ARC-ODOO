@@ -1,10 +1,5 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_report_order_history,access.report.order.history,model_report_order_history,base.group_user,1,0,0,0
-access_report_contract_statistics,access.report.contract.statistics,model_report_contract_statistics,base.group_user,1,0,0,0
-access_report_early_sale,access.report.early.sale,model_report_early_sale,base.group_user,1,0,0,0
 access_portfolio_transaction,access.portfolio.transaction,model_portfolio_transaction,base.group_user,1,0,0,0
 access_portfolio_investment,access.portfolio.investment,model_portfolio_investment,base.group_user,1,0,0,0
-access_report_fund_account,access.report.fund.account,model_report_fund_account,base.group_user,1,0,0,0
-access_investor_report,access.investor.report,model_investor_report,base.group_user,1,0,0,0
-access_list_tenors_interest_rate,access.list.tenors.interest.rate,model_list_tenors_interest_rate,base.group_user,1,0,0,0
-access_user_list_report,access.user.list.report,model_user_list_report,base.group_user,1,0,0,0
+access_investor_report,access.investor.report,model_investor_report,base.group_user,1,1,1,0
+access_list_tenors_interest_rate,access.list.tenors.interest.rate,model_list_tenors_interest_rate,base.group_user,1,1,1,0

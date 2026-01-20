@@ -910,13 +910,18 @@ export class NegotiatedOrdersComponent extends Component {
      * 
      * Ưu tiên sử dụng bulk API, fallback về single API nếu bulk thất bại
      */
+    /**
+     * Gửi các lệnh khớp đã chọn lên sàn giao dịch
+     */
     async sendToExchange() {
+        if (this.state.selectedIds.size === 0) return;
+        
         try {
-            if (this.state.selectedIds.size === 0) return;
             const ids = Array.from(this.state.selectedIds);
-            let ok = false;
+            let successIds = [];
+            let errors = [];
             
-            // Thử bulk API trước
+            // --- 1. Thử gửi Bulk API ---
             try {
                 const resBulk = await fetch('/api/transaction-list/bulk-send-to-exchange', {
                     method: 'POST',
@@ -927,52 +932,85 @@ export class NegotiatedOrdersComponent extends Component {
                         params: { matched_order_ids: ids, auto_submit: true } 
                     })
                 });
-                if (!resBulk.ok) throw new Error(`HTTP ${resBulk.status}`);
-                const rs = await resBulk.json();
-                ok = !!(rs?.success || rs?.result?.success);
-                if (!ok && rs?.result?.results) {
-                    ok = rs.result.results.some(r => r.success);
-                }
-            } catch (_) {
-                // Fallback về single API nếu bulk thất bại
-            }
-
-            // Fallback: Gửi từng lệnh một
-            if (!ok) {
-                let sent = 0;
-                for (const id of ids) {
-                    try {
-                        const res = await fetch('/api/transaction-list/send-to-exchange', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                            body: JSON.stringify({ 
-                                jsonrpc: '2.0', 
-                                method: 'call', 
-                                params: { matched_order_id: id, auto_submit: true } 
-                            })
+                
+                if (resBulk.ok) {
+                    const json = await resBulk.json();
+                    const result = json.result || json; // Handle Odoo wrapper
+                    
+                    if (result && result.success) {
+                        // Case: Bulk success all
+                        successIds = [...ids];
+                    } else if (result && result.results) {
+                        // Case: Mixed results
+                        result.results.forEach(r => {
+                            if (r.success) {
+                                successIds.push(String(r.id));
+                            } else {
+                                errors.push(r.message || `Lỗi không xác định (ID: ${r.id})`);
+                            }
                         });
-                        if (res.ok) {
-                            const j = await res.json();
-                            if (j?.success || j?.result?.success) sent++;
-                        }
-                    } catch (_) {
-                        // Continue với lệnh tiếp theo nếu lệnh này lỗi
+                    } else {
+                        // Case: Global failure (e.g. no account config)
+                        throw new Error(result.message || result.error || "Gửi thất bại");
                     }
+                } else {
+                    throw new Error(`HTTP ${resBulk.status}`);
                 }
-                ok = sent > 0;
+            } catch (bulkErr) {
+                // Nếu Bulk API lỗi network hoặc logic global fail, fallback hoặc report
+                console.warn('[Bulk Send Fail]', bulkErr);
+                if (errors.length === 0) errors.push(bulkErr.message);
             }
 
-            if (!ok) throw new Error('Gửi lên sàn thất bại');
+            // --- 2. Fallback (nếu API cũ không support bulk hoặc logic khác) ---
+            // Ở đây vì user yêu cầu fix lỗi "không báo khi chưa có tk", ta ưu tiên hiển thị lỗi từ Bulk trả về.
+            // Nếu successIds rỗng và errors rỗng sau bước trên, nghĩa là có gì đó k ổn, ta coi là lỗi chung.
 
-            this.showToast(`Đã gửi lên sàn ${this.state.selectedIds.size} cặp lệnh`, 'success');
-            this.state.selectedIds = new Set();
-            await this._loadMatchedOrders();
+            // --- 3. Xử lý kết quả ---
+            if (successIds.length > 0) {
+                // Update Local State -> Dim ngay lập tức
+                const sentSet = new Set(JSON.parse(localStorage.getItem('sentMatchedIds') || '[]'));
+                
+                this.state.matchedOrders = this.state.matchedOrders.map(order => {
+                    if (successIds.includes(String(order.id))) {
+                        sentSet.add(String(order.id));
+                        return { ...order, sent_to_exchange: true };
+                    }
+                    return order;
+                });
+                
+                localStorage.setItem('sentMatchedIds', JSON.stringify(Array.from(sentSet)));
+                
+                // Clear selection cho các item đã gửi thành công
+                successIds.forEach(id => this.state.selectedIds.delete(parseInt(id)));
+                this.state.selectedIds = new Set(this.state.selectedIds); // Trigger reactivity
+                
+                // Thông báo thành công
+                const msg = `Đã gửi thành công ${successIds.length} lệnh lên sàn.`;
+                this.showToast(msg, 'success');
+            }
+
+            if (errors.length > 0) {
+                // Hiển thị lỗi đầu tiên hoặc tổng hợp
+                const uniqueErrors = [...new Set(errors)];
+                const errMsg = uniqueErrors.length === 1 
+                    ? uniqueErrors[0] 
+                    : `${uniqueErrors.length} lệnh gửi thất bại. ${uniqueErrors[0]}...`;
+                
+                // Hiển thị toast lỗi (quan trọng: hiển thị Error thay vì Success giả)
+                this.showToast(errMsg, 'danger');
+            } else if (successIds.length === 0 && errors.length === 0) {
+                 this.showToast("Không thể kết nối tới server hoặc phản hồi không hợp lệ.", 'danger');
+            }
+
+            // Reload data ngầm để sync status chính xác nhất
+            if (successIds.length > 0) {
+                setTimeout(() => this._loadMatchedOrders(), 1000);
+            }
+            
         } catch (error) {
-            // Chỉ log lỗi nghiêm trọng
-            if (error.message && !error.message.includes('Network')) {
-                console.error('[SEND TO EXCHANGE] Error:', error);
-            }
-            this.showToast('Lỗi gửi lên sàn: ' + error.message, 'danger');
+           console.error('[SEND TO EXCHANGE] Fatal Error:', error);
+           this.showToast('Lỗi hệ thống: ' + error.message, 'danger');
         }
     }
     

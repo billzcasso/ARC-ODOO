@@ -241,47 +241,6 @@ export class OrderMatchingActions {
     }
   }
 
-  /**
-   * Gửi thông báo đáo hạn cho tất cả lệnh (TEST MODE)
-   * 
-   * CẢNH BÁO: Tính năng này chỉ dùng để TEST
-   * Sẽ gửi thông báo qua websocket cho tất cả lệnh mua đã hoàn thành,
-   * không kiểm tra ngày đáo hạn.
-   * 
-   * @param {Function} showNotification - Function to show notifications
-   * @param {Function} rpc - Function to make RPC calls
-   */
-  static async sendMaturityNotificationsTest(showNotification, rpc) {
-    try {
-      // Xác nhận trước khi gửi
-      if (!confirm('CẢNH BÁO: Bạn có chắc muốn gửi thông báo đáo hạn cho TẤT CẢ lệnh?\n\nTính năng này chỉ dùng để TEST và sẽ gửi thông báo qua websocket cho tất cả lệnh mua đã hoàn thành, không kiểm tra ngày đáo hạn.')) {
-        return;
-      }
-      
-      showNotification('[TEST] Đang gửi thông báo đáo hạn cho tất cả lệnh...', 'info');
-      
-      const response = await rpc('/api/transaction-list/send-maturity-notifications-test', {});
-      
-      if (response && response.success) {
-        const created = response.notifications_created || 0;
-        const sent = response.notifications_sent || 0;
-        showNotification(
-          `[TEST] ${response.message || `Đã tạo ${created} thông báo và gửi ${sent} thông báo qua websocket thành công.`}`,
-          'success'
-        );
-      } else {
-        showNotification(
-          response.message || 'Không thể gửi thông báo đáo hạn',
-          'error'
-        );
-      }
-    } catch (error) {
-      // Chỉ log lỗi nghiêm trọng
-      if (error.message && !error.message.includes('Network')) {
-        console.error('[SEND MATURITY NOTIFICATIONS TEST] Error:', error);
-      }
-      showNotification('Lỗi kết nối: ' + error.message, 'error');
-    }
-  }
+
 }
 

@@ -130,7 +130,11 @@ class SSIApiConfig(models.Model):
         if self.priority_securities_ids:
             symbols = [s.symbol for s in self.priority_securities_ids if s.symbol]
         elif self.streaming_symbols:
-            symbols = [s.strip().upper() for s in self.streaming_symbols.split(',')]
+            symbols = [s.strip().upper() for s in self.streaming_symbols.split(',') if s.strip()]
+            
+        # Auto-create missing securities if specific symbols are requested
+        if symbols:
+            self.env['ssi.securities'].ensure_securities_exist(symbols)
         
         channels = [self.streaming_channel or 'X']
         

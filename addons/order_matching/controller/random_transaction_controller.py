@@ -339,13 +339,13 @@ class RandomTransactionController(http.Controller):
                     if price < 50:
                         price = 50
                     
-                    units_raw = random.randint(50, 500)  # Số lượng từ 50 đến 500 CCQ
-                    # Làm tròn số lượng CCQ về bội số của 50
-                    units = mround(units_raw, 50)
-                    # Đảm bảo units tối thiểu là 50
-                    if units < 50:
-                        units = 50
-                    amount = mround(units * price, 50)  # Làm tròn amount về bội số của 50
+                    units_raw = random.randint(100, 1000)  # Số lượng từ 100 đến 1000 CCQ
+                    # Làm tròn số lượng CCQ về bội số của 100 (Lô 100)
+                    units = mround(units_raw, 100)
+                    # Đảm bảo units tối thiểu là 100
+                    if units < 100:
+                        units = 100
+                    amount = mround(units * price, 50)  # Amount làm tròn theo 50đ (tiền tệ)
                     
                     # Tạo transaction - CHỈ CHO NHÀ ĐẦU TƯ
                     transaction = Transaction.create({

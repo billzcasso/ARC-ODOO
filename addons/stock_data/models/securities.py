@@ -85,6 +85,70 @@ class Securities(models.Model):
     _sql_constraints = [
         ('symbol_market_unique', 'unique(symbol, market)', 'Symbol must be unique per market!')
     ]
+    
+    @api.model
+    def ensure_securities_exist(self, symbols):
+        """
+        Verify symbols exist in DB. If not, try to fetch and create them from SSI API.
+        Args:
+            symbols (list): List of symbol strings (e.g. ['VNM', 'VIC'])
+        """
+        if not symbols:
+            return
+            
+        # Normalize
+        symbols = [s.upper() for s in symbols]
+        
+        # Check what we already have
+        existing = self.search([('symbol', 'in', symbols)])
+        existing_symbols = set(existing.mapped('symbol'))
+        
+        missing = set(symbols) - existing_symbols
+        if not missing:
+            return
+        
+        _logger.info("Auto-creating missing securities: %s", missing)
+        
+        # Try to find missing symbols
+        try:
+            gateway = self._get_gateway()
+            
+            # We don't know the market for missing symbols, so we might need to try markets.
+            # But get_securities_details usually requires market. 
+            # Optimization: Try 'HOSE' first, then 'HNX', 'UPCOM'.
+            markets = ['HOSE', 'HNX', 'UPCOM']
+            
+            for symbol in missing:
+                found = False
+                for market in markets:
+                    try:
+                        data = gateway.get_securities_details(market, symbol)
+                        if data:
+                            items = data if isinstance(data, list) else data.get('items', [])
+                            if items:
+                                item = items[0]
+                                # Create Security
+                                self.create({
+                                    'symbol': symbol,
+                                    'market': market,
+                                    'stock_name_vn': item.get('StockName') or item.get('stockName'),
+                                    'stock_name_en': item.get('StockEnName') or item.get('stockEnName'),
+                                    'floor_code': item.get('floorCode'),
+                                    'security_type': item.get('securityType'),
+                                    'is_active': True 
+                                })
+                                found = True
+                                self.env.cr.commit() # Commit immediately so streaming thread can see it
+                                break
+                    except Exception as e:
+                        # Ignore error per market/symbol and continue
+                        pass
+                
+                if not found:
+                    _logger.warning("Could not auto-create symbol: %s (Not found on any market)", symbol)
+                    
+        except Exception as e:
+            _logger.error("Error in ensure_securities_exist: %s", e)
 
     @api.depends('current_price', 'reference_price')
     def _compute_change(self):
@@ -326,9 +390,24 @@ class Securities(models.Model):
                 if not symbol:
                     continue
                 
+                
                 # Get security ID from cache
                 security_id = self._get_security_id_from_cache(env, symbol)
+                
+                # Fallback: If not in cache, try to find in DB (maybe created recently)
                 if not security_id:
+                     sec = env['ssi.securities'].search([('symbol', '=', symbol)], limit=1)
+                     if sec:
+                         security_id = sec.id
+                         # Update cache for next time
+                         self._symbol_cache[symbol] = security_id
+                
+                if not security_id:
+                    # Optional: Could auto-create here, but better to do it in pre-hook or separate task
+                    # because creating inside this high-frequency loop might slow down streaming.
+                    # For now, just log debug.
+                    if self._symbol_cache_time: # Only log if we have initialized cache
+                         _logger.debug("Skipping unknown symbol in stream: %s", symbol)
                     continue
                 
                 # Extract price values

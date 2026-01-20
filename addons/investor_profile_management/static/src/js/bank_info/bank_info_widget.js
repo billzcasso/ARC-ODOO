@@ -82,7 +82,30 @@ class BankInfoWidget extends Component {
                                      <div class="row">
                                           <div class="col-md-6 mb-3">
                                                <label for="bank_name" class="form-label">Tên ngân hàng <span class="text-danger">*</span></label>
-                                               <input id="bank_name" type="text" class="form-control" t-model="state.formData.bank_name" required="required" placeholder="Ví dụ: Vietcombank" />
+                                               <div style="position: relative;">
+                                                    <input 
+                                                         id="bank_name" 
+                                                         type="text" 
+                                                         class="form-control" 
+                                                         t-model="state.formData.bank_name" 
+                                                         t-on-input="filterBanks"
+                                                         t-on-focus="() => this.state.showBankDropdown = true"
+                                                         required="required" 
+                                                         placeholder="Gõ để tìm ngân hàng..." 
+                                                         autocomplete="off"
+                                                    />
+                                                    <div t-if="state.showBankDropdown and state.filteredBanks.length > 0" 
+                                                         class="autocomplete-dropdown"
+                                                         style="position: absolute; top: 100%; left: 0; right: 0; max-height: 300px; overflow-y: auto; background: white; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 1000; margin-top: 4px;">
+                                                         <div t-foreach="state.filteredBanks" t-as="bank" t-key="bank.id"
+                                                              t-on-click="() => this.selectBank(bank)"
+                                                              class="autocomplete-item"
+                                                              style="padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">
+                                                              <div style="font-weight: 600; color: #333;"><t t-esc="bank.short_name" /></div>
+                                                              <div style="font-size: 0.85rem; color: #666;"><t t-esc="bank.name" /></div>
+                                                         </div>
+                                                    </div>
+                                               </div>
                                           </div>
                                           <div class="col-md-6 mb-3">
                                                <label for="bank_account_number" class="form-label">Số tài khoản <span class="text-danger">*</span></label>
@@ -92,7 +115,28 @@ class BankInfoWidget extends Component {
                                      
                                      <div class="mb-3">
                                           <label for="bank_branch" class="form-label">Chi nhánh <span class="text-danger">*</span></label>
-                                          <input id="bank_branch" type="text" class="form-control" t-model="state.formData.branch" required="required" />
+                                          <div style="position: relative;">
+                                               <input 
+                                                    id="bank_branch" 
+                                                    type="text" 
+                                                    class="form-control" 
+                                                    t-model="state.formData.branch" 
+                                                    t-on-focus="() => this.state.showBranchDropdown = true"
+                                                    required="required"
+                                                    placeholder="Chọn chi nhánh..."
+                                                    autocomplete="off"
+                                               />
+                                               <div t-if="state.showBranchDropdown and state.branches.length > 0" 
+                                                    class="autocomplete-dropdown"
+                                                    style="position: absolute; top: 100%; left: 0; right: 0; max-height: 250px; overflow-y: auto; background: white; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 1000; margin-top: 4px;">
+                                                    <div t-foreach="state.branches" t-as="branch" t-key="branch.id"
+                                                         t-on-click="() => this.selectBranch(branch)"
+                                                         class="autocomplete-item"
+                                                         style="padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0;">
+                                                         <t t-esc="branch.name" />
+                                                    </div>
+                                               </div>
+                                          </div>
                                      </div>
                                      <div class="form-text text-muted mb-2"><i class="fa fa-info-circle"></i> (*) Thông tin bắt buộc và tài khoản sẽ được dùng khi thực hiện lệnh bán</div>
                                 </div>
@@ -184,13 +228,20 @@ class BankInfoWidget extends Component {
             showModal: false,
             modalTitle: '',
             modalMessage: '',
+            // Autocomplete states
+            allBanks: [],
+            filteredBanks: [],
+            showBankDropdown: false,
+            selectedBankId: null,
+            branches: [],
+            showBranchDropdown: false,
         });
 
         onMounted(async () => {
             // Hide loading spinner
             const loadingSpinner = document.getElementById('loadingSpinner');
             const widgetContainer = document.getElementById('bankInfoWidget');
-            
+
             if (loadingSpinner && widgetContainer) {
                 loadingSpinner.style.display = 'none';
                 widgetContainer.style.display = 'block';
@@ -202,12 +253,24 @@ class BankInfoWidget extends Component {
                 sessionStorage.removeItem('bankInfoData');
                 sessionStorage.removeItem('bankInfoUserId');
             }
+            // Load banks list
+            await this.loadBanks();
             // Load profile data and status info
             await this.loadProfileData();
             this.loadInitialFormData(); // Load form data after profile is loaded or from sessionStorage
             await this.loadStatusInfo();
-            
+
             this.state.loading = false;
+
+            // Close dropdowns when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#bank_name') && !e.target.closest('.autocomplete-dropdown')) {
+                    this.state.showBankDropdown = false;
+                }
+                if (!e.target.closest('#bank_branch') && !e.target.closest('.autocomplete-dropdown')) {
+                    this.state.showBranchDropdown = false;
+                }
+            });
         });
     }
 
@@ -305,7 +368,7 @@ class BankInfoWidget extends Component {
             const response = await fetch('/data_bank_info');
             const data = await response.json();
             console.log("📥 Bank profile data received:", data);
-            
+
             if (data && data.length > 0) {
                 // For bank info, data might be an array of accounts, we'll take the first one or handle multiple later.
                 // For now, assuming user only fills out one primary bank account for simplicity.
@@ -324,15 +387,15 @@ class BankInfoWidget extends Component {
     formatCurrency(ev) {
         // Lấy giá trị hiện tại
         let value = ev.target.value;
-        
+
         // Loại bỏ tất cả ký tự không phải số
         value = value.replace(/[^\d]/g, '');
-        
+
         // Format với dấu phẩy ngăn cách hàng nghìn
         if (value) {
             value = parseInt(value).toLocaleString('vi-VN');
         }
-        
+
         // Cập nhật giá trị vào state
         this.state.formData.monthly_income = value;
     }
@@ -350,6 +413,72 @@ class BankInfoWidget extends Component {
             return value.replace(/[^\d]/g, '');
         }
         return '';
+    }
+
+    async loadBanks() {
+        try {
+            const response = await fetch('/get_bank_data?limit=1000');
+            const data = await response.json();
+            if (data && data.records) {
+                this.state.allBanks = data.records.filter(b => b.active);
+                this.state.filteredBanks = [...this.state.allBanks];
+                console.log('✅ Loaded', this.state.allBanks.length, 'banks');
+            }
+        } catch (error) {
+            console.error('❌ Error loading banks:', error);
+        }
+    }
+
+    filterBanks(ev) {
+        const searchTerm = ev.target.value.toLowerCase();
+        if (!searchTerm) {
+            this.state.filteredBanks = [...this.state.allBanks];
+            this.state.showBankDropdown = true;
+            return;
+        }
+
+        this.state.filteredBanks = this.state.allBanks.filter(bank =>
+            bank.name.toLowerCase().includes(searchTerm) ||
+            bank.short_name.toLowerCase().includes(searchTerm) ||
+            (bank.code && bank.code.toLowerCase().includes(searchTerm))
+        );
+        this.state.showBankDropdown = true;
+    }
+
+    async selectBank(bank) {
+        this.state.formData.bank_name = bank.short_name || bank.name;
+        this.state.selectedBankId = bank.id;
+        this.state.showBankDropdown = false;
+
+        // Load branches for selected bank
+        await this.loadBranches(bank.id);
+        console.log('✅ Selected bank:', bank.short_name);
+    }
+
+    async loadBranches(bankId) {
+        try {
+            const response = await fetch(`/get_bank_branch_data?limit=1000`);
+            const data = await response.json();
+            if (data && data.records) {
+                // Filter branches by bank name (since API doesn't support bank_id filter)
+                const selectedBank = this.state.allBanks.find(b => b.id === bankId);
+                if (selectedBank) {
+                    this.state.branches = data.records.filter(br =>
+                        br.bank_id === selectedBank.name && br.active
+                    );
+                    console.log('✅ Loaded', this.state.branches.length, 'branches for', selectedBank.short_name);
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error loading branches:', error);
+            this.state.branches = [];
+        }
+    }
+
+    selectBranch(branch) {
+        this.state.formData.branch = branch.name;
+        this.state.showBranchDropdown = false;
+        console.log('✅ Selected branch:', branch.name);
     }
 }
 

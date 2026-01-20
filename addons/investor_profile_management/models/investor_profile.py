@@ -10,6 +10,7 @@ _logger = logging.getLogger(__name__)
 class InvestorProfile(models.Model):
     _name = 'investor.profile'
     _description = 'Personal Information'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
     _rec_name = 'name'
 
     name = fields.Char(string='Họ và tên', required=True)
@@ -117,14 +118,19 @@ class InvestorProfile(models.Model):
 
     @api.constrains('partner_id')
     def _check_unique_partner(self):
+        """Ensure one profile per partner"""
         for record in self:
             if record.partner_id:
-                duplicate = self.search([
+                existing = self.search([
                     ('partner_id', '=', record.partner_id.id),
                     ('id', '!=', record.id)
                 ])
-                if duplicate:
-                    raise ValidationError(_('Mỗi đối tác chỉ được có một hồ sơ nhà đầu tư.'))
+                if existing:
+                    raise ValidationError(_('Đã tồn tại hồ sơ cho đối tác này.'))
+
+    def _get_thread_with_access(self, thread_id, **kwargs):
+        """Override mail.thread method for Odoo 18 compatibility"""
+        return self.browse(thread_id).exists()
 
     def write(self, vals):
         # Xử lý filename cho CCCD images nếu có

@@ -532,10 +532,11 @@ class MaturityNotification(models.Model):
         return len(expired_notifications)
 
     @api.model
-    def check_maturity_dates_for_test(self):
+    def send_maturity_notifications_manual(self):
         """
-        Method để test: Gửi thông báo đáo hạn cho TẤT CẢ lệnh mua đã hoàn thành,
-        không kiểm tra ngày đáo hạn. Dùng để test tính năng.
+        Method cho nút bấm thủ công (DEMO MODE): 
+        Gửi thông báo đáo hạn cho TẤT CẢ lệnh mua đã hoàn thành có kỳ hạn,
+        bất kể ngày đáo hạn thực tế.
         """
         transactions = self.env['portfolio.transaction'].search([
             ('transaction_type', '=', 'buy'),
@@ -543,54 +544,47 @@ class MaturityNotification(models.Model):
             ('term_months', '>', 0)
         ])
         
-        _logger.info(f"[TEST] Tìm thấy {len(transactions)} lệnh mua đã hoàn thành có term_months > 0")
+        _logger.info(f"[MANUAL-DEMO] Tìm thấy {len(transactions)} lệnh mua đã hoàn thành có term_months > 0")
         
         notifications_created = 0
         notifications_sent = 0
         skipped_no_user = 0
         
         for transaction in transactions:
-            # Kiểm tra user_id
             if not transaction.user_id:
                 skipped_no_user += 1
-                _logger.warning(f"[TEST] Lệnh {transaction.name} không có user_id, bỏ qua")
                 continue
             
             maturity_date = self._calculate_maturity_date(transaction)
             if not maturity_date:
-                # Nếu không tính được ngày đáo hạn, dùng ngày hôm nay
                 maturity_date = fields.Date.today()
             
-            # Luôn tạo và gửi thông báo mới, không kiểm tra existing notification
-            # Cho phép gửi lại nhiều lần
             try:
+                # Tạo notification
                 notification = self.create({
                     'transaction_id': transaction.id,
                     'maturity_date': maturity_date,
                     'state': 'draft'
                 })
                 notifications_created += 1
-                _logger.info(f"[TEST] Đã tạo thông báo cho lệnh {transaction.name}, maturity_date: {maturity_date}")
                 
+                # Gửi ngay lập tức
                 try:
                     notification.action_send_notification()
                     notifications_sent += 1
-                    _logger.info(f"[TEST] Đã gửi thông báo cho lệnh {transaction.name}")
                 except Exception as e:
-                    _logger.error(f"[TEST] Không thể gửi thông báo cho lệnh {transaction.name}: {str(e)}")
+                    _logger.error(f"[MANUAL-DEMO] Không thể gửi thông báo cho lệnh {transaction.name}: {str(e)}")
             except Exception as e:
-                _logger.error(f"[TEST] Không thể tạo notification cho lệnh {transaction.name}: {str(e)}")
+                _logger.error(f"[MANUAL-DEMO] Không thể tạo notification cho lệnh {transaction.name}: {str(e)}")
         
-        _logger.info(f"[TEST] Kết quả: Tìm thấy {len(transactions)} lệnh, "
-                    f"Bỏ qua {skipped_no_user} lệnh không có user_id, "
-                    f"Tạo {notifications_created} thông báo mới, "
-                    f"Gửi {notifications_sent} thông báo")
+        _logger.info(f"[MANUAL-DEMO] Hoàn tất: Tạo {notifications_created}, Gửi {notifications_sent}")
         
         return {
             'notifications_created': notifications_created,
             'notifications_sent': notifications_sent,
             'total_transactions': len(transactions),
-            'skipped_no_user': skipped_no_user,
-            'skipped_existing': 0  # Không còn skip existing nữa
+            'skipped_no_user': skipped_no_user
         }
+
+
 

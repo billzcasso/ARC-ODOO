@@ -483,6 +483,28 @@ class PortfolioTransaction(models.Model):
             fund_id = vals.get('fund_id')
             
             if transaction_type in ['buy', 'sell'] and user_id and fund_id:
+                # SKIP validation cho Market Maker hoặc user internal
+                source = vals.get('source')
+                user_rec = self.env['res.users'].browse(user_id)
+                # Market maker thường có source='sale' hoặc 'market_maker'
+                # Hoặc user internal có quyền market maker
+                if source in ['sale', 'market_maker']:
+                    continue
+                # Kiểm tra quyền Market Maker từ permission management
+                is_mm = False
+                try:
+                    if hasattr(user_rec, 'permission_management_ids'):
+                         permission_rec = user_rec.permission_management_ids.filtered(
+                            lambda p: p.permission_type == 'investor_user' and p.is_market_maker
+                        )
+                         if permission_rec:
+                             is_mm = True
+                except Exception:
+                    pass
+                
+                if is_mm:
+                    continue
+
                 # RÀNG BUỘC: User không thể có cả lệnh mua và bán pending cùng lúc cho cùng một quỹ
                 # Chỉ kiểm tra xung đột trên cùng một quỹ
                 existing_orders = self.env['portfolio.transaction'].search([
@@ -530,6 +552,26 @@ class PortfolioTransaction(models.Model):
                 
                 # Chỉ validate nếu là lệnh buy/sell và có user_id, fund_id
                 if new_transaction_type in ['buy', 'sell'] and user_id and new_fund_id:
+                    # SKIP validation cho Market Maker
+                    source = record.source
+                    if source in ['sale', 'market_maker']:
+                        continue
+                    
+                    user_rec = record.user_id
+                    is_mm = False
+                    try:
+                        if hasattr(user_rec, 'permission_management_ids'):
+                             permission_rec = user_rec.permission_management_ids.filtered(
+                                lambda p: p.permission_type == 'investor_user' and p.is_market_maker
+                            )
+                             if permission_rec:
+                                 is_mm = True
+                    except Exception:
+                        pass
+                    
+                    if is_mm:
+                        continue
+
                     # Tìm các lệnh pending khác của cùng user, cùng fund
                     existing_orders = self.env['portfolio.transaction'].search([
                         ('id', '!=', record.id),  # Loại trừ chính record đang được update

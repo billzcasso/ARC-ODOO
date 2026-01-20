@@ -68,7 +68,15 @@ class EKYCApiConfig(models.Model):
         return config
 
     def action_generate_token(self):
-        """Generate new access token"""
+        """
+        Generate new access token from VNPT OAuth API
+        
+        LƯU Ý: Nếu gặp lỗi 500, vui lòng:
+        1. Vào portal VNPT eKYC (https://ekyc.vnpt.vn)
+        2. Lấy access token mới
+        3. Paste vào trường Access Token bên dưới
+        4. Lưu lại
+        """
         self.ensure_one()
         
         if not self.token_id or not self.token_key:
@@ -87,6 +95,17 @@ class EKYCApiConfig(models.Model):
         
         try:
             response = requests.post(token_endpoint, json=payload, timeout=30)
+            
+            # Log response details before raising error
+            if not response.ok:
+                try:
+                    error_detail = response.json()
+                    _logger.error('VNPT OAuth error response (JSON): %s', error_detail)
+                except:
+                    error_detail = response.text
+                    _logger.error('VNPT OAuth error response (Text): %s', error_detail)
+                _logger.error('VNPT OAuth status code: %s, URL: %s', response.status_code, token_endpoint)
+            
             response.raise_for_status()
             data = response.json() or {}
         except Exception as exc:

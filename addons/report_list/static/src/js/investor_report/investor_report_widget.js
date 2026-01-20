@@ -54,20 +54,9 @@ class InvestorReportWidget extends Component {
                         </button>
                     </div>
                     <div class="report-contract-statistics-filter-group">
-                        <div class="dropdown" t-ref="exportDropdown">
-                            <button class="report-contract-statistics-btn report-contract-statistics-btn-success dropdown-toggle" type="button" t-on-click="toggleExportDropdown">
-                                <i class="fas fa-download"></i> Xuất file
-                                <i class="fas fa-chevron-down" style="margin-left: 5px;"></i>
-                            </button>
-                            <div class="dropdown-menu" t-if="state.showExportDropdown" style="display: block; position: absolute; top: 100%; left: 0; z-index: 1000; min-width: 160px; padding: 5px 0; margin: 2px 0 0; background-color: #fff; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 6px 12px rgba(0,0,0,.175);">
-                                <a class="dropdown-item" href="#" t-on-click="exportPdf" style="display: block; padding: 3px 20px; clear: both; font-weight: normal; line-height: 1.42857143; color: #333; white-space: nowrap; text-decoration: none;">
-                                    <i class="fas fa-file-pdf"></i> Xuất PDF
-                                </a>
-                                <a class="dropdown-item" href="#" t-on-click="exportXlsx" style="display: block; padding: 3px 20px; clear: both; font-weight: normal; line-height: 1.42857143; color: #333; white-space: nowrap; text-decoration: none;">
-                                    <i class="fas fa-file-excel"></i> Xuất XLSX
-                                </a>
-                            </div>
-                        </div>
+                        <button class="report-contract-statistics-btn report-contract-statistics-btn-success" t-on-click="exportXlsx">
+                            <i class="fas fa-file-excel"></i> Xuất Excel
+                        </button>
                     </div>
                 </div>
             </div>
@@ -173,13 +162,11 @@ class InvestorReportWidget extends Component {
                 startRecord: 0,
                 endRecord: 0,
                 pages: []
-            },
-            showExportDropdown: false
+            }
         });
 
         onMounted(() => {
             console.log('InvestorReportWidget OWL component mounted');
-            this.initDropdown();
             this.loadData();
         });
     }
@@ -283,62 +270,7 @@ class InvestorReportWidget extends Component {
         this.loadData();
     }
 
-    initDropdown() {
-        // Đóng dropdown khi click bên ngoài
-        document.addEventListener('click', (event) => {
-            if (!event.target.closest('.dropdown')) {
-                this.state.showExportDropdown = false;
-            }
-        });
-    }
-
-    toggleExportDropdown() {
-        this.state.showExportDropdown = !this.state.showExportDropdown;
-    }
-
-    async exportPdf() {
-        this.state.showExportDropdown = false;
-        try {
-            this.state.loading = true;
-            
-            const params = new URLSearchParams();
-            Object.keys(this.state.filters).forEach(key => {
-                if (this.state.filters[key]) {
-                    params.append(key, this.state.filters[key]);
-                }
-            });
-
-            const response = await fetch(`/investor_report/export_pdf?${params.toString()}`, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/pdf',
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `investor_report_${new Date().toISOString().split('T')[0]}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-            
-        } catch (error) {
-            console.error('Error exporting PDF:', error);
-            this.showError('Lỗi khi xuất PDF: ' + error.message);
-        } finally {
-            this.state.loading = false;
-        }
-    }
-
     async exportXlsx() {
-        this.state.showExportDropdown = false;
         try {
             this.state.loading = true;
             

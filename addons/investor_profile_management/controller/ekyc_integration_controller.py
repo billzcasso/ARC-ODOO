@@ -154,8 +154,20 @@ class EKYCIntegrationController(http.Controller):
         }
 
         _logger.info('Yêu cầu access token mới từ %s', token_endpoint)
+        _logger.debug('OAuth payload: tokenId=%s...', token_id[:20] if token_id else 'None')
         try:
             resp = requests.post(token_endpoint, json=payload, timeout=self.REQUEST_TIMEOUT)
+            
+            # Log response details before raising error
+            if not resp.ok:
+                try:
+                    error_detail = resp.json()
+                    _logger.error('VNPT OAuth error response (JSON): %s', error_detail)
+                except:
+                    error_detail = resp.text
+                    _logger.error('VNPT OAuth error response (Text): %s', error_detail)
+                _logger.error('VNPT OAuth status code: %s, URL: %s', resp.status_code, token_endpoint)
+            
             resp.raise_for_status()
             data = resp.json() or {}
         except Exception as exc:
@@ -187,16 +199,31 @@ class EKYCIntegrationController(http.Controller):
         return token
 
     def _ensure_access_token(self, config):
+        """
+        Lấy access token từ config.
+        KHÔNG tự động refresh token vì VNPT OAuth API đang lỗi 500.
+        Admin cần cập nhật token thủ công từ portal VNPT.
+        """
         token = config.get('access_token')
         expiration = config.get('token_expiration')
-        if token and expiration:
+        
+        # Kiểm tra token có tồn tại không
+        if not token:
+            _logger.error('Access token chưa được cấu hình. Vui lòng cập nhật từ portal VNPT.')
+            raise Exception(_('Access token chưa được cấu hình. Vui lòng vào Settings → VNPT eKYC Configuration để cập nhật.'))
+        
+        # Kiểm tra token có hết hạn không
+        if expiration:
             try:
                 exp_dt = fields.Datetime.from_string(expiration)
-            except Exception:
-                exp_dt = None
-            if exp_dt and exp_dt > fields.Datetime.now():
-                return token
-        return self._refresh_access_token(config)
+                if exp_dt <= fields.Datetime.now():
+                    _logger.warning('Access token đã hết hạn vào %s. Vui lòng cập nhật token mới từ portal VNPT.', expiration)
+                    # Vẫn trả về token cũ để thử, có thể VNPT vẫn chấp nhận
+                    # Nếu không được, API sẽ trả về 401 và admin sẽ biết cần cập nhật
+            except Exception as e:
+                _logger.warning('Không thể parse token expiration: %s', e)
+        
+        return token
 
     def _prepare_headers(self, config, content_type='application/json', include_mac=True):
         """Prepare headers for VNPT eKYC API requests"""

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'FMS - Reports',
-    'version': '18.0.1.0.24',
+    'version': '18.0.1.0.26',
     'category': 'Finance',
     'summary': 'Comprehensive balance, transaction and investor reports',
     'description': """
@@ -17,7 +17,7 @@ Report Types:
 - Tenors and interest rates list (Lãi suất)
 
 Features:
-- PDF export for all report types
+- XLSX export for all report types
 - Frontend report pages
 - Backend report views
     """,
@@ -37,16 +37,12 @@ Features:
         'views/report_list_backend_views.xml',
         # Balance Report
         'views/report_balance/report_balance_page.xml',
-        'views/report_balance/report_balance_pdf_template.xml',
         # Transaction Report
         'views/report_transaction/report_transaction_page.xml',
-        'views/report_transaction/report_transaction_pdf_template.xml',
         # Investor Report
         'views/investor_report/investor_report_page.xml',
-        'views/investor_report/investor_report_pdf_template.xml',
         # Tenors Interest Rates
         'views/list_tenors_interest_rates/list_tenors_interest_rates_page.xml',
-        'views/list_tenors_interest_rates/list_tenors_interest_rates_pdf_template.xml',
     ],
     'assets': {
         'web.assets_frontend': [

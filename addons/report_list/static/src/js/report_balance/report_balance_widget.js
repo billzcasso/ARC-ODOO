@@ -36,20 +36,9 @@ class ReportBalanceWidget extends Component {
                         </button>
                     </div>
                     <div class="report-contract-statistics-filter-group">
-                        <div class="dropdown" t-ref="exportDropdown">
-                            <button class="report-contract-statistics-btn report-contract-statistics-btn-success dropdown-toggle" type="button" t-on-click="toggleExportDropdown">
-                                <i class="fas fa-download"></i> Xuất file
-                                <i class="fas fa-chevron-down" style="margin-left: 5px;"></i>
-                            </button>
-                            <div class="dropdown-menu" t-if="state.showExportDropdown" style="display: block; position: absolute; top: 100%; left: 0; z-index: 1000; min-width: 160px; padding: 5px 0; margin: 2px 0 0; background-color: #fff; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 6px 12px rgba(0,0,0,.175);">
-                                <a class="dropdown-item" href="#" t-on-click="exportPdf" style="display: block; padding: 3px 20px; clear: both; font-weight: normal; line-height: 1.42857143; color: #333; white-space: nowrap; text-decoration: none;">
-                                    <i class="fas fa-file-pdf"></i> Xuất PDF
-                                </a>
-                                <a class="dropdown-item" href="#" t-on-click="exportXlsx" style="display: block; padding: 3px 20px; clear: both; font-weight: normal; line-height: 1.42857143; color: #333; white-space: nowrap; text-decoration: none;">
-                                    <i class="fas fa-file-excel"></i> Xuất XLSX
-                                </a>
-                            </div>
-                        </div>
+                        <button class="report-contract-statistics-btn report-contract-statistics-btn-success" t-on-click="exportXlsx">
+                            <i class="fas fa-file-excel"></i> Xuất Excel
+                        </button>
                     </div>
                     </div>
                 </div>
@@ -86,19 +75,19 @@ class ReportBalanceWidget extends Component {
                             </tr>
                             <tr t-foreach="state.records" t-as="record" t-key="record.id">
                                 <td t-esc="state.records.indexOf(record) + 1"/>
-                                <td t-esc="record.so_tai_khoan || ''"/>
-                                <td t-esc="record.so_tk_gdck || ''"/>
-                                <td t-esc="record.nha_dau_tu || ''"/>
-                                <td t-esc="record.chuong_trinh_ticker || ''"/>
-                                <td t-esc="record.so_ccq || 0"/>
+                                <td t-esc="record.trading_account || ''"/>
+                                <td t-esc="record.trading_account || ''"/>
+                                <td t-esc="record.investor_name || ''"/>
+                                <td t-esc="record.program_ticker || ''"/>
+                                <td t-esc="record.ccq_quantity || 0"/>
                                 <td>
-                                    <span t-if="record.loai_ndt" 
-                                          t-att-class="'chip-customer-type ' + this.getCustomerTypeChipClass(record.loai_ndt)"
-                                          t-esc="this.getCustomerTypeLabel(record.loai_ndt)"/>
+                                    <span t-if="record.investor_type" 
+                                          t-att-class="'chip-customer-type ' + this.getCustomerTypeChipClass(record.investor_type)"
+                                          t-esc="this.getCustomerTypeLabel(record.investor_type)"/>
                                 </td>
-                                <td t-esc="record.quoc_tich || ''"/>
-                                <td t-esc="record.nvcs || ''"/>
-                                <td t-esc="record.don_vi || 'VND'"/>
+                                <td t-esc="record.nationality || ''"/>
+                                <td t-esc="record.sales_staff || ''"/>
+                                <td t-esc="record.currency || 'VND'"/>
                             </tr>
                         </tbody>
                     </table>
@@ -139,25 +128,23 @@ class ReportBalanceWidget extends Component {
                 startRecord: 0,
                 endRecord: 0,
                 pages: []
-            },
-            showExportDropdown: false
+            }
         });
 
         onMounted(() => {
             console.log('ReportBalanceWidget OWL component mounted');
             this.loadFunds();
             this.loadData();
-            this.initDropdown();
         });
         }
 
     async loadFunds() {
         try {
-            const res = await this.rpc('/api/transaction-list/funds', {});
-            if (res && res.success && Array.isArray(res.data)) {
-                this.state.fundOptions = res.data.map(f => ({
+            const res = await this.rpc('/report-balance/products', {});
+            if (Array.isArray(res)) {
+                this.state.fundOptions = res.map(f => ({
                     id: f.id,
-                    label: (f.ticker || f.symbol || f.name || '').trim() || f.name || ''
+                    label: f.ticker || f.name || ''
                 }));
             }
         } catch (e) {
@@ -231,60 +218,6 @@ class ReportBalanceWidget extends Component {
         };
         this.state.pagination.currentPage = 1;
         this.loadData();
-    }
-
-    initDropdown() {
-        // Đóng dropdown khi click bên ngoài
-        document.addEventListener('click', (event) => {
-            if (!event.target.closest('.dropdown')) {
-                this.state.showExportDropdown = false;
-            }
-        });
-    }
-
-    toggleExportDropdown() {
-        this.state.showExportDropdown = !this.state.showExportDropdown;
-    }
-
-    async exportPdf() {
-        this.state.showExportDropdown = false;
-        try {
-            this.state.loading = true;
-            
-            const params = new URLSearchParams();
-            Object.keys(this.state.filters).forEach(key => {
-                if (this.state.filters[key]) {
-                    params.append(key, this.state.filters[key]);
-                }
-            });
-
-            const response = await fetch(`/report-balance/export-pdf?${params.toString()}`, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/pdf',
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `report_balance_${new Date().toISOString().split('T')[0]}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-            
-        } catch (error) {
-            console.error('Error exporting PDF:', error);
-            this.showError('Lỗi khi xuất PDF: ' + error.message);
-        } finally {
-            this.state.loading = false;
-        }
     }
 
     async exportXlsx() {

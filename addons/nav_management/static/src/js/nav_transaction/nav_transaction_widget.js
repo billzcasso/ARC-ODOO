@@ -191,11 +191,12 @@ export class NavTransactionWidget extends Component {
                   <th></th>
                   <th></th>
                   <th>
-                    <button t-if="state.navCalculated" class="nav-management-btn-modern nav-management-btn-primary-modern" 
+                    <button class="nav-management-btn-modern nav-management-btn-primary-modern" 
                             style="font-size: 0.7rem; padding: 0.25rem 0.5rem;" 
-                            t-att-disabled="this.getSelectedCount()===0" 
+                            t-att-disabled="!state.navCalculated || this.getSelectedCount()===0" 
+                            t-att-title="!state.navCalculated ? 'Vui lòng tính NAV trước' : (this.getSelectedCount()===0 ? 'Chọn ít nhất 1 giao dịch' : 'Thực hiện giao dịch với NTL')"
                             t-on-click="() => this.handleMmBulkAction()">
-                      Giao dịch (<t t-esc="this.getSelectedCount()"/>)
+                      <i class="fas fa-exchange-alt me-1"></i>Giao dịch (<t t-esc="this.getSelectedCount()"/>)
                     </button>
                   </th>
                 </tr>
@@ -1276,7 +1277,9 @@ export class NavTransactionWidget extends Component {
 
   formatDate(dateString) {
     if (!dateString) return '-';
-    const date = new Date(dateString);
+    // Sử dụng parseDateStringToLocal để đảm bảo timezone đúng
+    const date = this.parseDateStringToLocal(dateString);
+    if (!(date instanceof Date) || isNaN(date.getTime())) return '-';
     return date.toLocaleDateString('vi-VN', {
       day: '2-digit',
       month: '2-digit',
@@ -1289,8 +1292,9 @@ export class NavTransactionWidget extends Component {
   formatDateOnly(dateString) {
     if (!dateString) return '-';
     try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return '-';
+      // Sử dụng parseDateStringToLocal để đảm bảo timezone đúng
+      const date = this.parseDateStringToLocal(dateString);
+      if (!(date instanceof Date) || isNaN(date.getTime())) return '-';
       const day = String(date.getDate()).padStart(2, '0');
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const year = date.getFullYear();
@@ -2565,8 +2569,10 @@ export class NavTransactionWidget extends Component {
       
       const dtStr = tx.created_at || tx.transaction_date || tx.create_date;
       if (!dtStr) continue;
-      const ts = new Date(dtStr).getTime();
-      if (!ts || Number.isNaN(ts)) continue;
+      // Sử dụng parseDateStringToLocal để đảm bảo timezone đúng
+      const localDate = this.parseDateStringToLocal(dtStr);
+      if (!(localDate instanceof Date) || isNaN(localDate.getTime())) continue;
+      const ts = localDate.getTime();
       const nav = Number(tx.nav_value || 0);
       arr.push({ x: ts, y: nav });
     }
@@ -2627,7 +2633,13 @@ export class NavTransactionWidget extends Component {
 
       const minY = Math.min(...data);
       const maxY = Math.max(...data);
-      const nicePadding = (maxY - minY) * 0.05 || 1;
+      const dataRange = maxY - minY;
+      
+      // Đảm bảo padding tối thiểu 0.5% của giá trị trung bình để chart hiển thị rõ biến động
+      const avgValue = (minY + maxY) / 2;
+      const minPadding = avgValue * 0.005; // 0.5% của giá trị trung bình
+      const calculatedPadding = dataRange * 0.1; // 10% của range
+      const nicePadding = Math.max(calculatedPadding, minPadding, 1);
 
       const options = {
         responsive: true,
@@ -2641,6 +2653,20 @@ export class NavTransactionWidget extends Component {
           legend: { display: true, labels: { boxWidth: 18 } },
           tooltip: {
             callbacks: {
+              title: (items) => {
+                // Hiển thị thời gian theo timezone local của user
+                if (!items.length) return '';
+                const timestamp = items[0].parsed.x;
+                const date = new Date(timestamp);
+                return date.toLocaleString('vi-VN', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit'
+                });
+              },
               label: (ctx) => {
                 const v = ctx.raw;
                 if (v === null || v === undefined) return ctx.dataset.label + ': -';
