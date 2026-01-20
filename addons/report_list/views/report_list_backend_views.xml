@@ -9,13 +9,13 @@
         <field name="model">portfolio.investment</field>
         <field name="arch" type="xml">
             <list string="Báo cáo số dư" create="false" edit="false" delete="false">
-                <field name="account_number"/>
-                <field name="investor_name"/>
-                <field name="id_number"/>
-                <field name="fund_name"/>
-                <field name="program_ticker"/>
-                <field name="ccq_quantity"/>
-                <field name="print_date"/>
+                <field name="report_account_number"/>
+                <field name="report_investor_name"/>
+                <field name="report_id_number"/>
+                <field name="report_fund_name"/>
+                <field name="report_program_ticker"/>
+                <field name="report_ccq_quantity"/>
+                <field name="report_print_date"/>
             </list>
         </field>
     </record>
@@ -28,18 +28,18 @@
                 <sheet>
                     <group>
                         <group>
-                            <field name="account_number" readonly="1"/>
-                            <field name="investor_name" readonly="1"/>
-                            <field name="phone_number" readonly="1"/>
-                            <field name="email" readonly="1"/>
+                            <field name="report_account_number" readonly="1"/>
+                            <field name="report_investor_name" readonly="1"/>
+                            <field name="report_phone_number" readonly="1"/>
+                            <field name="report_email" readonly="1"/>
+                            <field name="report_id_number" readonly="1"/>
                         </group>
                         <group>
-                            <field name="id_number" readonly="1"/>
-                            <field name="fund_name" readonly="1"/>
-                            <field name="program_name" readonly="1"/>
-                            <field name="program_ticker" readonly="1"/>
-                            <field name="ccq_quantity" readonly="1"/>
-                            <field name="print_date" readonly="1"/>
+                            <field name="report_fund_name" readonly="1"/>
+                            <field name="report_program_name" readonly="1"/>
+                            <field name="report_program_ticker" readonly="1"/>
+                            <field name="report_ccq_quantity" readonly="1"/>
+                            <field name="report_print_date" readonly="1"/>
                         </group>
                     </group>
                 </sheet>

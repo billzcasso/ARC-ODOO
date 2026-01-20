@@ -58,9 +58,7 @@ class ReportBalanceController(http.Controller):
             if date_to:
                 normalized.append(('create_date', '<=', _to_datetime(date_to, False)))
 
-        normalized.append(('status', 'not in', ['draft', 'cancelled', 'rejected', 'error']))
-        normalized.append(('transaction_type', 'in', ['buy', 'sell']))
-
+        # Removed non-existent fields for portfolio.investment (transaction_type)
         return normalized
 
 
@@ -74,20 +72,60 @@ class ReportBalanceController(http.Controller):
             offset = int(kw.get('offset', (page - 1) * limit))
 
             filters = kw.get('filters') or {}
+            
+            # Domain for portfolio.investment
             normalized_domain = self._build_search_domain(domain, search_values, filters)
-
-            rows = request.env['portfolio.investment'].get_balance_report_rows(normalized_domain)
-            total = len(rows)
-
-            rows.sort(key=lambda r: r.get('last_update') or fields.Datetime.now(), reverse=True)
-            paginated_rows = rows[offset: offset + limit]
-
-            for row in paginated_rows:
-                row.pop('last_update', None)
-                # Keep all fields needed by frontend
-
+            
+            normalized_domain.append(('status', '=', 'active'))
+            
+            Model = request.env['portfolio.investment']
+            
+            # Count total
+            total = Model.search_count(normalized_domain)
+            
+            # Search records
+            fields_to_read = [
+                'id',
+                'report_account_number',
+                'report_investor_name', 
+                'report_id_number',
+                'report_email',
+                'report_phone_number',
+                'fund_id',          # returns (id, name)
+                'units',            # report quantity
+                'total_value',      # report amount 
+            ]
+            
+            # Order by latest created or updated
+            records = Model.search_read(
+                normalized_domain, 
+                fields_to_read, 
+                offset=offset, 
+                limit=limit, 
+                order='create_date desc'
+            )
+            
+            # Post-process to flatten data for frontend
+            data = []
+            for rec in records:
+                fund = rec.get('fund_id') 
+                fund_name = fund[1] if fund else ''
+                
+                data.append({
+                    'id': rec['id'],
+                    'account_number': rec['report_account_number'],
+                    'trading_account': rec['report_account_number'], 
+                    'investor_name': rec['report_investor_name'],
+                    'id_number': rec['report_id_number'],
+                    'phone_number': rec['report_phone_number'],
+                    'email': rec['report_email'],
+                    'program_ticker': fund_name, 
+                    'fund_name': fund_name,
+                    'ccq_quantity': rec['units'],
+                    'amount': rec['total_value'], 
+                })
             return {
-                'data': paginated_rows,
+                'data': data,
                 'total': total,
                 'page': page,
                 'limit': limit
@@ -116,10 +154,26 @@ class ReportBalanceController(http.Controller):
             return []
 
     def _get_export_rows(self, filters):
+        # We replace this to return recordset or list of dicts from recordset
+        Model = request.env['portfolio.investment']
         domain = self._build_search_domain([], {}, filters)
-        rows = request.env['portfolio.investment'].get_balance_report_rows(domain)
-        for row in rows:
-            row.pop('last_update', None)
+        domain.append(('status', '=', 'active'))
+        records = Model.search(domain, order='create_date desc')
+        
+        rows = []
+        for rec in records:
+            rows.append({
+                'account_number': rec.report_account_number,
+                'investor_name': rec.report_investor_name,
+                'phone_number': rec.report_phone_number,
+                'id_number': rec.report_id_number,
+                'email': rec.report_email,
+                'fund_name': rec.fund_id.name if rec.fund_id else '',
+                'program_ticker': rec.report_program_ticker,
+                'ccq_quantity': rec.units,
+                'amount': rec.total_value,
+                'status': rec.status
+            })
         return rows
 
     @http.route('/report-balance/export-pdf', type='http', auth='user', website=True)
@@ -146,6 +200,7 @@ class ReportBalanceController(http.Controller):
                 )
                 for row in rows
             ]
+
 
             data = {
                 'records': records,
@@ -197,7 +252,7 @@ class ReportBalanceController(http.Controller):
             sheet = workbook.active
             sheet.title = "Report Balance"
 
-            headers = ['STT', 'Số TK', 'Tên khách hàng', 'Loại NĐT', 'TN/NN', 'Số CCQ', 'Mã CK', 'Đơn vị']
+            headers = ['STT', 'Số TK', 'Tên khách hàng', 'Số điện thoại', 'Email', 'Quỹ', 'Mã CK', 'Số CCQ']
             for col, header in enumerate(headers, 1):
                 cell = sheet.cell(row=1, column=col, value=header)
                 cell.font = Font(bold=True)
@@ -205,13 +260,13 @@ class ReportBalanceController(http.Controller):
 
             for idx, row in enumerate(rows, start=2):
                 sheet.cell(row=idx, column=1, value=idx-1)
-                sheet.cell(row=idx, column=2, value=row['account_number'])
-                sheet.cell(row=idx, column=3, value=row['investor_name'])
-                sheet.cell(row=idx, column=4, value=row['investor_type'])
-                sheet.cell(row=idx, column=5, value=row['nationality'])
-                sheet.cell(row=idx, column=6, value=row['ccq_quantity'])
-                sheet.cell(row=idx, column=7, value=row['program_ticker'])
-                sheet.cell(row=idx, column=8, value=row['currency'])
+                sheet.cell(row=idx, column=2, value=row.get('account_number', ''))
+                sheet.cell(row=idx, column=3, value=row.get('investor_name', ''))
+                sheet.cell(row=idx, column=4, value=row.get('phone_number', ''))
+                sheet.cell(row=idx, column=5, value=row.get('email', ''))
+                sheet.cell(row=idx, column=6, value=row.get('fund_name', ''))
+                sheet.cell(row=idx, column=7, value=row.get('program_ticker', ''))
+                sheet.cell(row=idx, column=8, value=row.get('ccq_quantity', 0))
 
             for column_cells in sheet.columns:
                 length = max(len(str(cell.value)) if cell.value else 0 for cell in column_cells)
@@ -256,7 +311,6 @@ class ReportBalanceController(http.Controller):
                 'Số điện thoại',
                 'ĐKSH',
                 'Email',
-                'Loại NĐT',
                 'Quỹ',
                 'Mã CK',
                 'Số CCQ'
@@ -264,15 +318,14 @@ class ReportBalanceController(http.Controller):
 
             for row in rows:
                 writer.writerow([
-                    row['account_number'],
-                    row['investor_name'],
-                    row['phone_number'],
-                    row['id_number'],
-                    row['email'],
-                    row['investor_type'],
-                    row['fund_name'],
-                    row['program_ticker'],
-                    f"{row['ccq_quantity']:.2f}",
+                    row.get('account_number', ''),
+                    row.get('investor_name', ''),
+                    row.get('phone_number', ''),
+                    row.get('id_number', ''),
+                    row.get('email', ''),
+                    row.get('fund_name', ''),
+                    row.get('program_ticker', ''),
+                    f"{row.get('ccq_quantity', 0):.2f}",
                 ])
 
             csv_content = output.getvalue()

@@ -102,93 +102,14 @@
             </field>
         </record>
 
-        <!-- Fee Schedule list view -->
-        <record id="view_fund_fee_schedule_list" model="ir.ui.view">
-            <field name="name">fund.fee.schedule.list</field>
-            <field name="model">fund.fee.schedule</field>
-            <field name="arch" type="xml">
-                <list string="Fee Schedules">
-                    <field name="fee_name"/>
-                    <field name="fee_code"/>
-                    <field name="fee_type"/>
-                    <field name="scheme_id"/>
-                    <field name="operator_1" optional="hide"/>
-                    <field name="initial_value"/>
-                    <field name="operator_2" optional="hide"/>
-                    <field name="end_value"/>
-                    <field name="fee_rate"/>
-                    <field name="activate"/>
-                </list>
-            </field>
-        </record>
 
-        <!-- SIP Settings list view -->
-        <record id="view_fund_sip_settings_list" model="ir.ui.view">
-            <field name="name">fund.sip.settings.list</field>
-            <field name="model">fund.sip.settings</field>
-            <field name="arch" type="xml">
-                <list string="SIP Settings">
-                    <field name="sip_scheme_id"/>
-                    <field name="max_non_consecutive_periods"/>
-                    <field name="min_monthly_amount"/>
-                    <field name="min_maintenance_periods"/>
-                    <field name="cycle_code"/>
-                    <field name="program_period"/>
-                    <field name="allow_multiple_investments"/>
-                    <field name="active"/>
-                </list>
-            </field>
-        </record>
-
-        <!-- Tax Settings list view -->
-        <record id="view_fund_tax_settings_list" model="ir.ui.view">
-            <field name="name">fund.tax.settings.list</field>
-            <field name="model">fund.tax.settings</field>
-            <field name="arch" type="xml">
-                <list string="Tax Settings">
-                    <field name="tax_name"/>
-                    <field name="tax_english_name"/>
-                    <field name="tax_code"/>
-                    <field name="rate"/>
-                    <field name="active"/>
-                </list>
-            </field>
-        </record>
         <record id="action_fund_certificate" model="ir.actions.act_window">
             <field name="name">Fund Certificates</field>
             <field name="res_model">fund.certificate</field>
             <field name="view_mode">list,form</field>
         </record>
 
-        <record id="action_fund_scheme_type" model="ir.actions.act_window">
-            <field name="name">Scheme Types</field>
-            <field name="res_model">fund.scheme.type</field>
-            <field name="view_mode">list,form</field>
-        </record>
 
-        <record id="action_fund_scheme" model="ir.actions.act_window">
-            <field name="name">Schemes</field>
-            <field name="res_model">fund.scheme</field>
-            <field name="view_mode">list,form</field>
-        </record>
-
-        <record id="action_fund_fee_schedule" model="ir.actions.act_window">
-            <field name="name">Fee Schedules</field>
-            <field name="res_model">fund.fee.schedule</field>
-            <field name="view_mode">list,form</field>
-        </record>
-
-        <record id="action_fund_sip_settings" model="ir.actions.act_window">
-            <field name="name">SIP Settings</field>
-            <field name="res_model">fund.sip.settings</field>
-            <field name="view_mode">list,form</field>
-        </record>
-
-        <record id="action_fund_tax_settings" model="ir.actions.act_window">
-            <field name="name">Tax Settings</field>
-            <field name="res_model">fund.tax.settings</field>
-            <field name="view_mode">list,form</field>
-        </record>
 
         <record id="action_data_holiday" model="ir.actions.act_window">
             <field name="name">Holidays</field>
@@ -208,23 +129,7 @@
             <field name="view_mode">list,form</field>
         </record>
 
-        <record id="action_data_country" model="ir.actions.act_window">
-            <field name="name">Countries</field>
-            <field name="res_model">data.country</field>
-            <field name="view_mode">tree,form</field>
-        </record>
 
-        <record id="action_data_city" model="ir.actions.act_window">
-            <field name="name">Cities</field>
-            <field name="res_model">data.city</field>
-            <field name="view_mode">tree,form</field>
-        </record>
-
-        <record id="action_data_ward" model="ir.actions.act_window">
-            <field name="name">Wards</field>
-            <field name="res_model">data.ward</field>
-            <field name="view_mode">tree,form</field>
-        </record>
 
         <!-- Sub menus -->
         <menuitem id="menu_fmc_master" name="Master Data" parent="menu_fmc_root" sequence="10"/>
@@ -232,19 +137,21 @@
 
         <!-- Master Data menus -->
         <menuitem id="menu_fmc_fund_certificate" name="Fund Certificates" parent="menu_fmc_master" action="action_fund_certificate" sequence="10"/>
-        <menuitem id="menu_fmc_scheme_type" name="Scheme Types" parent="menu_fmc_master" action="action_fund_scheme_type" sequence="20"/>
-        <menuitem id="menu_fmc_scheme" name="Schemes" parent="menu_fmc_master" action="action_fund_scheme" sequence="30"/>
-        <menuitem id="menu_fmc_fee_schedule" name="Fee Schedules" parent="menu_fmc_master" action="action_fund_fee_schedule" sequence="40"/>
-        <menuitem id="menu_fmc_sip_settings" name="SIP Settings" parent="menu_fmc_master" action="action_fund_sip_settings" sequence="50"/>
-        <menuitem id="menu_fmc_tax_settings" name="Tax Settings" parent="menu_fmc_master" action="action_fund_tax_settings" sequence="60"/>
+
+        <!-- URL Action for Term Rate (OWL) -->
+        <record id="action_fmc_term_rate_url" model="ir.actions.act_url">
+            <field name="name">Term/Interest Rates</field>
+            <field name="url">/term_rate_list</field>
+            <field name="target">self</field>
+        </record>
+        <menuitem id="menu_fmc_term_rate" name="Term/Interest Rates" parent="menu_fmc_master" action="action_fmc_term_rate_url" sequence="20"/>
+
 
         <!-- Data menus -->
         <menuitem id="menu_fmc_holiday" name="Holidays" parent="menu_fmc_data" action="action_data_holiday" sequence="10"/>
         <menuitem id="menu_fmc_bank" name="Banks" parent="menu_fmc_data" action="action_data_bank" sequence="20"/>
         <menuitem id="menu_fmc_bank_branch" name="Bank Branches" parent="menu_fmc_data" action="action_data_bank_branch" sequence="30"/>
-        <menuitem id="menu_fmc_country" name="Countries" parent="menu_fmc_data" action="action_data_country" sequence="40"/>
-        <menuitem id="menu_fmc_city" name="Cities" parent="menu_fmc_data" action="action_data_city" sequence="50"/>
-        <menuitem id="menu_fmc_ward" name="Wards" parent="menu_fmc_data" action="action_data_ward" sequence="60"/>
+
 
         <!-- Sync Wizard Action is defined in wizard/wizard_sync_fund_view.xml with ID: action_wizard_sync_fund_certificate -->
         <!-- Sync Wizard Action - Moved to Root Level as requested -->

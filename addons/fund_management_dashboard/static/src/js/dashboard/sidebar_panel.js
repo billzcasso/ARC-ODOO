@@ -4,20 +4,13 @@ import { Component, xml, useState } from "@odoo/owl";
 
 const PRODUCT_MENU = [
     { label: "Chứng chỉ quỹ", href: "/fund_certificate_list" },
-    { label: "Loại chương trình", href: "/scheme_type_list" },
-    { label: "Chương trình", href: "/scheme_list" },
-    { label: "Biểu phí", href: "/fee_schedule_list" },
-    { label: "Cài đặt SIP", href: "/sip_settings_list" },
-    { label: "Cài đặt Thuế", href: "/tax_settings_list" },
+    { label: "Kỳ hạn / Lãi suất", href: "/term_rate_list" },
 ];
 
 const DATA_MENU = [
     { label: "Ngày lễ", href: "/holiday_list" },
     { label: "Ngân hàng", href: "/bank_list" },
     { label: "Chi nhánh ngân hàng", href: "/bank_branch_list" },
-    { label: "Quốc gia", href: "/country_list" },
-    { label: "Thành phố (tỉnh)", href: "/city_list" },
-    { label: "Phường (xã)", href: "/ward_list" },
 ];
 
 const USER_MENU = [

@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- LIST VIEW TEMPLATE -->
+    <template id="term_rate_list" name="Term Rates">
+        <t t-call="web.layout">
+            <t t-set="title" name="Kỳ hạn / Lãi suất" />
+            <t t-call-assets="web.assets_backend" t-js="true"/>
+            <t t-set="head">
+                <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+                <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+                <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+            </t>
+
+            <!-- Header Container for Management -->
+            <div id="headermana-container"></div>
+
+            <div class="fund-management-container">
+                <div class="dashboard-shell">
+                    <!-- Sidebar Widget Container -->
+                    <div id="sidebarWidget"></div>
+
+                    <!-- Main Content -->
+                    <main class="dashboard-main">
+                        <div id="termRateWidget">
+                            <div class="d-flex justify-content-center align-items-center" style="height: 300px;">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- FORM VIEW TEMPLATE (Create) -->
+    <template id="term_rate_form" name="New Term Rate">
+        <t t-call="web.layout">
+            <t t-set="title" name="Tạo Mới Kỳ hạn" />
+            <t t-call-assets="web.assets_backend" t-js="true"/>
+            <t t-set="head">
+                <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+                <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+                <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+            </t>
+
+            <div id="headermana-container"></div>
+
+            <div class="fund-management-container">
+                <div class="dashboard-shell">
+                    <div id="sidebarWidget"></div>
+                    <main class="dashboard-main p-4">
+                        <div class="card-fmc w-100" style="max-width: 800px; margin: 0 auto;">
+                            <div class="card-header bg-white border-bottom py-3">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-plus-circle me-2 text-primary"></i>Tạo cấu hình lãi suất mới</h5>
+                            </div>
+                            <div class="card-body">
+                                <form action="/term_rate/create" method="POST">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Kỳ hạn (tháng) <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="number" name="term_months" class="form-control" required="required" min="0"/>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Lãi suất (%) <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="number" step="0.01" name="interest_rate" class="form-control" required="required"/>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Ngày hiệu lực <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="date" name="effective_date" class="form-control" required="required" t-att-value="datetime.date.today().strftime('%Y-%m-%d')"/>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Ngày kết thúc</label>
+                                            <input type="date" name="end_date" class="form-control"/>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label fw-bold">Mô tả</label>
+                                            <textarea name="description" class="form-control" rows="3"></textarea>
+                                        </div>
+                                        <div class="col-12">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" name="active" checked="checked"/>
+                                                <label class="form-check-label fw-bold">Kích hoạt</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-12 text-end mt-4">
+                                            <a href="/term_rate_list" class="btn btn-secondary me-2">Hủy</a>
+                                            <button type="submit" class="btn btn-primary">Lưu cấu hình</button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <!-- FORM VIEW TEMPLATE (Edit) -->
+    <template id="term_rate_edit_form" name="Edit Term Rate">
+        <t t-call="web.layout">
+            <t t-set="title" name="Chỉnh sửa Kỳ hạn" />
+            <t t-call-assets="web.assets_backend" t-js="true"/>
+            <t t-set="head">
+                <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+                <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+                <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+            </t>
+
+            <div id="headermana-container"></div>
+
+            <div class="fund-management-container">
+                <div class="dashboard-shell">
+                    <div id="sidebarWidget"></div>
+                    <main class="dashboard-main p-4">
+                        <div class="card-fmc w-100" style="max-width: 800px; margin: 0 auto;">
+                            <div class="card-header bg-white border-bottom py-3">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-edit me-2 text-primary"></i>Cập nhật cấu hình lãi suất</h5>
+                            </div>
+                            <div class="card-body">
+                                <form action="/term_rate/update" method="POST">
+                                    <input type="hidden" name="id" t-att-value="rate.id"/>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Kỳ hạn (tháng) <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="number" name="term_months" class="form-control" required="required" min="0" t-att-value="rate.term_months"/>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Lãi suất (%) <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="number" step="0.01" name="interest_rate" class="form-control" required="required" t-att-value="rate.interest_rate"/>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Ngày hiệu lực <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="date" name="effective_date" class="form-control" required="required" t-att-value="rate.effective_date"/>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold">Ngày kết thúc</label>
+                                            <input type="date" name="end_date" class="form-control" t-att-value="rate.end_date"/>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label fw-bold">Mô tả</label>
+                                            <textarea name="description" class="form-control" rows="3" t-esc="rate.description"></textarea>
+                                        </div>
+                                        <div class="col-12">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" name="active" t-att-checked="'checked' if rate.active else None"/>
+                                                <label class="form-check-label fw-bold">Kích hoạt</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-12 text-end mt-4">
+                                            <a href="/term_rate_list" class="btn btn-secondary me-2">Hủy</a>
+                                            <button type="submit" class="btn btn-primary">Cập nhật</button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>

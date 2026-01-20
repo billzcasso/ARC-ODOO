@@ -26,7 +26,6 @@ Key Features:
         'web',
         # FMS Modules
         'fund_management',          # Fund base models
-        'fund_management_control',  # Fund certificate data
     ],
     'data': [
         # Security

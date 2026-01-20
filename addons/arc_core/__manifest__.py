@@ -41,7 +41,6 @@ Purpose:
         'stock_trading',
         'transaction_management',
         'order_matching',
-        'transaction_list',
         # NAV & Overview
         'nav_management',
         'overview_fund_management',

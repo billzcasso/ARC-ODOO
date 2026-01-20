@@ -21,13 +21,13 @@ export class InvestorListWidget extends Component {
             <div class="bo-stat-card__label">Tổng NĐT</div>
           </div>
           
-          <div class="bo-stat-card bo-stat-card--clickable bo-stat-card--danger" t-on-click="() => this.setActiveTab('pending')">
+          <div class="bo-stat-card bo-stat-card--clickable bo-stat-card--danger" t-on-click="() => this.setActiveTab('draft')">
             <div class="bo-stat-card__header">
               <div class="bo-stat-card__icon bo-stat-card__icon--danger">
                 <i class="fas fa-exclamation-triangle"></i>
               </div>
             </div>
-            <div class="bo-stat-card__value"><t t-esc="state.incompleteCount || 0"/></div>
+            <div class="bo-stat-card__value"><t t-esc="state.draftCount || 0"/></div>
             <div class="bo-stat-card__label">Chưa cập nhật</div>
           </div>
           
@@ -69,7 +69,7 @@ export class InvestorListWidget extends Component {
               <i class="fas fa-list"></i>
               <span>Danh sách NĐT</span>
             </button>
-            <button class="bo-tabs__tab" t-att-class="state.activeTab === 'pending' ? 'active' : ''" t-on-click="() => this.setActiveTab('pending')">
+            <button class="bo-tabs__tab" t-att-class="state.activeTab === 'draft' ? 'active' : ''" t-on-click="() => this.setActiveTab('draft')">
               <i class="fas fa-exclamation-triangle"></i>
               <span>Chưa cập nhật</span>
             </button>
@@ -97,7 +97,7 @@ export class InvestorListWidget extends Component {
           </div>
           
           <!-- Status Filter Pills -->
-          <div class="bo-filter-pills" t-if="state.activeTab !== 'pending'">
+          <div class="bo-filter-pills" t-if="state.activeTab !== 'draft'">
             <button t-att-class="'bo-filter-pill bo-filter-pill--warning ' + (state.statusFilter === 'pending' ? 'active' : '')" t-on-click="() => this.setStatusFilter('pending')">
               <i class="fas fa-clock"></i>
               <span>Chờ KYC</span>
@@ -386,11 +386,11 @@ export class InvestorListWidget extends Component {
       totalPages: 1,
       pageNumbers: [],
       totalInvestors: 0,
-      incompleteCount: 0,
+      draftCount: 0,
       pendingCount: 0,
-      kycCount: 0,
+      activeCount: 0,
       vsdCount: 0,
-      vsdCount: 0,
+      rejectedCount: 0,
       dateFrom: new Date().toISOString().split('T')[0],
       dateFilter: 'custom', // Use custom date filter
       sortField: 'open_date',
@@ -527,7 +527,7 @@ export class InvestorListWidget extends Component {
             method: 'search_read',
             args: [],
             kwargs: {
-              fields: ['open_date', 'account_number', 'partner_name', 'id_number', 'phone', 'email', 'province_city', 'source', 'bda_user', 'status'],
+              fields: ['open_date', 'account_number', 'partner_name', 'id_number', 'phone', 'email', 'province_city', 'status', 'account_status', 'profile_status'],
               limit: 1000
             }
           }
@@ -582,7 +582,7 @@ export class InvestorListWidget extends Component {
             method: 'search_read',
             args: [],
             kwargs: {
-              fields: ['open_date', 'account_number', 'partner_name', 'id_number', 'phone', 'email', 'province_city', 'source', 'bda_user', 'status'],
+              fields: ['open_date', 'account_number', 'partner_name', 'id_number', 'phone', 'email', 'province_city', 'status', 'account_status', 'profile_status'],
               limit: 1000
             }
           }
@@ -727,10 +727,12 @@ export class InvestorListWidget extends Component {
     let filtered = this.state.investors;
 
     // Áp dụng tab filter trước
-    if (this.state.activeTab === 'pending') {
-      filtered = filtered.filter(investor => investor.status === 'incomplete');
+    if (this.state.activeTab === 'draft') {
+      // Tab "Chưa cập nhật" - chỉ hiển thị draft
+      filtered = filtered.filter(investor => investor.status === 'draft');
     } else {
-      filtered = filtered.filter(investor => ['pending', 'kyc', 'vsd'].includes(investor.status));
+      // Tab "Danh sách NĐT" - chỉ hiển thị pending, active, vsd (loại bỏ draft và rejected)
+      filtered = filtered.filter(investor => ['pending', 'active', 'vsd'].includes(investor.status));
       
       // Áp dụng status filter nếu có
       if (this.state.statusFilter && this.state.statusFilter !== null) {
@@ -829,7 +831,7 @@ export class InvestorListWidget extends Component {
 
   setActiveTab(tab) {
     this.state.activeTab = tab;
-    if (tab === 'pending') {
+    if (tab === 'draft') {
       this.state.statusFilter = null;
     }
     this.applyFilters();
@@ -837,7 +839,7 @@ export class InvestorListWidget extends Component {
 
   calculateStats() {
     this.state.totalInvestors = this.state.investors.length;
-    this.state.incompleteCount = this.state.investors.filter(investor => investor.status === 'draft').length;
+    this.state.draftCount = this.state.investors.filter(investor => investor.status === 'draft').length;
     this.state.pendingCount = this.state.investors.filter(investor => investor.status === 'pending').length;
     this.state.activeCount = this.state.investors.filter(investor => investor.status === 'active').length;
     this.state.vsdCount = this.state.investors.filter(investor => investor.status === 'vsd').length;

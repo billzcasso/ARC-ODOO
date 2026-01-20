@@ -24,6 +24,9 @@ class StatusInfo(models.Model):
     
     # New Field for Auto-Approval Logic
     ekyc_verified = fields.Boolean(string="eKYC Verified", default=False, readonly=True)
+    
+    # Relationship Manager
+    rm_id = fields.Many2one('res.users', string='Relationship Manager')
 
     @api.model
     def create(self, vals):
@@ -40,7 +43,7 @@ class StatusInfo(models.Model):
             while True:
                 # Use secrets for cryptographically strong random numbers
                 random_digits = ''.join(secrets.choice(string.digits) for _ in range(5))
-                account_number = f"HDC{random_digits}"
+                account_number = f"ARC{random_digits}"
                 # Check uniqueness
                 if not self.search([('account_number', '=', account_number)]):
                     vals['account_number'] = account_number

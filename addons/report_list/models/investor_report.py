@@ -23,18 +23,7 @@ class InvestorReport(models.Model):
         ('pending', 'Chờ duyệt'),
     ], string='Trạng thái', default='pending', required=True)
 
-    customer_type = fields.Selection([
-        ('personal', 'Cá nhân'),
-        ('organization', 'Tổ chức'),
-    ], string='Loại KH (CN/TC)')
 
-    nationality_type = fields.Selection([
-        ('domestic', 'Trong nước'),
-        ('foreign', 'Nước ngoài'),
-    ], string='Quốc tịch (TN/NN)')
-
-    account_manager_id = fields.Many2one('res.users', string='Nhân viên chăm sóc (NVCS)')
-    unit = fields.Char(string='Đơn vị')
     
     @api.model
     def _build_domain(self, filters):
@@ -46,10 +35,7 @@ class InvestorReport(models.Model):
             domain.append(('create_date', '<=', filters['date_to']))
         if filters.get('status') and filters['status'] != 'all':
             domain.append(('status', '=', filters['status']))
-        if filters.get('customer_type') and filters['customer_type'] != 'all':
-            domain.append(('customer_type', '=', filters['customer_type']))
-        if filters.get('nationality_type') and filters['nationality_type'] != 'all':
-            domain.append(('nationality_type', '=', filters['nationality_type']))
+
         
         # Search term logic
         if filters.get('search_term'):
@@ -85,10 +71,7 @@ class InvestorReport(models.Model):
                 'phone_number': rec.phone_number,
                 'email': rec.email,
                 'status': dict(rec._fields['status'].selection).get(rec.status),
-                'customer_type': dict(rec._fields['customer_type'].selection).get(rec.customer_type),
-                'nationality_type': dict(rec._fields['nationality_type'].selection).get(rec.nationality_type),
-                'account_manager': rec.account_manager_id.name or '',
-                'unit': rec.unit or '',
+
             })
 
         return {
@@ -117,9 +100,6 @@ class InvestorReport(models.Model):
                 'phone_number': rec.phone_number,
                 'email': rec.email,
                 'status': dict(rec._fields['status'].selection).get(rec.status),
-                'customer_type': dict(rec._fields['customer_type'].selection).get(rec.customer_type),
-                'nationality_type': dict(rec._fields['nationality_type'].selection).get(rec.nationality_type),
-                'account_manager': rec.account_manager_id.name or '',
-                'unit': rec.unit or '',
+
             })
         return export_data

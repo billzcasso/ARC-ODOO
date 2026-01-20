@@ -1,22 +1,10 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_fund_certificate,access.fund.certificate,model_fund_certificate,base.group_user,1,1,1,1
-access_fund_scheme_type,access.fund.scheme.type,model_fund_scheme_type,base.group_user,1,1,1,1
-access_fund_scheme,access.fund.scheme,model_fund_scheme,base.group_user,1,1,1,1
-access_fund_fee_schedule,access.fund.fee.schedule,model_fund_fee_schedule,base.group_user,1,1,1,1
-access_fund_fee_schedule_admin,access.fund.fee.schedule.admin,model_fund_fee_schedule,base.group_user,1,1,1,1
-access_fund_sip_settings,access.fund.sip.settings,model_fund_sip_settings,base.group_user,1,1,1,1
-access_fund_tax_settings,access.fund.tax.settings,model_fund_tax_settings,base.group_user,1,1,1,1
 access_auto_fund_certificate_creator,access.auto.fund.certificate.creator,model_auto_fund_certificate_creator,base.group_user,1,1,1,0
 
 access_data_holiday,access.data.holiday,model_data_holiday,base.group_user,1,1,1,1
 access_data_bank,access.data.bank,model_data_bank,base.group_user,1,1,1,1
 access_data_bank_branch,access.data.bank.branch,model_data_bank_branch,base.group_user,1,1,1,1
-access_data_country,access.data.country,model_data_country,base.group_user,1,1,1,1
-access_data_city,access.data.city,model_data_city,base.group_user,1,1,1,1
-access_data_ward,access.data.ward,model_data_ward,base.group_user,1,1,1,1
 
 access_data_bank_portal,access.data.bank.portal,model_data_bank,base.group_portal,1,0,0,0
 access_data_bank_branch_portal,access.data.bank.branch.portal,model_data_bank_branch,base.group_portal,1,0,0,0
-access_data_country_portal,access.data.country.portal,model_data_country,base.group_portal,1,0,0,0
-access_data_city_portal,access.data.city.portal,model_data_city,base.group_portal,1,0,0,0
-access_data_ward_portal,access.data.ward.portal,model_data_ward,base.group_portal,1,0,0,0

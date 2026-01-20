@@ -1,19 +1,11 @@
     /** @odoo-module */
 
     import { FundCertificateWidget } from './fund_certificate_widget';
-    import { SidebarPanel } from "@fund_management_dashboard/js/dashboard/sidebar_panel";
+
     import { mount } from "@odoo/owl";
 
     document.addEventListener('DOMContentLoaded', async () => {
-        // Mount Sidebar
-        const sidebarContainer = document.getElementById("sidebarWidget");
-        if (sidebarContainer) {
-            try {
-                await mount(SidebarPanel, sidebarContainer);
-            } catch (e) {
-                console.error("Failed to mount SidebarPanel", e);
-            }
-        }
+
 
         // Mount FundCertificateWidget
         const widgetContainer = document.getElementById("fundCertificateWidget");

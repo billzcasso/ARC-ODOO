@@ -90,13 +90,6 @@ export class Header extends Component {
                 <i class="fas fa-exchange-alt"></i> Giao dịch
               </div>
               <div class="bo-nav-dropdown__body">
-                <a href="/transaction-list" class="bo-nav-dropdown__item" t-att-class="state.currentPage === 'transaction' ? 'active' : ''" t-on-click="closeTransactionDropdown">
-                  <div class="bo-nav-dropdown__icon bo-nav-dropdown__icon--blue"><i class="fas fa-list"></i></div>
-                  <div class="bo-nav-dropdown__text">
-                    <div class="title">Danh sách giao dịch</div>
-                    <div class="desc">Quản lý danh sách giao dịch</div>
-                  </div>
-                </a>
                 <a href="/order-book" class="bo-nav-dropdown__item" t-att-class="state.currentPage === 'order-book' ? 'active' : ''" t-on-click="closeTransactionDropdown">
                   <div class="bo-nav-dropdown__icon bo-nav-dropdown__icon--green"><i class="fas fa-book"></i></div>
                   <div class="bo-nav-dropdown__text">
@@ -190,7 +183,7 @@ export class Header extends Component {
             <span>Nhà đầu tư</span>
             <i class="fas fa-chevron-right"></i>
           </a>
-          <a href="/transaction-list" class="bo-mobile-menu__link" t-att-class="state.currentPage === 'transaction' ? 'active' : ''">
+          <a href="/order-book" class="bo-mobile-menu__link" t-att-class="state.currentPage === 'transaction' ? 'active' : ''">
             <i class="fas fa-exchange-alt"></i>
             <span>Giao dịch</span>
             <i class="fas fa-chevron-right"></i>

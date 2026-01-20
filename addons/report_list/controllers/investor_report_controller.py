@@ -47,8 +47,7 @@ class InvestorReportController(http.Controller):
                     domain.append(('account_number', 'ilike', search_values['account_number']))
                 if search_values.get('customer_name'):
                     domain.append(('partner_name', 'ilike', search_values['customer_name']))
-                if search_values.get('account_manager'):
-                    domain.append(('bda_user.name', 'ilike', search_values['account_manager']))
+
             
             # Lấy records với pagination
             offset = (int(page) - 1) * int(limit)
@@ -102,17 +101,9 @@ class InvestorReportController(http.Controller):
                 if account_status == 'inactive' and record.write_date:
                     close_date = record.write_date.strftime('%d/%m/%Y')
                 
-                # Xác định loại khách hàng
-                customer_type = 'CN' if record.status in ['kyc', 'vsd'] else 'TC'
+
                 
-                # Lấy account manager từ status_info
-                account_manager = ''
-                if status_info and status_info.rm_id:
-                    account_manager = status_info.rm_id.name
-                elif status_info and status_info.bda_id:
-                    account_manager = status_info.bda_id.name
-                elif record.bda_user:
-                    account_manager = record.bda_user.name
+
                 
                 data.append({
                     'id': record.id,
@@ -130,10 +121,7 @@ class InvestorReportController(http.Controller):
                     'open_date': record.open_date.strftime('%d/%m/%Y') if record.open_date else '',
                     'close_date': close_date,
                     'status': account_status,
-                    'customer_type': customer_type,
-                    'nationality_type': investor_profile.nationality.name if investor_profile and investor_profile.nationality else '',
-                    'account_manager': account_manager,
-                    'unit': record.source or ''
+
                 })
             
             return {
@@ -178,8 +166,7 @@ class InvestorReportController(http.Controller):
                 domain.append(('account_number', 'ilike', kw['account_number']))
             if kw.get('customer_name'):
                 domain.append(('partner_name', 'ilike', kw['customer_name']))
-            if kw.get('account_manager'):
-                domain.append(('bda_user.name', 'ilike', kw['account_manager']))
+
             
             records = request.env['investor.list'].search(domain)
             
@@ -230,17 +217,9 @@ class InvestorReportController(http.Controller):
                 if account_status == 'inactive' and record.write_date:
                     close_date = record.write_date.strftime('%d/%m/%Y')
                 
-                # Xác định loại khách hàng
-                customer_type = 'CN' if record.status in ['kyc', 'vsd'] else 'TC'
+
                 
-                # Lấy account manager từ status_info
-                account_manager = ''
-                if status_info and status_info.rm_id:
-                    account_manager = status_info.rm_id.name
-                elif status_info and status_info.bda_id:
-                    account_manager = status_info.bda_id.name
-                elif record.bda_user:
-                    account_manager = record.bda_user.name
+
                 
                 export_data.append({
                     'stt': i + 1,
@@ -257,10 +236,7 @@ class InvestorReportController(http.Controller):
                     'open_date': record.open_date.strftime('%d/%m/%Y') if record.open_date else '',
                     'close_date': close_date,
                     'status': account_status,
-                    'customer_type': customer_type,
-                    'nationality_type': investor_profile.nationality.name if investor_profile and investor_profile.nationality else '',
-                    'account_manager': account_manager,
-                    'unit': record.source or ''
+
                 })
             
             records = export_data
@@ -286,9 +262,7 @@ class InvestorReportController(http.Controller):
             'filters': {
                 'date_from': date_from,
                 'date_to': date_to,
-                'status': kw.get('status'),
-                'customer_type': kw.get('customer_type'),
-                'nationality_type': kw.get('nationality_type'),
+
                 'search_term': kw.get('search_term')
             },
             'report_date_range': report_date_range,
@@ -341,8 +315,7 @@ class InvestorReportController(http.Controller):
                 domain.append(('account_number', 'ilike', kw['account_number']))
             if kw.get('customer_name'):
                 domain.append(('partner_name', 'ilike', kw['customer_name']))
-            if kw.get('account_manager'):
-                domain.append(('bda_user.name', 'ilike', kw['account_manager']))
+
             
             records = request.env['investor.list'].search(domain)
             
@@ -393,17 +366,9 @@ class InvestorReportController(http.Controller):
                 if account_status == 'inactive' and record.write_date:
                     close_date = record.write_date.strftime('%d/%m/%Y')
                 
-                # Xác định loại khách hàng
-                customer_type = 'CN' if record.status in ['kyc', 'vsd'] else 'TC'
+
                 
-                # Lấy account manager từ status_info
-                account_manager = ''
-                if status_info and status_info.rm_id:
-                    account_manager = status_info.rm_id.name
-                elif status_info and status_info.bda_id:
-                    account_manager = status_info.bda_id.name
-                elif record.bda_user:
-                    account_manager = record.bda_user.name
+
                 
                 export_data.append({
                     'stt': i + 1,
@@ -420,10 +385,7 @@ class InvestorReportController(http.Controller):
                     'open_date': record.open_date.strftime('%d/%m/%Y') if record.open_date else '',
                     'close_date': close_date,
                     'status': account_status,
-                    'customer_type': customer_type,
-                    'nationality_type': investor_profile.nationality.name if investor_profile and investor_profile.nationality else '',
-                    'account_manager': account_manager,
-                    'unit': record.source or ''
+
                 })
             
             records = export_data
@@ -440,7 +402,7 @@ class InvestorReportController(http.Controller):
         headers = [
             'STT', 'Số TK', 'TK GDCK', 'Khách hàng', 'Số CCCD/CC/GPKD', 'Ngày cấp', 'Nơi cấp', 
             'Địa chỉ thường trú', 'Địa chỉ liên hệ', 'Số điện thoại', 'Email', 
-            'Trạng thái', 'Loại KH', 'TN/NN', 'NVCS', 'Đơn vị'
+            'Trạng thái'
         ]
         sheet.append(headers)
 
@@ -458,9 +420,7 @@ class InvestorReportController(http.Controller):
             row = [
                 rec.get('stt'), rec.get('account_number'), rec.get('trading_account'), rec.get('customer_name'),
                 rec.get('id_number'), rec.get('id_issue_date'), rec.get('id_issue_place'), rec.get('permanent_address'),
-                rec.get('contact_address'), rec.get('phone_number'), rec.get('email'), rec.get('status'),
-                rec.get('customer_type'), rec.get('nationality_type'),
-                rec.get('account_manager'), rec.get('unit')
+                rec.get('contact_address'), rec.get('phone_number'), rec.get('email'), rec.get('status')
             ]
             sheet.append(row)
 

@@ -61,33 +61,23 @@ class ReportBalanceWidget extends Component {
                                 <th>Khách hàng</th>
                                 <th>Mã CK</th>
                                 <th>Số lượng</th>
-                                <th>CN/TC</th>
-                                <th>TN/NN</th>
-                                <th>NVCS</th>
-                                <th>Đơn vị</th>
+                                <th>Tổng giá trị</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr t-if="!state.records || state.records.length === 0">
-                                <td colspan="10" class="text-center py-3" style="font-size: 0.85rem;">
+                                <td colspan="7" class="text-center py-3" style="font-size: 0.85rem;">
                                     <i class="fas fa-inbox me-2"></i>Không có dữ liệu báo cáo số dư
                                 </td>
                             </tr>
                             <tr t-foreach="state.records" t-as="record" t-key="record.id">
                                 <td t-esc="state.records.indexOf(record) + 1"/>
-                                <td t-esc="record.trading_account || ''"/>
+                                <td t-esc="record.account_number || ''"/>
                                 <td t-esc="record.trading_account || ''"/>
                                 <td t-esc="record.investor_name || ''"/>
                                 <td t-esc="record.program_ticker || ''"/>
-                                <td t-esc="record.ccq_quantity || 0"/>
-                                <td>
-                                    <span t-if="record.investor_type" 
-                                          t-att-class="'chip-customer-type ' + this.getCustomerTypeChipClass(record.investor_type)"
-                                          t-esc="this.getCustomerTypeLabel(record.investor_type)"/>
-                                </td>
-                                <td t-esc="record.nationality || ''"/>
-                                <td t-esc="record.sales_staff || ''"/>
-                                <td t-esc="record.currency || 'VND'"/>
+                                <td t-esc="this.formatNumber(record.ccq_quantity)"/>
+                                <td t-esc="this.formatCurrency(record.amount)"/>
                             </tr>
                         </tbody>
                     </table>
@@ -110,6 +100,25 @@ class ReportBalanceWidget extends Component {
                 </div>
             </div>
         `;
+
+    formatNumber(value) {
+        if (value === undefined || value === null) return '0';
+        return new Intl.NumberFormat('vi-VN', { 
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2 
+        }).format(value);
+    }
+
+    formatCurrency(value) {
+        if (value === undefined || value === null) return '0';
+        return new Intl.NumberFormat('vi-VN', {
+            style: 'decimal', // Use decimal style but typically we want currency symbol? User just said "." 
+                              // "giá" implies currency but 'vi-VN' decimal uses dots for thousands.
+                              // Let's stick to simple number formatting with dots.
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(value);
+    }
 
     setup() {
         this.state = useState({
@@ -288,27 +297,7 @@ class ReportBalanceWidget extends Component {
         }
     }
 
-    getCustomerTypeLabel(customerType) {
-        if (!customerType) return '';
-        
-        const typeMap = {
-            'truc_tiep': 'CN',
-            'ky_danh': 'TC',
-            'Trực tiếp': 'CN',
-            'Ký danh': 'TC',
-            'Cá nhân': 'CN',
-            'Tổ chức': 'TC'
-        };
-        
-        return typeMap[customerType] || customerType;
-    }
 
-    getCustomerTypeChipClass(customerType) {
-        if (!customerType) return '';
-        
-        const isPersonal = ['truc_tiep', 'Trực tiếp', 'Cá nhân', 'CN'].includes(customerType);
-        return isPersonal ? 'chip-cn' : 'chip-tc';
-    }
 }
 
 export { ReportBalanceWidget };

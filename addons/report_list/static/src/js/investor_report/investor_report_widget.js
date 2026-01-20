@@ -25,11 +25,7 @@ class InvestorReportWidget extends Component {
                         <input id="searchCustomer" type="text" class="report-contract-statistics-filter-input" placeholder="Nhập khách hàng"
                             t-model="state.searchValues.customer_name" t-on-input="onSearchChange"/>
                     </div>
-                    <div class="report-contract-statistics-filter-group">
-                        <label class="report-contract-statistics-filter-label" for="searchAM">NVCS:</label>
-                        <input id="searchAM" type="text" class="report-contract-statistics-filter-input" placeholder="Nhập NVCS"
-                            t-model="state.searchValues.account_manager" t-on-input="onSearchChange"/>
-                    </div>
+
                 </div>
                 <div class="report-contract-statistics-filter-row">
                     <div class="report-contract-statistics-filter-group">
@@ -85,10 +81,7 @@ class InvestorReportWidget extends Component {
                                 <th style="width: 130px;">Số điện thoại</th>
                                 <th style="width: 180px;">Email</th>
                                 <th style="width: 110px;">Trạng thái</th>
-                                <th style="width: 110px;">Loại KH</th>
-                                <th style="width: 90px;">TN/NN</th>
-                                <th style="width: 120px;">NVCS</th>
-                                <th style="width: 120px;">Đơn vị</th>
+
                             </tr>
                         </thead>
                         <tbody>
@@ -114,10 +107,7 @@ class InvestorReportWidget extends Component {
                                         <t t-esc="record.status === 'active' ? 'Hoạt động' : 'Không hoạt động'"/>
                                     </span>
                                 </td>
-                                <td style="font-size: 0.8rem;" t-esc="record.customer_type or ''"/>
-                                <td style="font-size: 0.8rem;" t-esc="record.nationality_type or ''"/>
-                                <td style="font-size: 0.8rem;" t-esc="record.account_manager or ''"/>
-                                <td style="font-size: 0.8rem;" t-esc="record.unit or ''"/>
+
                             </tr>
                         </tbody>
                     </table>
@@ -153,7 +143,6 @@ class InvestorReportWidget extends Component {
             searchValues: {
                 account_number: '',
                 customer_name: '',
-                account_manager: ''
             },
             pagination: {
                 currentPage: 1,
@@ -203,10 +192,6 @@ class InvestorReportWidget extends Component {
                 phone_number: it.phone_number || it.so_dien_thoai || '',
                 email: it.email || '',
                 status: it.status || it.trang_thai || '',
-                customer_type: it.customer_type || it.loai_kh || '',
-                nationality_type: it.nationality_type || it.tn_nn || '',
-                account_manager: it.account_manager || it.nvcs || '',
-                unit: it.unit || it.don_vi || '',
             }));
             if (response.page) this.state.pagination.currentPage = response.page;
             if (response.limit) this.state.pagination.pageSize = response.limit;
@@ -264,7 +249,6 @@ class InvestorReportWidget extends Component {
         this.state.searchValues = {
             account_number: '',
             customer_name: '',
-            account_manager: ''
         };
         this.state.pagination.currentPage = 1;
         this.loadData();
