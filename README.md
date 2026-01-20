@@ -1,143 +1,102 @@
-# Fund Management System
+# Đồ án Tốt nghiệp: Hệ thống ARC (Advanced Resource & Control)
+## Thiết kế và xây dựng hệ thống quản lý giao dịch và tư vấn đầu tư thông minh chứng chỉ quỹ tích hợp trí tuệ nhân tạo
 
-**HDC-FMS** là bộ giải pháp quản lý quỹ đầu tư toàn diện xây dựng trên nền tảng Odoo, cung cấp các công cụ mạnh mẽ để quản lý giao dịch chứng chỉ quỹ (CCQ), theo dõi tài sản, khớp lệnh tự động và tích hợp dữ liệu thị trường thực.
-
-Hệ thống được thiết kế theo kiến trúc module hóa, dễ dàng mở rộng và tùy biến cho các công ty quản lý quỹ chuyên nghiệp.
-
----
-
-## 🚀 Tính Năng Chính
-
-- **Quản Lý Quỹ & NAV**: Theo dõi Net Asset Value (NAV) realtime, quản lý danh mục đầu tư đa dạng.
-- **Giao Dịch Thông Minh**: Hỗ trợ đặt lệnh (LO, ATO, ATC, MTL), khớp lệnh tự động và sổ lệnh điện tử.
-- **AI Trading Assistant**: Tích hợp trợ lý ảo AI hỗ trợ phân tích dữ liệu và gợi ý đầu tư.
-- **Cổng Thanh Toán**: Tích hợp cổng thanh toán PayOS và các phương thức chuyển khoản ngân hàng.
-- **Dữ Liệu Thị Trường**: Đồng bộ dữ liệu chứng khoán (OHLC, Index) từ các nguồn uy tín (SSI, Vietstock).
-- **Minh Bạch & Bảo Mật**: Hệ thống phân quyền chi tiết, xác thực đa lớp (2FA, Custom Auth) và lưu vết giao dịch.
+**Sinh viên thực hiện:**
+- **Trần Nguyễn Trường Phát** - 2274802010640
+- **Võ Văn Nhân** - 2274802010602
 
 ---
 
-## 📦 Danh Sách Module
+## 1. Tổng quan dự án
+Dự án tập trung vào việc hiện đại hóa quy trình quản lý và giao dịch chứng chỉ quỹ (Fund Certificates) thông qua hệ thống **ARC**. Hệ thống không chỉ dừng lại ở các nghiệp vụ quản trị truyền thống mà còn tích hợp các công nghệ tiên tiến như Trí tuệ nhân tạo (AI) để hỗ trợ ra quyết định và các giao thức bảo mật hiện đại (Digital Signature, KYC).
 
-Hệ thống bao gồm các module chính được chia theo nhóm chức năng:
-
-### 1. Quản Trị Quỹ & Tài Sản
-
-- `fund_management`: Core module quản lý thông tin quỹ, nguyên tắc đầu tư và quy trình nghiệp vụ.
-- `fund_management_control`: Các công cụ kiểm soát, cấu hình hạn mức và quy tắc tuân thủ.
-- `fund_management_dashboard`: Bảng điều khiển trực quan dành cho người quản lý (Admin Dashboard).
-- `nav_management`: Tính toán và quản lý giá trị tài sản ròng (NAV) hàng ngày/định kỳ.
-- `asset_management`: Quản lý danh mục tài sản chi tiết của từng quỹ.
-- `overview_fund_management`: Tổng quan hiệu suất hoạt động của các quỹ.
-
-### 2. Giao Dịch & Khớp Lệnh
-
-- `transaction_management`: Quản lý dòng đời giao dịch, trạng thái lệnh và lịch sử.
-- `transaction_list`: Danh sách và báo cáo chi tiết các giao dịch.
-- `stock_trading`: Module giao dịch chứng khoán cơ sở (Stocks/Etfs).
-- `order_matching`: Engine khớp lệnh nội bộ và đối ứng với thị trường.
-
-### 3. Nhà Đầu Tư & Phân Quyền
-
-- `investor_profile_management`: Quản lý hồ sơ KYC, thông tin cá nhân và tài khoản nhà đầu tư.
-- `investor_list`: Danh sách và phân nhóm nhà đầu tư.
-- `user_permission_management`: Phân quyền người dùng nội bộ chi tiết theo vai trò.
-- `custom_auth`: Tùy biến quy trình đăng nhập, xác thực và bảo mật.
-
-### 4. Dữ Liệu & Tiện Ích Mở Rộng
-
-- `stock_data`: Cập nhật và lưu trữ dữ liệu thị trường chứng khoán.
-- `ai_trading_assistant`: Chatbot/Assistant hỗ trợ ra quyết định đầu tư.
-- `payos_gateway`: Cổng thanh toán tích hợp PayOS.
-- `report_list`: Hệ thống báo cáo định kỳ và tùy chỉnh.
+**Mục tiêu chính:**
+- Tự động hóa vòng đời giao dịch chứng chỉ quỹ.
+- Cung cấp trải nghiệm đầu tư minh bạch và an toàn cho nhà đầu tư.
+- Ứng dụng AI (Deep Reinforcement Learning) trong việc phân tích thị trường và tư vấn chiến lược đầu tư.
 
 ---
 
-## 🛠️ Công Nghệ Sử Dụng
+## 2. Kiến trúc hệ thống ARC
+Hệ thống được thiết kế theo kiến trúc Layered Module trên nền tảng Odoo 18, đảm bảo tính mở rộng và khả năng bảo mật cao:
 
-- **Backend**: Python (Odoo 18 Framework).
-- **Frontend**: OWL (Odoo Web Library), JavaScript (ES6+), SCSS.
-- **Database**: PostgreSQL 13+.
-- **Infrastructure**: Docker & Docker Compose.
-- **Integration**: RESTful APIs, Webhooks.
+### A. Layer Lõi (Core Layer)
+- **`arc_core`**: Module hạt nhân đóng vai trò bộ tổng hợp phụ thuộc (dependency aggregator), giúp quản lý tập trung và giảm thiểu rủi ro xung đột giữa các thành phần.
+- **`user_permission_management` & `custom_auth`**: Hệ thống phân quyền chi tiết và xác thực đa lớp (2FA/OTP), đảm bảo an toàn dữ liệu nhà đầu tư.
 
----
+### B. Layer Nghiệp vụ (Domain Layer)
+- **`fund_management`**: Quản lý thông tin quỹ, danh mục đầu tư và quy trình Mua/Bán (Subscription/Redemption).
+- **`transaction_management`**: Cổng thông tin cho phép nhà đầu tư theo dõi trạng thái lệnh, lịch sử giao dịch và kế hoạch đầu tư định kỳ (SIP).
+- **`nav_management`**: Tính toán giá trị tài sản ròng (NAV/Unit) theo thời gian thực hoặc định kỳ dựa trên biến động thị trường.
 
-## ⚙️ Hướng Dẫn Cài Đặt (Docker)
+### C. Layer Tích hợp (Integration Layer)
+- **`stock_data`**: Đồng bộ dữ liệu thị trường (Index, OHLC) từ SSI và các đối tác tài chính.
+- **`stock_trading`**: Kết nối trực tiếp với **SSI FastConnect API**, cho phép đặt lệnh thực trên thị trường chứng khoán Việt Nam (HOSE, HNX, UPCOM).
+- **`payos_gateway`**: Tích hợp thanh toán QR-Code nhanh chóng và tiện lợi.
 
-### Yêu Cầu
-
-- Docker & Docker Compose đã được cài đặt.
-- Cấu hình file `docker-compose.yml` phù hợp với môi trường (Port, Volume).
-
-### Khởi Chạy
-
-Để khởi động toàn bộ hệ thống HDC-FMS:
-
-```bash
-# 1. Khởi động các services
-docker compose up -d
-
-# 2. Theo dõi logs (tùy chọn)
-docker compose logs -f odoo
-```
-
-### Truy Cập
-
-- **URL**: `http://localhost:8069`
-- **Tài khoản mặc định**: `admin` / `admin` (hoặc cấu hình trong file conf).
-
-### Cập Nhật Ứng Dụng
-
-Để cập nhật code mới nhất cho các module:
-
-```bash
-# Restart container để Odoo nhận code mới
-docker compose restart odoo
-
-# Update module trong giao diện Odoo (Apps -> Update App List -> Upgrade)
-# Hoặc dùng command line (nếu có script hỗ trợ)
-```
+### D. Layer Thông minh (AI Layer)
+- **`ai_trading_assistant`**: "Bộ não" của hệ thống ARC.
+    - **DRL Algorithms**: Sử dụng các thuật toán Học sâu tăng cường (PPO, A2C, SAC, TD3, DDPG) từ thư viện FinRL để tối ưu hóa danh mục đầu tư.
+    - **Technical Analysis**: Tích hợp các chỉ báo kỹ thuật (RSI, MACD, Bollinger Bands) để làm đầu vào cho mô hình AI.
+    - **AI Chatbot**: Trợ lý ảo hỗ trợ giải đáp thắc mắc và vẽ biểu đồ phân tích kỹ thuật theo yêu cầu của người dùng.
 
 ---
 
-## 🔌 API Endpoints Cơ Bản
-
-Hệ thống cung cấp các API để tích hợp với Mobile App hoặc Web Portal:
-
-### Fund Operations
-
-- `POST /api/fund/normal-order/market-info`: Lấy thông tin thị trường/quỹ để đặt lệnh.
-- `POST /api/fund/normal-order/order-types`: Lấy danh sách loại lệnh hợp lệ.
-- `POST /submit_fund_sell`: Gửi lệnh bán.
-- `POST /create_investment`: Tạo khoản đầu tư mới.
-
-### Signatures
-
-- `POST /api/append_signature`: Tích hợp ký tay vào file PDF hợp đồng.
-- `POST /api/sign`: Ký số văn bản.
-
-### Market Data
-
-- `GET /ssi/api/ohlc/daily`: Dữ liệu nến ngày.
-- `GET /ssi/api/index/daily`: Chỉ số thị trường.
+## 3. Các đặc điểm kỹ thuật nổi bật
+- **Quy trình giao dịch an toàn**: Tích hợp chữ ký số (Digital Signature) và Smart OTP ngay trên giao diện web giúp giảm thiểu rủi ro giả mạo.
+- **Real-time Monitoring**: Sử dụng **Odoo Bus Service** và **SignalR** để cập nhật giá chứng khoán và trạng thái lệnh tức thời mà không cần tải lại trang.
+- **Phân tích hiệu suất**: Hệ thống Dashboard trực quan (module `overview_fund_management`) giúp người quản lý theo dõi tốc độ tăng trưởng và hiệu suất từng quỹ.
+- **Hạ tầng hiện đại**: Triển khai trên nền tảng **Docker**, giúp hệ thống hoạt động ổn định và dễ dàng mở rộng khi lưu lượng truy cập tăng cao.
 
 ---
 
-## 📁 Cấu Trúc Thư Mục
-
-```plaintext
-HDC-FMS/
-├── addons/                     # Chứa source code các module Odoo
-│   ├── fund_management/        # Module lõi
-│   ├── stock_data/             # Module dữ liệu
-│   └── ...                     # Các module khác
-├── etc/                        # File cấu hình Odoo (odoo.conf)
-├── docker-compose.yml          # Định nghĩa container
-└── README.md                   # Tài liệu dự án
-```
+## 4. Công nghệ sử dụng
+- **Ngôn ngữ**: Python 11+, JavaScript (ESnext).
+- **Backend Framework**: Odoo 18, FastAPI (cho xử lý AI nặng).
+- **Frontend Framework**: OWL (Odoo Web Library), SCSS thời thượng.
+- **AI Libraries**: FinRL, Stable Baselines 3, Gymnasium, PyTorch.
+- **Database**: PostgreSQL 15+.
+- **Data Integration**: SSI FastConnect SDK, PayOS SDK.
 
 ---
 
-**© 2024 - 2025 HDC Fund Management System. All rights reserved.**
-Dự án nội bộ - Vui lòng không chia sẻ mã nguồn ra bên ngoài.
+## 5. Hướng dẫn khởi chạy hệ thống
+
+### Yêu cầu tiên quyết
+- Đã cài đặt **Docker** và **Docker Compose**.
+- Cấu hình file `.env` (nếu có) để thiết lập các API Key (SSI, PayOS).
+
+### Các bước thực hiện
+1. **Khởi động các container:**
+   ```bash
+   docker-compose up -d
+   ```
+2. **Kiểm tra trạng thái hệ thống:**
+   ```bash
+   docker-compose ps
+   ```
+3. **Truy cập ứng dụng:**
+   - Mở trình duyệt và truy cập: `http://localhost:8069`
+   - Tài khoản đăng nhập mặc định: `admin` / `admin`.
+
+4. **Cập nhật module (khi có thay đổi code):**
+   ```bash
+   docker-compose restart odoo
+   # Sau đó vào Apps -> Update App List -> Upgrade module 'arc_core'
+   ```
+
+---
+
+## 6. Các lỗi thường gặp và cách xử lý
+
+| Lỗi | Nguyên nhân | Cách xử lý |
+| :--- | :--- | :--- |
+| **Port 8069 already in use** | Có ứng dụng khác đang chiếm dụng cổng 8069. | Đổi cổng trong file `docker-compose.yml` (ví dụ: `8070:8069`). |
+| **Database Connection Error** | Container PostgreSQL chưa khởi động kịp hoặc sai thông số cấu hình. | Kiểm tra logs bằng `docker-compose logs db`. Đảm bảo các biến ENV về DB khớp nhau. |
+| **Module not found** | Đường dẫn `addons` trong cấu hình chưa chính xác. | Kiểm tra tham số `addons_path` trong file `etc/odoo.conf` hoặc volumes trong `docker-compose.yml`. |
+| **Internal Server Error (500)** | Lỗi logic Python hoặc thiếu thư viện phụ thuộc. | Kiểm tra logs bằng `docker-compose logs -f odoo` để tìm traceback chi tiết. |
+| **AI Model không load được** | Thiếu tài nguyên RAM hoặc thư viện `torch/finrl` chưa cài đặt đúng. | Đảm bảo server có tối thiểu 4GB RAM và kiểm tra `external_dependencies` trong manifest. |
+
+---
+*Hệ thống ARC - Giải pháp chuyển đổi số toàn diện cho ngành quản lý quỹ.*
+
