@@ -17,13 +17,12 @@
             </t>
 
             <div class="fm fm-page-wrapper">
-                <div class="main-content mx-auto w-100" style="width: 100%; max-width: 1200px; background: transparent; box-shadow: none; padding: 0 16px;">
+                <div class="main-content mx-auto w-100" style="width: 100%; max-width: 900px; background: transparent; box-shadow: none; padding: 0;">
 
                     <!-- NEW HEADER -->
                     <div id="header-container" class="mb-3"></div>
-
                     <!-- STEPPER -->
-                    <div class="fm-step-indicator">
+                    <div class="fm-step-indicator mb-4">
                         <div class="step active">
                             <div class="step-num">1</div>
                             <span class="step-text">Đặt lệnh</span>
@@ -40,10 +39,10 @@
                         </div>
                     </div>
 
-                    <div class="row g-4 fm-card-modern overflow-hidden">
+                    <div class="row g-0 fm-card-modern overflow-hidden">
                         <!-- LEFT COLUMN: INPUT FORM -->
-                        <div class="col-lg-8">
-                            <div class="bg-white rounded-3 shadow-sm p-3 h-100">
+                        <div class="col-lg-8 p-0 border-end border-light">
+                            <div class="p-4">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <h5 class="fm-section-title mb-0 text-fm-primary fw-bold" style="font-size: 1rem;">Bán chứng chỉ quỹ</h5>
 
@@ -268,22 +267,13 @@
                                         </div>
                                     </form>
                                 </div>
-
-                                <!-- DEBUG TOGGLE - DISABLED
-                                <div class="mt-4 form-check form-switch d-flex align-items-center gap-2 border-top pt-3">
-                                   <input type="checkbox" id="fund-sell-debug-toggle" class="form-check-input" style="cursor: pointer;"/>
-                                   <label class="form-check-label text-sm text-muted cursor-pointer select-none" for="fund-sell-debug-toggle" style="font-size: 0.75rem;">Debug Mode</label>
-                                </div>
-                                <div id="fund-sell-debug-warning" class="alert alert-warning mt-2 mb-0 p-2 fs-xs" style="display: none;">
-                                    <i class="fas fa-exclamation-triangle"></i> <strong>Chế độ Debug:</strong> Bỏ qua kiểm tra số dư.
-                                </div>
-                                -->
                             </div>
+                        </div>
 
 
-                            <!-- RIGHT COLUMN: SUMMARY -->
-                            <div class="col-lg-4">
-                                <div class="bg-white rounded-3 shadow-sm p-4 h-100 d-flex flex-column">
+                        <!-- RIGHT COLUMN: SUMMARY -->
+                        <div class="col-lg-4 p-0">
+                                <div class="fm-summary-section">
                                     <h5 class="fm-section-title mb-3">Tổng quan lệnh bán</h5>
 
                                     <div class="d-flex flex-column gap-3 flex-grow-1">
@@ -344,9 +334,7 @@
 
                     <!-- Signature Modal -->
                     <t t-call="fund_management.signature_modal_template"/>
-
                 </div>
-            </div>
 
             <!-- Footer Container -->
             <div id="footer-container"></div>

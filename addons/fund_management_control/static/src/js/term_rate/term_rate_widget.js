@@ -123,10 +123,15 @@ export class TermRateWidget extends Component {
                          <nav aria-label="Page navigation">
                             <ul class="pagination pagination-sm mb-0">
                                 <li t-attf-class="page-item #{state.currentPage === 1 ? 'disabled' : ''}">
-                                    <a class="page-link" href="#" t-on-click.prevent="() => this.changePage(state.currentPage - 1)">«</a>
+                                    <a class="page-link shadow-none" href="#" t-on-click.prevent="() => this.changePage(state.currentPage - 1)">«</a>
                                 </li>
+                                <t t-foreach="visiblePages" t-as="page" t-key="page_index">
+                                    <li t-attf-class="page-item #{page === state.currentPage ? 'active' : ''} #{page === '...' ? 'disabled' : ''}">
+                                        <a class="page-link shadow-none" href="#" t-on-click.prevent="() => page !== '...' &amp;&amp; this.changePage(page)" t-esc="page"/>
+                                    </li>
+                                </t>
                                 <li t-attf-class="page-item #{state.currentPage === totalPages ? 'disabled' : ''}">
-                                    <a class="page-link" href="#" t-on-click.prevent="() => this.changePage(state.currentPage + 1)">»</a>
+                                    <a class="page-link shadow-none" href="#" t-on-click.prevent="() => this.changePage(state.currentPage + 1)">»</a>
                                 </li>
                             </ul>
                         </nav>
@@ -173,9 +178,38 @@ export class TermRateWidget extends Component {
             this.loadData();
         });
     }
-    
+
     get totalPages() {
         return Math.ceil(this.state.totalRecords / this.state.limit);
+    }
+
+    get visiblePages() {
+        const current = this.state.currentPage;
+        const total = this.totalPages;
+        const delta = 2;
+        const range = [];
+        const rangeWithDots = [];
+        let l;
+
+        for (let i = 1; i <= total; i++) {
+            if (i === 1 || i === total || (i >= current - delta && i <= current + delta)) {
+                range.push(i);
+            }
+        }
+
+        for (const i of range) {
+            if (l) {
+                if (i - l === 2) {
+                    rangeWithDots.push(l + 1);
+                } else if (i - l !== 1) {
+                    rangeWithDots.push('...');
+                }
+            }
+            rangeWithDots.push(i);
+            l = i;
+        }
+
+        return rangeWithDots;
     }
 
     async loadData() {
@@ -190,7 +224,7 @@ export class TermRateWidget extends Component {
             const response = await fetch(`/get_term_rate_data?${params.toString()}`);
             if (!response.ok) throw new Error('Network error');
             const result = await response.json();
-            
+
             this.state.rates = result.records || [];
             this.state.totalRecords = result.total_records || 0;
         } catch (error) {
@@ -208,14 +242,14 @@ export class TermRateWidget extends Component {
             this.loadData();
         }, 300);
     }
-    
+
     performSearch() {
         this.state.currentPage = 1;
         this.loadData();
     }
 
     changePage(newPage) {
-         if (newPage > 0 && newPage <= this.totalPages) {
+        if (newPage > 0 && newPage <= this.totalPages) {
             this.state.currentPage = newPage;
             this.loadData();
         }
@@ -224,7 +258,7 @@ export class TermRateWidget extends Component {
     formatPercent(value) {
         return value ? value.toFixed(2) + '%' : '0.00%';
     }
-    
+
     formatDate(dateStr) {
         if (!dateStr) return '';
         const date = new Date(dateStr);
@@ -240,10 +274,10 @@ export class TermRateWidget extends Component {
     // I will try to redirect to the Odoo backend form for editing/creating to save time and complexity, 
     // OR create a simple route /term_rate/edit/<id> that renders a simple form template like FundCertificate.
     // Let's stick to the FundCertificate pattern: /term_rate/new and /term_rate/edit/<id>.
-    
+
     createNewRate() {
         // Redirect to a controller route that renders the form
-        window.location.href = '/term_rate/new'; 
+        window.location.href = '/term_rate/new';
     }
 
     handleEdit(id) {
@@ -258,7 +292,7 @@ export class TermRateWidget extends Component {
 
     async handleDelete() {
         if (!this.state.deleteTargetId) return;
-        
+
         try {
             const response = await fetch('/term_rate/delete', {
                 method: 'POST',
@@ -268,11 +302,11 @@ export class TermRateWidget extends Component {
                 body: JSON.stringify({ id: this.state.deleteTargetId })
             });
             const result = await response.json();
-            
+
             if (result.success) {
-                 const modal = bootstrap.Modal.getInstance(document.getElementById('deleteRateModal'));
-                 modal.hide();
-                 this.loadData();
+                const modal = bootstrap.Modal.getInstance(document.getElementById('deleteRateModal'));
+                modal.hide();
+                this.loadData();
             } else {
                 alert('Error: ' + result.error);
             }

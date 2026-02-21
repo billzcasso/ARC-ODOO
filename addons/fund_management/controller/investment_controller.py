@@ -59,8 +59,8 @@ class NegotiatedOrderController(http.Controller):
             skip_max_ccq = kwargs.get('skip_max_ccq', 'false').lower() in ('true', '1', 'yes')
             skip_lot_size = kwargs.get('skip_lot_size', 'false').lower() in ('true', '1', 'yes') or debug_mode
             
-            # Validation: Min 20,000 CCQ, Max 500,000 CCQ per order
-            MIN_UNITS = 20000
+            # Validation: Min 100 CCQ, Max 500,000 CCQ per order
+            MIN_UNITS = 100
             MAX_UNITS = 500000
             
             if skip_min_ccq:

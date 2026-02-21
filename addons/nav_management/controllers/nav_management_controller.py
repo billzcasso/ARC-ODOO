@@ -714,6 +714,30 @@ class NavManagementController(http.Controller):
         except Exception as e:
             return {'success': False, 'message': str(e)}
 
+    def _safe_get_capital_cost(self, cert):
+        """Safely get capital_cost from certificate, returns 0.0 if field doesn't exist."""
+        try:
+            if cert and cert.exists():
+                return float(getattr(cert, 'capital_cost', 0) or 0)
+        except Exception:
+            pass
+        return 0.0
+
+    def _build_opening_price_response(self, opening, cert):
+        """Build a standard opening price response dict."""
+        cap_percent = self._safe_get_capital_cost(cert)
+        cap_amount = opening * cap_percent / 100.0
+        opening_with_cap = opening + cap_amount
+        return {
+            'success': True,
+            'data': {
+                'opening_avg_price': opening,
+                'capital_cost_percent': cap_percent,
+                'capital_cost_amount': cap_amount,
+                'opening_price_with_capital_cost': opening_with_cap,
+            }
+        }
+
     @http.route('/nav_management/api/opening_price_today_http', type='http', auth='user', methods=['GET'])
     def get_opening_price_today_http(self, fund_id=None):
         """Endpoint HTTP trả JSON đơn giản để frontend dễ tiêu thụ, tránh JSON-RPC."""
@@ -725,58 +749,36 @@ class NavManagementController(http.Controller):
             if not fund_id:
                 return _http.Response(json.dumps({'success': False, 'message': 'Thiếu fund_id'}), status=400, content_type='application/json')
 
+            fund_id_int = int(fund_id)
             today = fields.Date.today()
             Inventory = request.env['nav.daily.inventory'].sudo()
-            inv_today = Inventory.search([('fund_id', '=', int(fund_id)), ('inventory_date', '=', today)], limit=1)
+
+            # Lấy cert 1 lần duy nhất
+            fund = request.env['portfolio.fund'].sudo().browse(fund_id_int)
+            cert = fund.certificate_id if fund and fund.exists() else None
+
+            inv_today = Inventory.search([('fund_id', '=', fund_id_int), ('inventory_date', '=', today)], limit=1)
             if inv_today and inv_today.opening_avg_price:
                 opening = float(inv_today.opening_avg_price)
-                # Lấy chi phí vốn từ fund.certificate
-                fund = request.env['portfolio.fund'].sudo().browse(int(fund_id))
-                cert = fund.certificate_id if fund else None
-                cap_percent = float(cert.capital_cost) if cert else 0.0
-                cap_amount = opening * cap_percent / 100.0
-                opening_with_cap = opening + cap_amount
-                return _http.Response(json.dumps({'success': True, 'data': {
-                    'opening_avg_price': opening,
-                    'capital_cost_percent': cap_percent,
-                    'capital_cost_amount': cap_amount,
-                    'opening_price_with_capital_cost': opening_with_cap,
-                }}), content_type='application/json')
+                payload = self._build_opening_price_response(opening, cert)
+                return _http.Response(json.dumps(payload), content_type='application/json')
 
-            inv_prev = Inventory.search([('fund_id', '=', int(fund_id)), ('inventory_date', '<', today)], order='inventory_date desc', limit=1)
+            inv_prev = Inventory.search([('fund_id', '=', fund_id_int), ('inventory_date', '<', today)], order='inventory_date desc', limit=1)
             if inv_prev and inv_prev.closing_avg_price:
                 opening = float(inv_prev.closing_avg_price)
-                # Lấy chi phí vốn từ fund.certificate
-                fund = request.env['portfolio.fund'].sudo().browse(int(fund_id))
-                cert = fund.certificate_id if fund else None
-                cap_percent = float(cert.capital_cost) if cert else 0.0
-                cap_amount = opening * cap_percent / 100.0
-                opening_with_cap = opening + cap_amount
-                return _http.Response(json.dumps({'success': True, 'data': {
-                    'opening_avg_price': opening,
-                    'capital_cost_percent': cap_percent,
-                    'capital_cost_amount': cap_amount,
-                    'opening_price_with_capital_cost': opening_with_cap,
-                }}), content_type='application/json')
+                payload = self._build_opening_price_response(opening, cert)
+                return _http.Response(json.dumps(payload), content_type='application/json')
 
             # Fallback: lấy từ fund.certificate
-            fund = request.env['portfolio.fund'].sudo().browse(int(fund_id))
-            cert = fund.certificate_id if fund else None
-            if cert:
-                opening = float(cert.initial_certificate_price or 0.0)
-                cap_percent = float(cert.capital_cost or 0.0)
-                cap_amount = opening * cap_percent / 100.0
-                opening_with_cap = opening + cap_amount
-                return _http.Response(json.dumps({'success': True, 'data': {
-                    'opening_avg_price': opening,
-                    'capital_cost_percent': cap_percent,
-                    'capital_cost_amount': cap_amount,
-                    'opening_price_with_capital_cost': opening_with_cap,
-                }}), content_type='application/json')
+            if cert and cert.exists():
+                opening = float(getattr(cert, 'initial_certificate_price', 0) or 0)
+                payload = self._build_opening_price_response(opening, cert)
+                return _http.Response(json.dumps(payload), content_type='application/json')
 
             return _http.Response(json.dumps({'success': False, 'message': 'Không tìm thấy dữ liệu opening cho quỹ'}), status=404, content_type='application/json')
         except Exception as e:
             from odoo import http as _http
+            _logger.error(f"Error in get_opening_price_today_http: {e}", exc_info=True)
             return _http.Response(json.dumps({'success': False, 'message': str(e)}), status=500, content_type='application/json')
     
     @http.route('/nav_management/api/auto_create_inventory', type='json', auth='user', methods=['POST'])
@@ -799,3 +801,41 @@ class NavManagementController(http.Controller):
             }
         except Exception as e:
             return {'success': False, 'message': str(e)}
+
+    @http.route('/nav_management/api/fund_config', type='http', auth='user', methods=['GET', 'POST'], csrf=False)
+    def get_fund_config(self, fund_id=None):
+        """Trả về cấu hình quỹ NAV (nav.fund.config) cho fund_id."""
+        try:
+            if not fund_id:
+                fund_id = request.params.get('fund_id')
+            if not fund_id:
+                return request.make_json_response(
+                    {'success': False, 'message': 'Thiếu fund_id'}, status=400)
+
+            config = request.env['nav.fund.config'].sudo().search([
+                ('fund_id', '=', int(fund_id)),
+                ('active', '=', True),
+            ], limit=1)
+
+            if not config:
+                return request.make_json_response({
+                    'success': False,
+                    'message': 'Không tìm thấy cấu hình quỹ NAV cho fund_id này',
+                })
+
+            return request.make_json_response({
+                'success': True,
+                'data': {
+                    'id': config.id,
+                    'fund_id': config.fund_id.id,
+                    'fund_name': config.fund_id.name,
+                    'initial_nav_price': config.initial_nav_price,
+                    'initial_ccq_quantity': config.initial_ccq_quantity,
+                    'capital_cost_percent': config.capital_cost_percent,
+                    'description': config.description or '',
+                    'active': config.active,
+                },
+            })
+        except Exception as e:
+            return request.make_json_response(
+                {'success': False, 'message': str(e)}, status=500)

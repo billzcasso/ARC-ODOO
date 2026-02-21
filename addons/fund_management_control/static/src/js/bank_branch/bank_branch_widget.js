@@ -19,16 +19,16 @@ class BankBranchWidget extends Component {
                 </nav>
             </div>
             <div class="d-flex align-items-center gap-2">
-                 <button t-on-click="syncBasic" t-att-disabled="state.syncing || state.syncingAll" class="btn btn-light border d-flex align-items-center gap-2">
-                    <i t-if="state.syncing" class="fas fa-spin fa-spinner"></i>
-                    <i t-else="" class="fas fa-sync"></i>
+                 <button t-on-click="syncBasic" t-att-disabled="state.syncing || state.syncingAll" class="btn btn-fmc-light d-flex align-items-center gap-2">
+                    <i t-if="state.syncing" class="fas fa-spin fa-spinner text-primary"></i>
+                    <i t-else="" class="fas fa-sync text-primary"></i>
                     <span t-if="state.syncing">Đang đồng bộ...</span>
                     <span t-else="">Đồng bộ cơ bản</span>
                 </button>
-                 <button t-on-click="syncNationwide" t-att-disabled="state.syncingAll || state.syncing" class="btn btn-light border d-flex align-items-center gap-2">
-                     <i t-if="state.syncingAll" class="fas fa-spin fa-spinner"></i>
-                    <i t-else="" class="fas fa-globe"></i>
-                    <span t-if="state.syncingAll">Toàn quốc...</span>
+                 <button t-on-click="syncNationwide" t-att-disabled="state.syncingAll || state.syncing" class="btn btn-fmc-light d-flex align-items-center gap-2">
+                     <i t-if="state.syncingAll" class="fas fa-spin fa-spinner text-primary"></i>
+                    <i t-else="" class="fas fa-globe text-primary"></i>
+                    <span t-if="state.syncingAll">Đang đồng bộ...</span>
                     <span t-else="">Đồng bộ toàn quốc</span>
                 </button>
                 <button t-on-click="createNew" class="btn btn-fmc-primary d-flex align-items-center gap-2">
@@ -145,9 +145,9 @@ class BankBranchWidget extends Component {
                                 <i class="fas fa-chevron-left"></i>
                             </a>
                         </li>
-                        <t t-foreach="Array.from({ length: totalPages }, (_, i) => i + 1)" t-as="page" t-key="page">
-                             <li t-attf-class="page-item #{page === state.currentPage ? 'active' : ''}">
-                                <a class="page-link shadow-none" href="#" t-on-click.prevent="() => this.changePage(page)" t-esc="page"/>
+                        <t t-foreach="visiblePages" t-as="page" t-key="page_index">
+                             <li t-attf-class="page-item #{page === state.currentPage ? 'active' : ''} #{page === '...' ? 'disabled' : ''}">
+                                <a class="page-link shadow-none" href="#" t-on-click.prevent="() => page !== '...' &amp;&amp; this.changePage(page)" t-esc="page"/>
                             </li>
                         </t>
                          <li t-attf-class="page-item #{state.currentPage === totalPages ? 'disabled' : ''}">
@@ -175,6 +175,35 @@ class BankBranchWidget extends Component {
         onMounted(() => this.loadData());
     }
     get totalPages() { return Math.ceil(this.state.totalRecords / this.state.limit); }
+
+    get visiblePages() {
+        const current = this.state.currentPage;
+        const total = this.totalPages;
+        const delta = 2;
+        const range = [];
+        const rangeWithDots = [];
+        let l;
+
+        for (let i = 1; i <= total; i++) {
+            if (i === 1 || i === total || (i >= current - delta && i <= current + delta)) {
+                range.push(i);
+            }
+        }
+
+        for (const i of range) {
+            if (l) {
+                if (i - l === 2) {
+                    rangeWithDots.push(l + 1);
+                } else if (i - l !== 1) {
+                    rangeWithDots.push('...');
+                }
+            }
+            rangeWithDots.push(i);
+            l = i;
+        }
+
+        return rangeWithDots;
+    }
     async loadData() {
         this.state.loading = true;
         const url = `/get_bank_branch_data?page=${this.state.currentPage}&limit=${this.state.limit}&search=${encodeURIComponent(this.state.searchTerm.trim())}`;

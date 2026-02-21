@@ -121,22 +121,32 @@ export class DashboardWidget extends Component {
                             </div>
                     </section>
 
+                    <!-- NEW: Chart Sections -->
                     <section class="dashboard-section">
-                        <div class="section-header">
-                            <div>
-                                <p class="section-kicker">Lượt truy cập</p>
-                                <h3>Thống kê lượt truy cập</h3>
+                        <div class="two-column">
+                            <div class="panel chart-panel">
+                                <div class="section-header">
+                                    <div>
+                                        <p class="section-kicker">Xu hướng</p>
+                                        <h3>Biểu đồ giao dịch</h3>
+                                    </div>
+                                </div>
+                                <div class="chart-container">
+                                    <canvas id="transactionTrendChart"></canvas>
+                                </div>
                             </div>
+                            <div class="panel chart-panel">
+                                <div class="section-header">
+                                    <div>
+                                        <p class="section-kicker">Phân bổ</p>
+                                        <h3>Tỷ trọng danh mục đầu tư</h3>
+                                    </div>
+                                </div>
+                                <div class="chart-container">
+                                    <canvas id="fundDistributionChart"></canvas>
+                                </div>
                             </div>
-                        <div class="traffic-grid">
-                            <t t-foreach="this.getTrafficStats()" t-as="stat" t-key="stat.label">
-                                <div class="traffic-card">
-                                    <p class="label" t-esc="stat.label"/>
-                                    <h4 t-esc="stat.value"/>
-                                    <p class="description" t-if="stat.description" t-esc="stat.description"/>
                         </div>
-                            </t>
-                    </div>
                     </section>
 
                 </main>
@@ -250,15 +260,15 @@ export class DashboardWidget extends Component {
                     id: Math.floor(Math.random() * 1000000)
                 }),
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const jsonRpcResponse = await response.json();
             // Với type='json', Odoo trả về JSON-RPC format: {jsonrpc: '2.0', id: null, result: {...}}
             const data = jsonRpcResponse.result || jsonRpcResponse;
-            
+
             if (data && data.success) {
                 // Nếu user là fund_operator, ẩn sidebar
                 if (data.user_type === 'fund_operator') {
@@ -279,7 +289,7 @@ export class DashboardWidget extends Component {
     startRealtimeClock() {
         // Update time immediately
         this.updateCurrentTime();
-        
+
         // Update every second
         this.clockInterval = setInterval(() => {
             this.updateCurrentTime();
@@ -288,7 +298,7 @@ export class DashboardWidget extends Component {
 
     updateCurrentTime() {
         const now = new Date();
-        
+
         // Format thời gian theo định dạng: HH:mm:ss DD/MM/YYYY
         const hours = String(now.getHours()).padStart(2, '0');
         const minutes = String(now.getMinutes()).padStart(2, '0');
@@ -296,7 +306,7 @@ export class DashboardWidget extends Component {
         const day = String(now.getDate()).padStart(2, '0');
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const year = now.getFullYear();
-        
+
         this.state.currentTime = `${hours}:${minutes}:${seconds} ${day}/${month}/${year}`;
     }
 
@@ -337,7 +347,7 @@ export class DashboardWidget extends Component {
             this.state.balance_metrics,
             this.computeBalanceMetrics(transactionStats, this.state.summary)
         );
-        
+
         // Render charts after state update
         this.renderCharts();
     }
@@ -359,8 +369,6 @@ export class DashboardWidget extends Component {
                 setTimeout(() => {
                     this.renderTransactionTrendChart();
                     this.renderFundDistributionChart();
-                    this.renderBuySellComparisonChart();
-                    this.renderNavOpeningPriceChart();
                 }, 100);
             } else {
                 // Retry after 100ms if Chart.js not loaded yet
@@ -372,148 +380,52 @@ export class DashboardWidget extends Component {
 
     renderTransactionTrendChart() {
         const ctx = document.getElementById('transactionTrendChart');
-        if (!ctx) {
-            console.warn('transactionTrendChart canvas not found');
-            return;
-        }
+        if (!ctx) return;
 
-        // Check if Chart.js is available
-        if (typeof Chart === 'undefined') {
-            console.error('Chart.js is not loaded');
-            return;
-        }
-
-        // Destroy existing chart if exists
         if (this.transactionTrendChart) {
             this.transactionTrendChart.destroy();
         }
 
         const trendData = this.state.transaction_trend;
         if (!trendData || !trendData.labels || !trendData.buy_data || !trendData.sell_data) {
-            console.warn('Transaction trend data not available; chart skipped.');
             return;
         }
 
-        const labels = trendData.labels;
-        const buyData = trendData.buy_data;
-        const sellData = trendData.sell_data;
-
-        // Nếu không có dữ liệu, không vẽ chart
-        if (labels.length === 0 || (buyData.length === 0 && sellData.length === 0)) {
-            console.warn('No data to render transaction trend chart');
-            return;
-        }
-
-        try {
-            this.transactionTrendChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Lệnh mua',
-                        data: buyData,
-                        borderColor: '#198754',
-                        backgroundColor: 'rgba(25, 135, 84, 0.15)',
-                        borderWidth: 3,
-                        pointRadius: 5,
-                        pointHoverRadius: 7,
-                        pointBackgroundColor: '#198754',
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 2,
-                        tension: 0.4,
-                        fill: true
-                    }, {
-                        label: 'Lệnh bán',
-                        data: sellData,
-                        borderColor: '#dc3545',
-                        backgroundColor: 'rgba(220, 53, 69, 0.15)',
-                        borderWidth: 3,
-                        pointRadius: 5,
-                        pointHoverRadius: 7,
-                        pointBackgroundColor: '#dc3545',
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 2,
-                        tension: 0.4,
-                        fill: true
-                    }]
+        this.transactionTrendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: trendData.labels,
+                datasets: [{
+                    label: 'Lệnh mua',
+                    data: trendData.buy_data,
+                    borderColor: '#22c55e',
+                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                }, {
+                    label: 'Lệnh bán',
+                    data: trendData.sell_data,
+                    borderColor: '#ef4444',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+                    tooltip: { mode: 'index', intersect: false }
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    layout: {
-                        padding: {
-                            top: 10,
-                            bottom: 10,
-                            left: 10,
-                            right: 10
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                            labels: {
-                                font: {
-                                    size: 14,
-                                    weight: '600'
-                                },
-                                padding: 15,
-                                usePointStyle: true,
-                                pointStyle: 'circle'
-                            }
-                        },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            padding: 12,
-                            titleFont: {
-                                size: 14,
-                                weight: '600'
-                            },
-                            bodyFont: {
-                                size: 13
-                            },
-                            borderColor: 'rgba(255, 255, 255, 0.1)',
-                            borderWidth: 1,
-                            cornerRadius: 8
-                        }
-                    },
-                    scales: {
-                        x: {
-                            ticks: {
-                                font: {
-                                    size: 12,
-                                    weight: '500'
-                                },
-                                padding: 8
-                            },
-                            grid: {
-                                display: true,
-                                color: 'rgba(0, 0, 0, 0.05)'
-                            }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                precision: 0,
-                                font: {
-                                    size: 12,
-                                    weight: '500'
-                                },
-                                padding: 8
-                            },
-                            grid: {
-                                display: true,
-                                color: 'rgba(0, 0, 0, 0.05)'
-                            }
-                        }
-                    }
+                scales: {
+                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+                    x: { grid: { display: false } }
                 }
-            });
-            console.log('Transaction trend chart rendered successfully');
-        } catch (error) {
-            console.error('Error rendering transaction trend chart:', error);
-        }
+            }
+        });
     }
 
     renderFundDistributionChart() {
@@ -525,25 +437,13 @@ export class DashboardWidget extends Component {
         }
 
         const fundMovements = this.state.fund_movements || [];
-        
-        // Filter chỉ lấy các quỹ có dữ liệu (tổng giá trị > 0)
-        const validMovements = fundMovements.filter(m => {
-            const total = (m.buy_amount || 0) + (m.sell_amount || 0);
-            return total > 0;
-        });
+        const activeFunds = fundMovements.filter(m => (m.buy_amount || 0) + (m.sell_amount || 0) > 0);
 
-        if (validMovements.length === 0) {
-            console.warn('No data to render fund distribution chart');
-            return;
-        }
+        if (activeFunds.length === 0) return;
 
-        const labels = validMovements.map(m => m.fund_ticker || 'N/A');
-        const data = validMovements.map(m => (m.buy_amount || 0) + (m.sell_amount || 0));
-
-        const colors = [
-            '#0d6efd', '#198754', '#ffc107', '#dc3545', '#0dcaf0',
-            '#6610f2', '#e83e8c', '#fd7e14', '#20c997', '#6f42c1'
-        ];
+        const labels = activeFunds.map(m => m.fund_ticker || 'N/A');
+        const data = activeFunds.map(m => (m.buy_amount || 0) + (m.sell_amount || 0));
+        const colors = ['#2563eb', '#7c3aed', '#22c55e', '#f59e0b', '#ef4444', '#0ea5e9'];
 
         this.fundDistributionChart = new Chart(ctx, {
             type: 'doughnut',
@@ -552,61 +452,27 @@ export class DashboardWidget extends Component {
                 datasets: [{
                     data: data,
                     backgroundColor: colors.slice(0, labels.length),
-                    borderWidth: 3,
-                    borderColor: '#fff',
-                    hoverBorderWidth: 4
+                    borderWidth: 2,
+                    borderColor: '#fff'
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '60%',
-                layout: {
-                    padding: {
-                        top: 10,
-                        bottom: 10,
-                        left: 10,
-                        right: 10
-                    }
-                },
+                cutout: '70%',
                 plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            boxWidth: 16,
-                            padding: 15,
-                            font: {
-                                size: 13,
-                                weight: '500'
-                            },
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
+                    legend: { position: 'right', labels: { boxWidth: 10, font: { size: 11 } } },
                     tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        padding: 12,
-                        titleFont: {
-                            size: 14,
-                            weight: '600'
-                        },
-                        bodyFont: {
-                            size: 13
-                        },
-                        borderColor: 'rgba(255, 255, 255, 0.1)',
-                        borderWidth: 1,
-                        cornerRadius: 8,
                         callbacks: {
                             label: (context) => {
+                                const value = context.raw;
                                 const index = context.dataIndex;
-                                const movement = validMovements[index];
-                                const label = context.label || '';
-                                const value = context.parsed || 0;
+                                const movement = activeFunds[index];
                                 const total = data.reduce((a, b) => a + b, 0);
                                 const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
                                 const fundName = movement ? movement.fund_name : '';
                                 return [
-                                    `${label}${fundName ? ' - ' + fundName : ''}`,
+                                    `${context.label}${fundName ? ' - ' + fundName : ''}`,
                                     `Giá trị: ${this.formatCurrency(value)}`,
                                     `Tỷ lệ: ${percentage}%`
                                 ];
@@ -627,18 +493,9 @@ export class DashboardWidget extends Component {
         }
 
         const fundMovements = this.state.fund_movements || [];
-        
-        // Filter chỉ lấy các quỹ có giao dịch (buy_amount > 0 hoặc sell_amount > 0)
-        const validMovements = fundMovements.filter(m => {
-            const buyAmount = m.buy_amount || 0;
-            const sellAmount = m.sell_amount || 0;
-            return buyAmount > 0 || sellAmount > 0;
-        });
+        const validMovements = fundMovements.filter(m => (m.buy_amount || 0) > 0 || (m.sell_amount || 0) > 0);
 
-        if (validMovements.length === 0) {
-            console.warn('No data to render buy sell comparison chart');
-            return;
-        }
+        if (validMovements.length === 0) return;
 
         const labels = validMovements.map(m => m.fund_ticker || 'N/A');
         const buyData = validMovements.map(m => m.buy_amount || 0);
@@ -648,113 +505,32 @@ export class DashboardWidget extends Component {
             type: 'bar',
             data: {
                 labels: labels,
-                datasets: [{
-                    label: 'Mua',
-                    data: buyData,
-                    backgroundColor: '#198754',
-                    borderColor: '#146c43',
-                    borderWidth: 2,
-                    borderRadius: 8,
-                    borderSkipped: false
-                }, {
-                    label: 'Bán',
-                    data: sellData,
-                    backgroundColor: '#dc3545',
-                    borderColor: '#b02a37',
-                    borderWidth: 2,
-                    borderRadius: 8,
-                    borderSkipped: false
-                }]
+                datasets: [
+                    {
+                        label: 'Mua',
+                        data: buyData,
+                        backgroundColor: '#22c55e',
+                        borderRadius: 4,
+                    },
+                    {
+                        label: 'Bán',
+                        data: sellData,
+                        backgroundColor: '#ef4444',
+                        borderRadius: 4,
+                    }
+                ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                layout: {
-                    padding: {
-                        top: 10,
-                        bottom: 10,
-                        left: 10,
-                        right: 10
-                    }
-                },
                 plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: {
-                            font: {
-                                size: 14,
-                                weight: '600'
-                            },
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        padding: 12,
-                        titleFont: {
-                            size: 14,
-                            weight: '600'
-                        },
-                        bodyFont: {
-                            size: 13
-                        },
-                        borderColor: 'rgba(255, 255, 255, 0.1)',
-                        borderWidth: 1,
-                        cornerRadius: 8,
-                        callbacks: {
-                            title: (context) => {
-                                const index = context[0].dataIndex;
-                                const movement = validMovements[index];
-                                return movement ? `${movement.fund_ticker} - ${movement.fund_name || ''}` : '';
-                            },
-                            label: (context) => {
-                                const index = context.dataIndex;
-                                const movement = validMovements[index];
-                                const value = context.parsed.y;
-                                const label = context.dataset.label;
-                                return `${label}: ${this.formatCurrency(value)}`;
-                            }
-                        }
-                    }
+                    legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
                 },
                 scales: {
-                    x: {
-                        ticks: {
-                            font: {
-                                size: 12,
-                                weight: '500'
-                            },
-                            padding: 8
-                        },
-                        grid: {
-                            display: false
-                        }
-                    },
                     y: {
                         beginAtZero: true,
                         ticks: {
-                            font: {
-                                size: 12,
-                                weight: '500'
-                            },
-                            padding: 8,
-                            callback: (value) => {
-                                const rounded = Math.round(value);
-                                if (rounded >= 1000000000) {
-                                    return (rounded / 1000000000).toFixed(1) + 'B';
-                                } else if (rounded >= 1000000) {
-                                    return (rounded / 1000000).toFixed(1) + 'M';
-                                } else if (rounded >= 1000) {
-                                    return (rounded / 1000).toFixed(1) + 'K';
-                                }
-                                return rounded;
-                            }
-                        },
-                        grid: {
-                            display: true,
-                            color: 'rgba(0, 0, 0, 0.05)'
+                            callback: (value) => this.formatNumber(value)
                         }
                     }
                 }
@@ -763,6 +539,7 @@ export class DashboardWidget extends Component {
     }
 
     renderNavOpeningPriceChart() {
+        // This method is now secondary but kept for completeness if the container exists
         const ctx = document.getElementById('navOpeningPriceChart');
         if (!ctx) return;
 
@@ -771,157 +548,42 @@ export class DashboardWidget extends Component {
         }
 
         const navData = this.state.nav_opening_data?.funds || [];
-        
-        // Filter chỉ lấy các quỹ có giá CCQ > 0
-        const validNavData = navData.filter(f => {
-            const price = f.opening_price || 0;
-            const numPrice = typeof price === 'string' ? parseFloat(price) : (isNaN(price) ? 0 : price);
-            return numPrice > 0;
-        });
+        if (navData.length === 0) return;
 
-        if (validNavData.length === 0) {
-            console.warn('No data to render NAV opening price chart');
-            return;
-        }
-
-        const labels = validNavData.map(f => f.fund_ticker || 'N/A');
-        // Đảm bảo prices là số thực
-        const prices = validNavData.map(f => {
-            const price = f.opening_price || 0;
-            return typeof price === 'string' ? parseFloat(price) : (isNaN(price) ? 0 : price);
-        });
-        
-        // Debug log
-        console.log('NAV Opening Chart Data:', {
-            navData: validNavData,
-            prices: prices,
-            sample: validNavData.length > 0 ? {
-                ticker: validNavData[0].fund_ticker,
-                rawPrice: validNavData[0].opening_price,
-                priceType: typeof validNavData[0].opening_price,
-                parsedPrice: prices[0]
-            } : null
-        });
-
-        // Calculate max price for percentage calculation
-        const maxPrice = Math.max(...prices, 1);
-        const pricePercentages = prices.map(p => (p / maxPrice) * 100);
+        const labels = navData.map(f => f.ticker || 'N/A');
+        const navValues = navData.map(f => f.nav || 0);
+        const openingPrices = navData.map(f => f.opening_price || 0);
 
         this.navOpeningPriceChart = new Chart(ctx, {
-            type: 'line',
-            indexAxis: 'y', // Horizontal line chart
+            type: 'bar',
             data: {
                 labels: labels,
-                datasets: [{
-                    label: 'Giá CCQ đầu ngày (%)',
-                    data: pricePercentages,
-                    borderColor: '#0d6efd',
-                    backgroundColor: 'rgba(13, 110, 253, 0.15)',
-                    borderWidth: 3,
-                    tension: 0.4,
-                    fill: true,
-                    pointRadius: 6,
-                    pointHoverRadius: 8,
-                    pointBackgroundColor: '#0d6efd',
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2,
-                    pointHoverBackgroundColor: '#0d6efd',
-                    pointHoverBorderColor: '#fff',
-                    pointHoverBorderWidth: 3
-                }]
+                datasets: [
+                    {
+                        label: 'Giá NAV',
+                        data: navValues,
+                        backgroundColor: '#2563eb',
+                        borderRadius: 4,
+                    },
+                    {
+                        label: 'Giá mở cửa',
+                        data: openingPrices,
+                        backgroundColor: '#94a3b8',
+                        borderRadius: 4,
+                    }
+                ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                layout: {
-                    padding: {
-                        top: 10,
-                        bottom: 10,
-                        left: 10,
-                        right: 10
-                    }
-                },
                 plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: {
-                            boxWidth: 16,
-                            padding: 15,
-                            font: {
-                                size: 13,
-                                weight: '500'
-                            }
-                        }
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        padding: 12,
-                        titleFont: {
-                            size: 14,
-                            weight: '600'
-                        },
-                        bodyFont: {
-                            size: 13
-                        },
-                        borderColor: 'rgba(255, 255, 255, 0.1)',
-                        borderWidth: 1,
-                        cornerRadius: 8,
-                        callbacks: {
-                            title: (context) => {
-                                const index = context[0].dataIndex;
-                                const fund = validNavData[index];
-                                return fund ? `${fund.fund_ticker} - ${fund.fund_name || ''}` : '';
-                            },
-                            label: (context) => {
-                                const index = context.dataIndex;
-                                const fund = validNavData[index];
-                                const price = prices[index];
-                                const percentage = context.parsed.x;
-                                const ccq = fund ? (fund.opening_ccq || 0) : 0;
-                                return [
-                                    `Giá: ${this.formatCurrency(price)}`,
-                                    `Tỷ lệ: ${percentage.toFixed(1)}%`,
-                                    `CCQ: ${this.formatNumber(ccq)}`,
-                                    `Giá trị: ${this.formatCurrency(fund ? (fund.opening_value || 0) : 0)}`
-                                ];
-                            }
-                        }
-                    }
+                    legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
                 },
                 scales: {
-                    x: {
-                        beginAtZero: true,
-                        max: 100,
-                        ticks: {
-                            font: {
-                                size: 12,
-                                weight: '500'
-                            },
-                            padding: 8,
-                            callback: (value) => {
-                                return value.toFixed(0) + '%';
-                            }
-                        },
-                        grid: {
-                            display: true,
-                            color: 'rgba(0, 0, 0, 0.05)',
-                            drawBorder: false
-                        }
-                    },
                     y: {
+                        beginAtZero: true,
                         ticks: {
-                            font: {
-                                size: 12,
-                                weight: '500'
-                            },
-                            padding: 8
-                        },
-                        grid: {
-                            display: true,
-                            color: 'rgba(0, 0, 0, 0.05)',
-                            drawBorder: false
+                            callback: (value) => this.formatNumber(value)
                         }
                     }
                 }
@@ -1135,7 +797,7 @@ export class DashboardWidget extends Component {
         transactions.forEach((tx) => {
             const type = buyTypes.includes(tx.transaction_type) ? 'buy'
                 : sellTypes.includes(tx.transaction_type) ? 'sell'
-                : null;
+                    : null;
             if (!type) {
                 return;
             }

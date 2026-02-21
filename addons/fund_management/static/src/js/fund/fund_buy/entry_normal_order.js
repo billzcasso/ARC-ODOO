@@ -1,6 +1,6 @@
 /** @odoo-module **/
 
-import { mount } from "@odoo/owl";
+import { mount, App } from "@odoo/owl";
 import { NormalOrderFormComponent } from "./normal_order_form";
 
 let isMounted = false;
@@ -17,22 +17,22 @@ function validateElement(element) {
  * Mount NormalOrderFormComponent to target container
  * Called when user switches to "Normal Order" tab
  */
-export function mountNormalOrderForm(targetId = 'normal-order-form-container') {
+export async function mountNormalOrderForm(targetId = 'normal-order-form-container') {
     if (isMounted) {
         console.log('[NormalOrderForm] Already mounted');
-        return Promise.resolve();
+        return;
     }
 
     const target = document.getElementById(targetId);
     if (!validateElement(target)) {
         console.warn('[NormalOrderForm] Target not found:', targetId);
-        return Promise.reject(new Error('Target not found'));
+        throw new Error('Target not found');
     }
 
     // Check if already has component
     if (target.querySelector('.normal-order-form-container')) {
         isMounted = true;
-        return Promise.resolve();
+        return;
     }
 
     // Clear target
@@ -51,23 +51,27 @@ export function mountNormalOrderForm(targetId = 'normal-order-form-container') {
     };
 
     try {
-        app = new owl.App(NormalOrderFormComponent, { props });
-        return app.mount(target)
-            .then(() => {
-                isMounted = true;
-                console.log('[NormalOrderForm] Mounted successfully');
-            })
-            .catch(error => {
-                console.error('[NormalOrderForm] Mount error:', error);
-                // Fallback mount
-                return mount(NormalOrderFormComponent, { target, props });
-            })
-            .then(() => {
-                isMounted = true;
-            });
+        // Primary: use OWL App class (Odoo 18)
+        if (App) {
+            app = new App(NormalOrderFormComponent, { props });
+            await app.mount(target);
+            isMounted = true;
+            console.log('[NormalOrderForm] Mounted via App class');
+            return;
+        }
     } catch (error) {
-        console.error('[NormalOrderForm] Sync error:', error);
-        return Promise.reject(error);
+        console.warn('[NormalOrderForm] App mount failed, trying mount():', error);
+    }
+
+    try {
+        // Fallback: use standalone mount function
+        await mount(NormalOrderFormComponent, target, { props });
+        isMounted = true;
+        console.log('[NormalOrderForm] Mounted via mount() function');
+    } catch (error) {
+        console.error('[NormalOrderForm] All mount methods failed:', error);
+        target.innerHTML = '<div class="alert alert-danger">Lỗi tải form đặt lệnh: ' + error.message + '</div>';
+        throw error;
     }
 }
 
@@ -91,7 +95,7 @@ export function isNormalOrderFormMounted() {
     return isMounted;
 }
 
-// Export for global access
+// Export for global access (called by fund_buy.js vanilla JS)
 window.NormalOrderFormMount = {
     mount: mountNormalOrderForm,
     unmount: unmountNormalOrderForm,

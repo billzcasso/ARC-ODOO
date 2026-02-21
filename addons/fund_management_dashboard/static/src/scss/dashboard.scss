@@ -141,8 +141,8 @@ $fmd-gradient-bg: linear-gradient(135deg, #f8f9fa 0%, #eef2f7 100%);
   // Dashboard Shell
   .dashboard-shell {
     display: flex;
-    gap: $fmd-spacing-6;
-    padding: $fmd-spacing-6;
+    gap: 0;
+    padding: 0;
 
     &.no-sidebar {
       gap: 0;
@@ -155,7 +155,7 @@ $fmd-gradient-bg: linear-gradient(135deg, #f8f9fa 0%, #eef2f7 100%);
 
     &.sidebar-collapsed {
       .dashboard-sidebar {
-        width: 96px;
+        width: 72px;
 
         .logo-text,
         .sidebar-group,
@@ -186,7 +186,7 @@ $fmd-gradient-bg: linear-gradient(135deg, #f8f9fa 0%, #eef2f7 100%);
       }
 
       .dashboard-main {
-        margin-left: -$fmd-spacing-2;
+        margin-left: 72px; // Should match $sidebar-width-collapsed
       }
     }
   }
@@ -202,6 +202,10 @@ $fmd-gradient-bg: linear-gradient(135deg, #f8f9fa 0%, #eef2f7 100%);
 
   .dashboard-main {
     flex: 1;
+    margin-left: 240px; // Should match $sidebar-width
+    padding: $fmd-spacing-8;
+    min-width: 0;
+    transition: margin-left 0.25s ease;
   }
 
   .dashboard-top-bar {
@@ -350,6 +354,20 @@ $fmd-gradient-bg: linear-gradient(135deg, #f8f9fa 0%, #eef2f7 100%);
     padding: $fmd-spacing-5;
     box-shadow: $fmd-shadow-lg;
     height: 100%;
+    display: flex;
+    flex-direction: column;
+
+    &.chart-panel {
+      min-height: 350px;
+    }
+  }
+
+  .chart-container {
+    flex: 1;
+    position: relative;
+    min-height: 0;
+    width: 100%;
+    padding: $fmd-spacing-2;
   }
 
   .two-column {

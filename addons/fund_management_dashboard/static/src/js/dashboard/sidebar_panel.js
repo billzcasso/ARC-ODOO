@@ -24,20 +24,21 @@ export class SidebarPanel extends Component {
         this.productMenu = PRODUCT_MENU;
         this.dataMenu = DATA_MENU;
         this.userMenu = USER_MENU;
+        this.userName = "";
 
         // Get current path to determine active menu
         const currentPath = window.location.pathname;
-        
+
         // Check if any product menu item is active
-        const activeProductItem = this.productMenu.find(item => 
+        const activeProductItem = this.productMenu.find(item =>
             currentPath === item.href || currentPath.startsWith(item.href + '/')
         );
-        
+
         // Check if any data menu item is active
-        const activeDataItem = this.dataMenu.find(item => 
+        const activeDataItem = this.dataMenu.find(item =>
             currentPath === item.href || currentPath.startsWith(item.href + '/')
         );
-        
+
         // Check if any user menu item is active
         const activeUserItem = this.userMenu.find(item => {
             // Check by exact path match
@@ -52,15 +53,43 @@ export class SidebarPanel extends Component {
                 user: !!activeUserItem, // Auto-open if active item found
             },
             currentPath: currentPath,
+            userName: "Loading...",
         });
+
+        this.fetchUserInfo();
+    }
+
+    async fetchUserInfo() {
+        try {
+            const response = await fetch('/web/session/get_session_info', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: '{}'
+            });
+            const data = await response.json();
+            if (data.result && data.result.name) {
+                this.state.userName = data.result.name;
+            }
+        } catch (e) {
+            console.error("Failed to fetch user info", e);
+        }
+    }
+
+    async logout() {
+        try {
+            await fetch('/web/session/destroy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: '{}'
+            });
+            window.location.href = '/web/login';
+        } catch (e) {
+            console.error("Logout failed", e);
+        }
     }
 
     toggleCollapse() {
-        this.state.collapsed = !this.state.collapsed;
-        const shell = document.querySelector('.dashboard-shell');
-        if (shell) {
-            shell.classList.toggle('sidebar-collapsed', this.state.collapsed);
-        }
+        // Keeping for compatibility but making it a no-op if toggled externally
     }
 
     toggleMenu(menuKey) {
@@ -75,7 +104,7 @@ export class SidebarPanel extends Component {
         const currentPath = this.state.currentPath || window.location.pathname;
         return currentPath === href || currentPath.startsWith(href + '/');
     }
-    
+
     isUserMenuActive(permissionType) {
         const currentPath = this.state.currentPath || window.location.pathname;
         const menuItem = this.userMenu.find(item => item.permissionType === permissionType);
@@ -92,9 +121,6 @@ export class SidebarPanel extends Component {
 
     static template = xml`
         <aside class="dashboard-sidebar">
-            <button class="sidebar-toggle-btn" t-on-click="toggleCollapse">
-                <t t-esc="state.collapsed ? '&gt;' : '&lt;'"/>
-            </button>
             <div class="sidebar-logo">
                 <img src="/fund_management_dashboard/static/src/img/logo.png" alt="Logo" class="sidebar-logo-img"/>
             </div>
@@ -172,6 +198,21 @@ export class SidebarPanel extends Component {
                     </div>
                 </div>
 
+                </div>
+
+                <div class="sidebar-footer">
+                    <div class="user-info">
+                        <div class="user-avatar">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                        <div class="user-details">
+                            <span class="user-name" t-esc="state.userName"/>
+                        </div>
+                    </div>
+                    <button class="logout-btn" t-on-click="logout" title="Đăng xuất">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Đăng xuất</span>
+                    </button>
                 </div>
         </aside>
     `;

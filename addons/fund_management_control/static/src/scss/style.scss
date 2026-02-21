@@ -46,6 +46,21 @@ body {
 .dashboard-shell {
     display: flex;
     min-height: 100vh;
+
+    // Fix header overlap with fixed sidebar
+    .bo-header {
+        left: 240px;
+        transition: left 0.25s ease;
+    }
+
+    &.sidebar-collapsed {
+        .dashboard-main {
+            margin-left: 72px;
+        }
+        .bo-header {
+            left: 72px;
+        }
+    }
 }
 
 .dashboard-main {
@@ -53,6 +68,9 @@ body {
     overflow-x: hidden;
     padding: $spacing-base * 1.5;
     background-color: $bg-body;
+    margin-left: 240px;
+    transition: margin-left 0.25s ease;
+    min-width: 0;
 }
 
 .fund-management-container {
@@ -242,6 +260,60 @@ body {
     &.badge-info {
         background-color: rgba($info-color, 0.1);
         color: darken($info-color, 10%);
+    }
+}
+
+// Pagination
+.pagination {
+    .page-item {
+        margin: 0 2px;
+        
+        .page-link {
+            border-radius: $border-radius-sm;
+            border: 1px solid $border-color;
+            color: $text-secondary;
+            padding: 0.4rem 0.75rem;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 36px;
+            
+            &:hover {
+                background-color: $bg-body;
+                border-color: darken($border-color, 10%);
+                color: $primary-color;
+            }
+            
+            &.shadow-none {
+                box-shadow: none !important;
+            }
+        }
+        
+        &.active .page-link {
+            background-color: $secondary-color;
+            border-color: $secondary-color;
+            color: white;
+            font-weight: 600;
+        }
+        
+        &.disabled {
+            .page-link {
+                background-color: transparent;
+                border: 1px solid transparent;
+                color: lighten($text-secondary, 20%);
+                cursor: default;
+                pointer-events: none;
+            }
+            
+            // For ellipses
+            &:not(:first-child):not(:last-child) {
+                .page-link {
+                    border: none;
+                }
+            }
+        }
     }
 }
 

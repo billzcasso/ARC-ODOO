@@ -136,14 +136,15 @@ class FundManagementProduct(http.Controller):
             _logger.info("Nhận dữ liệu cho chứng chỉ quỹ mới: %s", post)
 
             # Xử lý các trường boolean (ngày trong tuần)
+            # Checkbox gửi "on" hoặc "1" tuỳ theo thuộc tính value trong HTML
             weekdays = {
-                "monday": post.get("monday") == "on",
-                "tuesday": post.get("tuesday") == "on",
-                "wednesday": post.get("wednesday") == "on",
-                "thursday": post.get("thursday") == "on",
-                "friday": post.get("friday") == "on",
-                "saturday": post.get("saturday") == "on",
-                "sunday": post.get("sunday") == "on",
+                "monday": post.get("monday") in ("on", "1", "true", True),
+                "tuesday": post.get("tuesday") in ("on", "1", "true", True),
+                "wednesday": post.get("wednesday") in ("on", "1", "true", True),
+                "thursday": post.get("thursday") in ("on", "1", "true", True),
+                "friday": post.get("friday") in ("on", "1", "true", True),
+                "saturday": post.get("saturday") in ("on", "1", "true", True),
+                "sunday": post.get("sunday") in ("on", "1", "true", True),
             }
 
             # Xử lý hình ảnh (nếu có)
@@ -291,13 +292,13 @@ class FundManagementProduct(http.Controller):
                 return request.redirect("/fund_certificate_list")
 
             weekdays = {
-                "monday": post.get("monday") == "on",
-                "tuesday": post.get("tuesday") == "on",
-                "wednesday": post.get("wednesday") == "on",
-                "thursday": post.get("thursday") == "on",
-                "friday": post.get("friday") == "on",
-                "saturday": post.get("saturday") == "on",
-                "sunday": post.get("sunday") == "on",
+                "monday": post.get("monday") in ("on", "1", "true", True),
+                "tuesday": post.get("tuesday") in ("on", "1", "true", True),
+                "wednesday": post.get("wednesday") in ("on", "1", "true", True),
+                "thursday": post.get("thursday") in ("on", "1", "true", True),
+                "friday": post.get("friday") in ("on", "1", "true", True),
+                "saturday": post.get("saturday") in ("on", "1", "true", True),
+                "sunday": post.get("sunday") in ("on", "1", "true", True),
             }
 
             vals = {

@@ -10,6 +10,21 @@ body {
 .dashboard-shell {
     display: flex;
     min-height: 100vh;
+
+    // Fix header overlap with fixed sidebar
+    .bo-header {
+        left: 240px;
+        transition: left 0.25s ease;
+    }
+
+    &.sidebar-collapsed {
+        .dashboard-main {
+            margin-left: 72px;
+        }
+        .bo-header {
+            left: 72px;
+        }
+    }
 }
 
 .dashboard-main {
@@ -17,6 +32,9 @@ body {
     overflow-x: hidden;
     padding: $spacing-base * 1.5;
     background-color: $bg-body;
+    margin-left: 240px;
+    transition: margin-left 0.25s ease;
+    min-width: 0;
 }
 
 .fund-management-container {

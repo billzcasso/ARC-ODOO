@@ -53,24 +53,24 @@ export class OrderBookComponent extends Component {
                             <i class="fas fa-flask me-2"></i>Khớp lệnh thỏa thuận
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li>
+                            <!-- <li>
                                 <button class="dropdown-item" t-on-click="createRandomTransactions">
                                     <i class="fas fa-dice"></i>
                                     <span>Tạo Random</span>
                                 </button>
-                            </li>
+                            </li> -->
                             <li>
                                 <button class="dropdown-item" t-on-click="marketMakerHandleRemainingFromMenu">
                                     <i class="fas fa-exchange-alt"></i>
-                                    <span>Nhà tạo lập Mua/Bán</span>
+                                    <span>Xử lý thanh khoản</span>
                                 </button>
                             </li>
-                            <li>
+                            <!-- <li>
                                 <button class="dropdown-item" t-on-click="importExcel">
                                     <i class="fas fa-file-excel"></i>
                                     <span>Import Excel</span>
                                 </button>
-                            </li>
+                            </li> -->
                             <li><hr class="dropdown-divider"/></li>
                             <li>
                                 <button class="dropdown-item" t-on-click="sendMaturityNotifications">
@@ -353,10 +353,10 @@ export class OrderBookComponent extends Component {
         this.refreshInterval = null;
         this.matchInterval = null;
         this.autoRotateInterval = null;
-        
+
         this.setupEventListeners();
         this.loadInitialData();
-        
+
         // Component mounted: set initial value cho combobox sau khi mount
         onMounted(() => {
             setTimeout(() => {
@@ -371,7 +371,7 @@ export class OrderBookComponent extends Component {
         this.refreshInterval = setInterval(() => {
             this.refreshData();
         }, 5000);
-        
+
         // Auto match orders mỗi 2 giây
         this.matchInterval = setInterval(() => {
             this.autoMatchOrders().catch(err => {
@@ -388,17 +388,17 @@ export class OrderBookComponent extends Component {
             // Load danh sách funds
             const response = await fetch("/api/transaction-list/funds", {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({})
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const funds = await response.json();
             this.state.funds = funds.funds || [];
-            
+
             if (this.state.funds.length > 0) {
                 this.state.currentFundIndex = 0;
                 this.state.selectedFund = this.state.funds[0];
@@ -424,16 +424,16 @@ export class OrderBookComponent extends Component {
         try {
             const response = await fetch("/api/transaction-list/order-book", {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     fund_id: this.state.selectedFund.id
                 })
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const data = await response.json();
 
             if (data.success) {
@@ -441,7 +441,7 @@ export class OrderBookComponent extends Component {
                 this.detectMatchedOrders(data.buy_orders || [], data.sell_orders || []);
                 // Phát hiện tăng matched_units để kích hoạt animation ngay khi khớp
                 this.detectMatchedIncrements(data.buy_orders || [], data.sell_orders || []);
-                
+
                 // Cập nhật danh sách lệnh mua/bán (đã được sắp xếp theo Price-Time Priority từ backend)
                 this.state.buyOrders = data.buy_orders || [];
                 this.state.sellOrders = data.sell_orders || [];
@@ -456,7 +456,7 @@ export class OrderBookComponent extends Component {
                 // Loại bỏ các lệnh đã khớp hoàn toàn khỏi box chờ xử lý
                 // remaining_units = units - matched_units (theo chuẩn Stock Exchange)
                 this.reconcileOrders();
-                
+
                 // Cho phép animation trở lại sau khi đã đồng bộ danh sách theo quỹ mới
                 this.state.suppressAnimations = false;
             } else {
@@ -476,7 +476,7 @@ export class OrderBookComponent extends Component {
 
     async onFundChange(event) {
         let fundId = null;
-        
+
         // Nếu có event từ select (cũ), lấy fundId từ event
         if (event && event.target) {
             fundId = parseInt(event.target.value);
@@ -484,7 +484,7 @@ export class OrderBookComponent extends Component {
             // Nếu không có event, dùng selectedFund hiện tại
             fundId = this.state.selectedFund.id;
         }
-        
+
         if (fundId) {
             const index = this.state.funds.findIndex(f => f.id === fundId);
             if (index !== -1) {
@@ -516,20 +516,20 @@ export class OrderBookComponent extends Component {
         if (!this.state.funds || this.state.funds.length <= 1) {
             return; // Không có quỹ hoặc chỉ có 1 quỹ thì không cần rotate
         }
-        
+
         // Tăng index và loop lại từ đầu nếu đến cuối
         this.state.currentFundIndex = (this.state.currentFundIndex + 1) % this.state.funds.length;
         this.state.selectedFund = this.state.funds[this.state.currentFundIndex];
-        
+
         // Khi đổi quỹ: không nháy màu do thay đổi filter
         this.state.suppressAnimations = true;
         // Reset bộ nhớ để không coi sự biến mất do filter là khớp lệnh
         this.state.previousOrderIds = { buy: new Set(), sell: new Set() };
         this.state.lastMatchedUnits.buy.clear();
         this.state.lastMatchedUnits.sell.clear();
-        
+
         // Không cần cập nhật select element nữa vì đã dùng combobox
-        
+
         await this.loadOrderBook();
     }
 
@@ -709,38 +709,38 @@ export class OrderBookComponent extends Component {
             };
             return;
         }
-        
+
         // Tạo Set các order IDs hiện tại
         const currentBuyIds = new Set(newBuyOrders.map(order => order.id));
         const currentSellIds = new Set(newSellOrders.map(order => order.id));
-        
+
         // Phát hiện buy/sell orders bị khớp hoàn toàn (disappeared)
         const matchedBuyIds = [...this.state.previousOrderIds.buy || []].filter(id => !currentBuyIds.has(id));
         const matchedSellIds = [...this.state.previousOrderIds.sell || []].filter(id => !currentSellIds.has(id));
-        
+
         // Hiển thị animation cho matched orders
         if (matchedBuyIds.length > 0 || matchedSellIds.length > 0) {
             this.showMatchAnimation(matchedBuyIds, matchedSellIds);
         }
-        
+
         // Cập nhật previous order IDs để so sánh lần sau
         this.state.previousOrderIds = {
             buy: currentBuyIds,
             sell: currentSellIds
         };
     }
-    
+
     showMatchAnimation(matchedBuyIds, matchedSellIds) {
         // Hiển thị notification
         const totalMatched = matchedBuyIds.length + matchedSellIds.length;
         this.showMatchNotification(`🎉 Đã khớp ${totalMatched} lệnh! (${matchedBuyIds.length} mua, ${matchedSellIds.length} bán)`);
-        
+
         // Trigger animation cho các orders còn lại (nếu có)
         setTimeout(() => {
             this.triggerMatchAnimation();
         }, 100);
     }
-    
+
     /**
      * Hiển thị thông báo khớp lệnh cho người dùng
      * 
@@ -751,12 +751,12 @@ export class OrderBookComponent extends Component {
         // Xóa notification cũ nếu có
         const existingNotifications = document.querySelectorAll('.match-notification');
         existingNotifications.forEach(notification => notification.remove());
-        
+
         // Tạo notification element
         const notification = document.createElement('div');
         notification.className = 'match-notification';
         notification.textContent = message;
-        
+
         // Thêm style theo type
         const typeStyles = {
             'error': '#dc3545',
@@ -774,9 +774,9 @@ export class OrderBookComponent extends Component {
         notification.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
         notification.style.fontSize = '14px';
         notification.style.fontWeight = '500';
-        
+
         document.body.appendChild(notification);
-        
+
         // Auto remove sau 4 giây
         setTimeout(() => {
             if (notification.parentNode) {
@@ -789,18 +789,18 @@ export class OrderBookComponent extends Component {
             }
         }, 4000);
     }
-    
+
     triggerMatchAnimation() {
         // Thêm class animation cho orders (nếu cần)
         const buyOrders = document.querySelectorAll('.buy-order');
         const sellOrders = document.querySelectorAll('.sell-order');
-        
+
         // Random animation cho một số orders để tạo hiệu ứng
         [...buyOrders].slice(0, 2).forEach(order => {
             order.classList.add('matched-buy');
             setTimeout(() => order.classList.remove('matched-buy'), 2000);
         });
-        
+
         [...sellOrders].slice(0, 2).forEach(order => {
             order.classList.add('matched-sell');
             setTimeout(() => order.classList.remove('matched-sell'), 2000);
@@ -817,7 +817,7 @@ export class OrderBookComponent extends Component {
     updateComboboxValue() {
         const input = document.getElementById('fund-combobox');
         if (!input) return;
-        
+
         // Chỉ update nếu input không đang focus (để không làm gián đoạn khi đang gõ)
         if (document.activeElement !== input) {
             if (this.state.fundSearchTerm && this.state.fundSearchTerm.trim() !== "") {
@@ -839,7 +839,7 @@ export class OrderBookComponent extends Component {
 
     onFundComboboxFocus(event) {
         // Khi focus, luôn cho phép gõ mới, không tự fill lại tên quỹ
-            this.state.fundSearchTerm = "";
+        this.state.fundSearchTerm = "";
         if (event && event.target) {
             event.target.value = "";
         }
@@ -855,10 +855,10 @@ export class OrderBookComponent extends Component {
 
     onFundComboboxKeydown(event) {
         if (!event) return;
-        
+
         const key = event.key;
         const filteredFunds = this.getFilteredFunds();
-        
+
         if (key === 'Escape') {
             this.state.showFundDropdown = false;
             event.target.blur();
@@ -1022,7 +1022,7 @@ export class OrderBookComponent extends Component {
         if (!this.state.selectedFund) {
             return;
         }
-        
+
         try {
             // Backend sẽ tự query tất cả lệnh pending từ database
             // Không dựa vào state.buyOrders/sellOrders vì có thể không đầy đủ do filter hoặc delay
@@ -1048,15 +1048,15 @@ export class OrderBookComponent extends Component {
             }
 
             const result = await response.json();
-            
+
             // Kiểm tra kết quả khớp lệnh
             if (result.success) {
                 const totalMatched = result.summary?.total_matched || 0;
-                
+
                 if (totalMatched > 0) {
                     // Có khớp lệnh, refresh data để hiển thị animation và cập nhật UI
                     await this.refreshData();
-                    
+
                     // Hiển thị notification cho người dùng (chỉ khi có khớp)
                     this.showMatchNotification(
                         `Đã khớp ${totalMatched} cặp lệnh tự động!`,
@@ -1142,7 +1142,7 @@ export class OrderBookComponent extends Component {
             partialOrders: this.state.partialOrders || [],
             selectedFund: this.state.selectedFund || null
         };
-        
+
         await OrderMatchingActions.marketMakerHandleRemainingFromMenu(
             compatibleState,
             (msg, type) => this.showMatchNotification(msg, type),
@@ -1202,28 +1202,28 @@ export class OrderBookComponent extends Component {
         const rpc = async (route, params) => {
             const response = await fetch(route, {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify(params)
             });
-            
+
             if (!response.ok) {
                 const errorText = await response.text().catch(() => '');
                 throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
             }
-            
+
             const result = await response.json();
-            
+
             // Xử lý JSON-RPC format nếu có
             if (result.jsonrpc && result.result) {
                 return result.result;
             }
-            
+
             return result;
         };
-        
+
         await OrderMatchingActions.sendMaturityNotifications(
             (msg, type) => this.showMatchNotification(msg, type),
             rpc
@@ -1235,28 +1235,28 @@ export class OrderBookComponent extends Component {
         const rpc = async (route, params) => {
             const response = await fetch(route, {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify(params)
             });
-            
+
             if (!response.ok) {
                 const errorText = await response.text().catch(() => '');
                 throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
             }
-            
+
             const result = await response.json();
-            
+
             // Xử lý JSON-RPC format nếu có
             if (result.jsonrpc && result.result) {
                 return result.result;
             }
-            
+
             return result;
         };
-        
+
         await OrderMatchingActions.sendMaturityNotificationsTest(
             (msg, type) => this.showMatchNotification(msg, type),
             rpc
@@ -1267,15 +1267,15 @@ export class OrderBookComponent extends Component {
         const span = ev.target;
         const orderId = parseInt(span.getAttribute('data-order-id'));
         if (!orderId) return;
-        
+
         // Tìm order trong state (lệnh tách hiện tại)
         const allOrders = [...this.state.buyOrders, ...this.state.sellOrders, ...this.state.partialOrders];
         const order = allOrders.find(o => o.id === orderId);
-        
+
         if (!order || !order.parent_order_info) return;
-        
+
         const parentInfo = order.parent_order_info;
-        
+
         // Tạo tooltip element
         const tooltip = document.createElement('div');
         tooltip.className = 'parent-order-tooltip';
@@ -1290,14 +1290,14 @@ export class OrderBookComponent extends Component {
                 <div><strong>Thời gian:</strong> ${this.formatDateTime(parentInfo.created_at)}</div>
             </div>
         `;
-        
+
         document.body.appendChild(tooltip);
-        
+
         // Tính vị trí tooltip
         const rect = span.getBoundingClientRect();
         tooltip.style.left = `${rect.right + 10}px`;
         tooltip.style.top = `${rect.top}px`;
-        
+
         // Đảm bảo tooltip không vượt ra ngoài màn hình
         setTimeout(() => {
             const tooltipRect = tooltip.getBoundingClientRect();
@@ -1309,22 +1309,22 @@ export class OrderBookComponent extends Component {
             }
         }, 0);
     }
-    
+
     showOrderInfoTooltip(ev) {
         const icon = ev.currentTarget;
         const orderId = icon.getAttribute('data-order-id');
         if (!orderId) return;
-        
+
         // Tìm order trong buyOrders hoặc sellOrders
         const allOrders = [...this.state.buyOrders, ...this.state.sellOrders];
         const order = allOrders.find(o => String(o.id) === String(orderId));
-        
+
         if (!order) return;
-        
+
         const units = typeof order.units === 'number' ? order.units : 0;
         const matchedUnits = typeof order.matched_units === 'number' ? order.matched_units : 0;
         const remainingUnits = typeof order.remaining_units === 'number' ? order.remaining_units : (units - matchedUnits);
-        
+
         const tooltipContent = `
             <div style="text-align: left;">
                 <div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #e4e8f0;">
@@ -1338,7 +1338,7 @@ export class OrderBookComponent extends Component {
                 </div>
             </div>
         `;
-        
+
         // Tạo tooltip element
         let tooltip = document.getElementById('order-info-tooltip');
         if (!tooltip) {
@@ -1358,19 +1358,19 @@ export class OrderBookComponent extends Component {
             `;
             document.body.appendChild(tooltip);
         }
-        
+
         tooltip.innerHTML = tooltipContent;
-        
+
         // Tính vị trí tooltip
         const rect = icon.getBoundingClientRect();
         tooltip.style.display = 'block';
-        
+
         // Đặt vị trí tooltip
         const tooltipWidth = 250;
         const tooltipHeight = 150;
         let left = rect.right + 10;
         let top = rect.top - 10;
-        
+
         // Đảm bảo tooltip không vượt ra ngoài màn hình
         if (left + tooltipWidth > window.innerWidth) {
             left = rect.left - tooltipWidth - 10;
@@ -1381,18 +1381,18 @@ export class OrderBookComponent extends Component {
         if (top < 10) {
             top = 10;
         }
-        
+
         tooltip.style.left = left + 'px';
         tooltip.style.top = top + 'px';
     }
-    
+
     hideOrderInfoTooltip(ev) {
         const tooltip = document.getElementById('order-info-tooltip');
         if (tooltip) {
             tooltip.style.display = 'none';
         }
     }
-    
+
     hideParentOrderTooltip(ev) {
         const tooltips = document.querySelectorAll('.parent-order-tooltip');
         tooltips.forEach(tooltip => tooltip.remove());
@@ -1441,7 +1441,7 @@ export class OrderBookComponent extends Component {
             clearInterval(this.autoRotateInterval);
             this.autoRotateInterval = null;
         }
-        
+
         // Xóa tooltip khi unmount
         this.hideParentOrderTooltip();
         this.hideOrderInfoTooltip();

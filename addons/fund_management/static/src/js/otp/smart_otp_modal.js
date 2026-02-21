@@ -117,29 +117,7 @@ export class SmartOtpModal extends Component {
                     </button>
                 </div>
                 
-                {/* DEBUG MODE TOGGLE - DISABLED
-                <div class="mt-4 pt-3 border-top" style="border-color: #e2e8f0;">
-                    <label class="d-flex align-items-center justify-content-between" style="cursor: pointer;">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-bug text-warning me-2"></i>
-                            <span style="font-size: 13px; color: #475569;">Debug Mode</span>
-                            <span class="ms-2" style="font-size: 11px; color: #94a3b8;">(Bỏ qua xác thực)</span>
-                        </div>
-                        <div class="form-check form-switch">
-                            <input 
-                                type="checkbox" 
-                                class="form-check-input"
-                                t-att-checked="state.debugMode"
-                                t-on-change="onToggleDebug"
-                            />
-                        </div>
-                    </label>
-                    <p t-if="state.debugMode" class="mt-2" style="font-size: 11px; color: #f97316;">
-                        <i class="fas fa-exclamation-triangle me-1"></i>
-                        Chế độ debug đang bật - OTP sẽ được bỏ qua xác thực
-                    </p>
-                </div>
-                */}
+
             </div>
         </div>
     `;
@@ -154,19 +132,19 @@ export class SmartOtpModal extends Component {
         this._initializeIndices();
         this._setupFocusOnMount();
     }
-    
+
     getTitle() {
         return this.otpType === 'sms_email' ? this.messages.TITLE_SMS_EMAIL : this.messages.TITLE_SMART;
     }
-    
+
     getDescription() {
         return this.otpType === 'sms_email' ? this.messages.DESCRIPTION_SMS_EMAIL : this.messages.DESCRIPTION_SMART;
     }
-    
+
     getInstructionStep1() {
         return this.otpType === 'sms_email' ? this.messages.INSTRUCTION_STEP_1_SMS_EMAIL : this.messages.INSTRUCTION_STEP_1_SMART;
     }
-    
+
     getInstructionStep2() {
         return this.otpType === 'sms_email' ? this.messages.INSTRUCTION_STEP_2_SMS_EMAIL : this.messages.INSTRUCTION_STEP_2_SMART;
     }
@@ -178,16 +156,12 @@ export class SmartOtpModal extends Component {
     }
 
     _initializeState() {
-        // Load debug mode từ localStorage
-        const savedDebugMode = localStorage.getItem('otp_debug_mode') === 'true';
-        
         this.state = useState({
             otpCodes: Array(this.config.LENGTH).fill(''),
             error: '',
             success: false,
             loading: false,
             timer: this.config.TIMEOUT_SECONDS,
-            debugMode: savedDebugMode,
             iconState: '' // 'success' hoặc 'error' hoặc ''
         });
         this.timerInterval = null;
@@ -202,19 +176,19 @@ export class SmartOtpModal extends Component {
             setTimeout(() => {
                 this._focusInput(0);
             }, this.config.FOCUS_DELAY_MS);
-            
+
             // Khởi động timer đếm ngược
             this._startTimer();
         });
     }
-    
+
     _startTimer() {
         // Clear timer cũ nếu có
         this._clearTimer();
-        
+
         // Reset timer về giá trị ban đầu
         this.state.timer = this.config.TIMEOUT_SECONDS;
-        
+
         // Bắt đầu đếm ngược
         this.timerInterval = setInterval(() => {
             if (this.state.timer > 0) {
@@ -226,14 +200,14 @@ export class SmartOtpModal extends Component {
             }
         }, this.config.TIMER_INTERVAL_MS);
     }
-    
+
     _clearTimer() {
         if (this.timerInterval) {
             clearInterval(this.timerInterval);
             this.timerInterval = null;
         }
     }
-    
+
     _handleTimeout() {
         // Đóng popup khi hết thời gian
         this._closePopup();
@@ -297,10 +271,10 @@ export class SmartOtpModal extends Component {
     onOTPInput(ev) {
         const index = parseInt(ev.target.dataset.index);
         const sanitizedValue = this._sanitizeInputValue(ev.target.value);
-        
+
         this._updateInputValue(index, sanitizedValue);
         ev.target.value = sanitizedValue;
-        
+
         if (sanitizedValue) {
             this._moveToNextInput(index);
         }
@@ -310,13 +284,13 @@ export class SmartOtpModal extends Component {
         const index = parseInt(ev.target.dataset.index);
         const isBackspace = ev.key === 'Backspace';
         const hasValue = !!ev.target.value;
-        
+
         if (isBackspace && hasValue) {
             this._clearInputAtIndex(index);
             ev.target.value = '';
             return;
         }
-        
+
         if (isBackspace && !hasValue) {
             this._moveToPreviousInput(index);
         }
@@ -348,20 +322,14 @@ export class SmartOtpModal extends Component {
         this.state.error = '';
         this.state.iconState = '';
     }
-    
+
     _setSuccess() {
         this.state.success = true;
         this.state.iconState = 'success';
         this.state.error = '';
     }
 
-    onToggleDebug(ev) {
-        const newDebugMode = ev.target.checked;
-        this.state.debugMode = newDebugMode;
-        // Lưu vào localStorage
-        localStorage.setItem('otp_debug_mode', newDebugMode.toString());
-        console.log('[OTP Debug] Debug mode:', newDebugMode ? 'ENABLED' : 'DISABLED');
-    }
+
 
     async onVerify() {
         if (!this._validateOTPCode() || this.state.loading) {
@@ -371,14 +339,13 @@ export class SmartOtpModal extends Component {
         const otp = this._getOTPCode();
         this._setLoadingState(true);
         this._clearError();
-        
+
         // Dừng timer khi đang verify
         this._clearTimer();
 
         try {
             if (typeof this.props.onConfirm === 'function') {
-                // Truyền debug mode vào callback
-                await this.props.onConfirm(otp, this.state.debugMode);
+                await this.props.onConfirm(otp);
                 // Xác nhận thành công - hiển thị icon xanh
                 this._setSuccess();
                 // Đợi một chút để user thấy trạng thái success
@@ -398,7 +365,7 @@ export class SmartOtpModal extends Component {
     _closePopup() {
         // Dừng timer trước khi đóng
         this._clearTimer();
-        
+
         if (typeof this.props.onClose === 'function') {
             this.props.onClose();
         }
@@ -411,12 +378,12 @@ export class SmartOtpModal extends Component {
     onClose() {
         // Dừng timer khi đóng popup
         this._clearTimer();
-        
+
         if (typeof this.props.onClose === 'function') {
             this.props.onClose();
         }
     }
-    
+
     // Cleanup khi component unmount
     willUnmount() {
         this._clearTimer();
@@ -433,11 +400,9 @@ function createProps(options, cleanup) {
     return {
         show: true,
         otpType: options.otpType || 'smart', // Lấy loại OTP từ options
-        onConfirm: async (otp, debugMode) => {
-            // Popup đã được đóng trong onVerify, chỉ cần gọi callback
-            // Truyền debug mode vào callback
+        onConfirm: async (otp) => {
             if (typeof options.onConfirm === 'function') {
-                await options.onConfirm(otp, debugMode);
+                await options.onConfirm(otp);
             }
             // Cleanup sau khi callback hoàn tất để đảm bảo container được xóa
             cleanup();
@@ -471,14 +436,14 @@ function mountComponent(container, props) {
 export function openSmartOtp(options = {}) {
     // Find or create a container for the OTP modal
     let container = document.querySelector('#smart-otp-container');
-    
+
     if (!container) {
         container = document.createElement('div');
         container.id = 'smart-otp-container';
         // Container không cần style - để overlay SCSS xử lý full-screen positioning
         document.body.appendChild(container);
     }
-    
+
     let isCleanedUp = false;
     const cleanup = () => {
         if (!isCleanedUp && container && container.parentNode) {
@@ -488,11 +453,11 @@ export function openSmartOtp(options = {}) {
             container.parentNode.removeChild(container);
         }
     };
-    
+
     const props = createProps(options, cleanup);
-    
+
     mountComponent(container, props);
-    
+
     return { close: cleanup };
 }
 

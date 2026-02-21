@@ -534,110 +534,91 @@ class FundCertificate(models.Model):
     
     def _sync_to_nav_fund_config(self):
         """Đồng bộ 3 field quan trọng từ fund.certificate sang nav.fund.config"""
+        # Guard: skip nếu model chưa được cài đặt trong registry
+        if 'nav.fund.config' not in self.env:
+            return
+
         for cert in self:
+            # Dùng savepoint để lỗi DB (vd bảng chưa tồn tại) không phá huỷ
+            # transaction cha – tránh "current transaction is aborted"
             try:
-                print(f"DEBUG: Bắt đầu đồng bộ cho fund.certificate {cert.id} ({cert.symbol})")
-                
-                # Tìm portfolio.fund tương ứng
-                portfolio_fund = self.env['portfolio.fund'].search([
-                    ('certificate_id', '=', cert.id)
-                ], limit=1)
-                
-                if not portfolio_fund:
-                    print(f"DEBUG: Không tìm thấy portfolio.fund cho certificate {cert.id}")
-                    continue
-                
-                print(f"DEBUG: Tìm thấy portfolio.fund {portfolio_fund.id} cho certificate {cert.id}")
-                
-                # Tìm hoặc tạo nav.fund.config
-                nav_config = self.env['nav.fund.config'].search([
-                    ('fund_id', '=', portfolio_fund.id)
-                ], limit=1)
-                
-                if not nav_config:
-                    # Tạo mới nav.fund.config
-                    new_config = self.env['nav.fund.config'].create({
-                        'fund_id': portfolio_fund.id,
+                with self.env.cr.savepoint():
+                    _logger.debug("Bắt đầu đồng bộ cho fund.certificate %s (%s)", cert.id, cert.symbol)
+
+                    # Tìm portfolio.fund tương ứng
+                    portfolio_fund = self.env['portfolio.fund'].search([
+                        ('certificate_id', '=', cert.id)
+                    ], limit=1)
+
+                    if not portfolio_fund:
+                        _logger.debug("Không tìm thấy portfolio.fund cho certificate %s", cert.id)
+                        continue
+
+                    # Tìm hoặc tạo nav.fund.config
+                    nav_config = self.env['nav.fund.config'].search([
+                        ('fund_id', '=', portfolio_fund.id)
+                    ], limit=1)
+
+                    vals = {
                         'initial_nav_price': cert.initial_certificate_price if cert.initial_certificate_price is not None else 0.0,
                         'initial_ccq_quantity': cert.initial_certificate_quantity if cert.initial_certificate_quantity is not None else 0.0,
-                        'capital_cost_percent': cert.capital_cost if cert.capital_cost is not None else 0.0,
-                        'description': f"Tự động đồng bộ từ {cert.symbol}",
-                        'active': True
-                    })
-                    print(f"DEBUG: Đã tạo nav.fund.config mới {new_config.id} cho fund {portfolio_fund.id}")
-                else:
-                    # Cập nhật nav.fund.config
-                    old_values = {
-                        'initial_nav_price': nav_config.initial_nav_price,
-                        'initial_ccq_quantity': nav_config.initial_ccq_quantity,
-                        'capital_cost_percent': nav_config.capital_cost_percent,
+                        'capital_cost_percent': getattr(cert, 'capital_cost', 0) or 0.0,
                     }
-                    
-                    nav_config.with_context(
-                        skip_certificate_sync=True,
-                        skip_fund_sync=True,
-                        skip_nav_config_sync=True
-                    ).write({
-                        'initial_nav_price': cert.initial_certificate_price if cert.initial_certificate_price is not None else 0.0,
-                        'initial_ccq_quantity': cert.initial_certificate_quantity if cert.initial_certificate_quantity is not None else 0.0,
-                        'capital_cost_percent': cert.capital_cost if cert.capital_cost is not None else 0.0,
-                    })
-                    print(f"DEBUG: Đã cập nhật nav.fund.config {nav_config.id} từ {old_values} sang giá trị mới")
-                    
+
+                    if not nav_config:
+                        vals.update({
+                            'fund_id': portfolio_fund.id,
+                            'description': f"Tự động đồng bộ từ {cert.symbol}",
+                            'active': True,
+                        })
+                        self.env['nav.fund.config'].create(vals)
+                    else:
+                        nav_config.with_context(
+                            skip_certificate_sync=True,
+                            skip_fund_sync=True,
+                            skip_nav_config_sync=True,
+                        ).write(vals)
+
             except Exception as e:
-                # Log lỗi nhưng không chặn transaction
-                import logging
-                _logger = logging.getLogger(__name__)
-                _logger.warning(f"Lỗi khi đồng bộ fund.certificate {cert.id} sang nav.fund.config: {e}")
-                print(f"DEBUG: Lỗi khi đồng bộ fund.certificate {cert.id}: {e}")
-                pass
+                _logger.warning("Lỗi khi đồng bộ fund.certificate %s sang nav.fund.config: %s", cert.id, e)
     
     def _sync_to_daily_inventory(self):
         """Đồng bộ dữ liệu từ fund.certificate sang tồn kho CCQ hàng ngày"""
+        if 'nav.daily.inventory' not in self.env:
+            return
+
         for cert in self:
             try:
-                print(f"DEBUG: Bắt đầu đồng bộ sang tồn kho hàng ngày cho fund.certificate {cert.id} ({cert.symbol})")
-                
-                # Tìm portfolio.fund tương ứng
-                portfolio_fund = self.env['portfolio.fund'].search([
-                    ('certificate_id', '=', cert.id)
-                ], limit=1)
-                
-                if not portfolio_fund:
-                    print(f"DEBUG: Không tìm thấy portfolio.fund cho certificate {cert.id}")
-                    continue
-                
-                print(f"DEBUG: Tìm thấy portfolio.fund {portfolio_fund.id} cho certificate {cert.id}")
-                
-                # Tìm tất cả bản ghi tồn kho của quỹ này
-                daily_inventories = self.env['nav.daily.inventory'].search([
-                    ('fund_id', '=', portfolio_fund.id)
-                ])
-                
-                if not daily_inventories:
-                    print(f"DEBUG: Không tìm thấy tồn kho hàng ngày cho fund {portfolio_fund.id}")
-                    continue
-                
-                # Sử dụng method sync_from_fund_certificate để cập nhật tất cả bản ghi
-                certificate_data = {
-                    'initial_certificate_quantity': cert.initial_certificate_quantity if cert.initial_certificate_quantity is not None else 0.0,
-                    'initial_certificate_price': cert.initial_certificate_price if cert.initial_certificate_price is not None else 0.0,
-                }
-                
-                # Gọi method sync từ nav.daily.inventory
-                self.env['nav.daily.inventory'].sync_from_fund_certificate(
-                    portfolio_fund.id, 
-                    certificate_data
-                )
-                
-                print(f"DEBUG: Hoàn thành đồng bộ sang tồn kho hàng ngày cho fund.certificate {cert.id}")
-                
+                with self.env.cr.savepoint():
+                    # Tìm portfolio.fund tương ứng
+                    portfolio_fund = self.env['portfolio.fund'].search([
+                        ('certificate_id', '=', cert.id)
+                    ], limit=1)
+
+                    if not portfolio_fund:
+                        continue
+
+                    # Tìm tất cả bản ghi tồn kho của quỹ này
+                    daily_inventories = self.env['nav.daily.inventory'].search([
+                        ('fund_id', '=', portfolio_fund.id)
+                    ])
+
+                    if not daily_inventories:
+                        continue
+
+                    # Sử dụng method sync_from_fund_certificate để cập nhật tất cả bản ghi
+                    certificate_data = {
+                        'initial_certificate_quantity': cert.initial_certificate_quantity if cert.initial_certificate_quantity is not None else 0.0,
+                        'initial_certificate_price': cert.initial_certificate_price if cert.initial_certificate_price is not None else 0.0,
+                    }
+
+                    self.env['nav.daily.inventory'].sync_from_fund_certificate(
+                        portfolio_fund.id,
+                        certificate_data
+                    )
+
             except Exception as e:
-                # Log lỗi nhưng không chặn transaction
-                import logging
-                _logger.warning(f"Lỗi khi đồng bộ fund.certificate {cert.id} sang tồn kho hàng ngày: {e}")
-                print(f"DEBUG: Lỗi khi đồng bộ fund.certificate {cert.id} sang tồn kho hàng ngày: {e}")
-                pass
+                _logger.warning("Lỗi khi đồng bộ fund.certificate %s sang tồn kho hàng ngày: %s", cert.id, e)
 
     @api.model
     def sync_batch(self, market_selection='all', sync_option='both'):

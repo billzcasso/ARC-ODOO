@@ -46,16 +46,17 @@ $sidebar-transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 .dashboard-sidebar {
   width: $sidebar-width;
   background: $sidebar-bg;
-  border-radius: $sidebar-radius;
-  box-shadow: $sidebar-shadow;
-  padding: 1.25rem 1rem;
-  position: sticky;
-  top: 1rem;
-  height: fit-content;
-  max-height: calc(100vh - 2rem);
-  overflow-y: auto;
-  overflow-x: hidden;
-  transition: width $sidebar-transition;
+  border-radius: 0;
+  border-right: 1px solid $sidebar-border;
+  padding: 1.5rem 1rem;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  transition: width $sidebar-transition, transform $sidebar-transition;
+  z-index: 100;
 
   // Custom scrollbar
   &::-webkit-scrollbar {
@@ -132,8 +133,21 @@ $sidebar-transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   // -----------------------------------------------------------------------------
   // Menu Section
   // -----------------------------------------------------------------------------
-
   .sidebar-menu {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    margin-right: -0.5rem;
+    padding-right: 0.5rem;
+
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: $sidebar-border;
+      border-radius: 4px;
+    }
+
     ul {
       list-style: none;
       padding: 0;
@@ -331,11 +345,98 @@ $sidebar-transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       }
     }
   }
+
+  // -----------------------------------------------------------------------------
+  // Sidebar Footer
+  // -----------------------------------------------------------------------------
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding-top: 1.25rem;
+    border-top: 1px solid $sidebar-border;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem;
+
+      .user-avatar {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        background: $sidebar-bg-active;
+        color: $sidebar-primary;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+      }
+
+      .user-details {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+
+        .user-name {
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: $sidebar-text-primary;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+          overflow: hidden;
+        }
+
+        .user-role {
+          font-size: 0.7rem;
+          color: $sidebar-text-secondary;
+        }
+      }
+    }
+
+    .logout-btn {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1.5px solid #ff4d4f;
+      background: transparent;
+      color: #ff4d4f;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: #ff4d4f;
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(255, 77, 79, 0.2);
+      }
+
+      i {
+        font-size: 0.9rem;
+      }
+
+      span {
+        font-size: 0.85rem;
+      }
+    }
+  }
 }
 
 // =============================================================================
 // Collapsed State (via dashboard-shell)
 // =============================================================================
+// Hiding toggle logic for now as requested
+.sidebar-toggle-btn {
+  display: none !important;
+}
 
 .dashboard-shell.sidebar-collapsed {
   .dashboard-sidebar {

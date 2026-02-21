@@ -31,16 +31,16 @@ export class OrderMatchingActions {
       }
 
       const result = await response.json();
-      
+
       if (result.success) {
         showNotification(
-          `Tạo thành công ${result.created_count || 0} giao dịch random`, 
+          `Tạo thành công ${result.created_count || 0} giao dịch random`,
           'success'
         );
         if (loadData) loadData();
       } else {
         showNotification(
-          'Lỗi tạo random transactions: ' + (result.message || 'Không xác định'), 
+          'Lỗi tạo random transactions: ' + (result.message || 'Không xác định'),
           'error'
         );
       }
@@ -75,12 +75,12 @@ export class OrderMatchingActions {
         use_time_priority: options.use_time_priority !== false,  // Default true - Sử dụng Price-Time Priority (FIFO)
         status_mode: options.status_mode || 'pending'
       };
-      
+
       // Thêm fund_id nếu có (để khớp lệnh cho quỹ cụ thể)
       if (options.fund_id) {
         payload.fund_id = options.fund_id;
       }
-      
+
       const response = await fetch('/api/transaction-list/match-orders', {
         method: 'POST',
         headers: {
@@ -94,12 +94,12 @@ export class OrderMatchingActions {
       }
 
       const result = await response.json();
-      
+
       if (result.success) {
         const algorithmUsed = result.algorithm_used || 'Price-Time Priority (FIFO)';
         const totalMatched = result.summary?.total_matched || 0;
         showNotification(
-          `Khớp lệnh thành công: ${totalMatched} cặp (${algorithmUsed})`, 
+          `Khớp lệnh thành công: ${totalMatched} cặp (${algorithmUsed})`,
           'success'
         );
         // Hiển thị popup kết quả khớp lệnh ngay
@@ -135,12 +135,12 @@ export class OrderMatchingActions {
   static async marketMakerHandleRemainingFromMenu(state, showNotification, showMatchingResults, loadData, options = {}) {
     try {
       const payload = {};
-      
+
       // Thêm fund_id nếu có (để xử lý lệnh cho quỹ cụ thể)
       if (options.fund_id) {
         payload.fund_id = options.fund_id;
       }
-      
+
       const res = await fetch('/api/transaction-list/market-maker/handle-remaining', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -165,8 +165,8 @@ export class OrderMatchingActions {
       const total = totalBuys + totalSells;
 
       const msg = total > 0
-        ? `Nhà tạo lập đã xử lý ${total} lệnh (Mua: ${totalBuys}, Bán: ${totalSells})`
-        : 'Không tìm thấy lệnh pending nào để Nhà tạo lập xử lý';
+        ? `Đã xử lý thanh khoản ${total} lệnh (Mua: ${totalBuys}, Bán: ${totalSells})`
+        : 'Không tìm thấy lệnh pending nào để xử lý thanh khoản';
 
       showNotification(msg, total > 0 ? 'success' : 'info');
 
@@ -200,7 +200,7 @@ export class OrderMatchingActions {
       if (error.message && !error.message.includes('Network')) {
         console.error('[MARKET MAKER] Error:', error);
       }
-      showNotification('Lỗi Market Maker: ' + error.message, 'error');
+      showNotification('Lỗi xử lý thanh khoản: ' + error.message, 'error');
     }
   }
 
@@ -216,9 +216,9 @@ export class OrderMatchingActions {
   static async sendMaturityNotifications(showNotification, rpc) {
     try {
       showNotification('Đang kiểm tra và gửi thông báo đáo hạn...', 'info');
-      
+
       const response = await rpc('/api/transaction-list/send-maturity-notifications', {});
-      
+
       if (response && response.success) {
         const created = response.notifications_created || 0;
         const sent = response.notifications_sent || 0;

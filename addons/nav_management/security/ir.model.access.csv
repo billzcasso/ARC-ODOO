@@ -7,3 +7,5 @@ access_nav_cap_config_user,nav.cap.config.user,model_nav_cap_config,base.group_u
 access_nav_cap_config_manager,nav.cap.config.manager,model_nav_cap_config,base.group_system,1,1,1,1
 access_nav_daily_inventory_user,nav.daily.inventory.user,model_nav_daily_inventory,base.group_user,1,1,1,1
 access_nav_daily_inventory_manager,nav.daily.inventory.manager,model_nav_daily_inventory,base.group_system,1,1,1,1
+access_nav_fund_config_user,nav.fund.config.user,model_nav_fund_config,base.group_user,1,1,1,1
+access_nav_fund_config_manager,nav.fund.config.manager,model_nav_fund_config,base.group_system,1,1,1,1

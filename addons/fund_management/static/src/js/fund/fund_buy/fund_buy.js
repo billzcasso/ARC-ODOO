@@ -51,13 +51,13 @@ function mround25(value, step = 50) {
 }
 
 /**
- * Cập nhật hint số tiền đầu tư tối thiểu = giá CCQ * 20,000 CCQ
+ * Cập nhật hint số tiền đầu tư tối thiểu = giá CCQ * 100 CCQ
  */
 function updateMinInvestmentHint(navPrice) {
-  const MIN_UNITS = 20000;
+  const MIN_UNITS = 100;
   const hintEl = document.getElementById('min-investment-hint');
   if (!hintEl) return;
-  
+
   if (navPrice > 0) {
     const minAmount = navPrice * MIN_UNITS;
     hintEl.textContent = `Số tiền đầu tư tối thiểu: ${minAmount.toLocaleString('vi-VN')}đ`;
@@ -298,8 +298,48 @@ const ORDER_SESSION_KEYS = [
   'result_fund_name', 'result_order_date', 'result_amount', 'result_total_amount',
   'result_units', 'result_order_type', 'result_status',
   'backup_term_months', 'backup_interest_rate',
-  'order_token' // Previous token
+  'order_token', // Previous token
+  'debug_skip_min_ccq', 'debug_skip_max_ccq', 'debug_skip_lot_size'
 ];
+
+function shouldSkipMinCcq() {
+  return sessionStorage.getItem('debug_skip_min_ccq') === 'true';
+}
+
+function shouldSkipMaxCcq() {
+  return sessionStorage.getItem('debug_skip_max_ccq') === 'true';
+}
+
+function shouldSkipLotSize() {
+  return sessionStorage.getItem('debug_skip_lot_size') === 'true';
+}
+
+function initFundBuyDebugToggle() {
+  const toggleBtn = document.getElementById('debug-mode-buy-toggle');
+  if (!toggleBtn) return;
+
+  // Sync initial state
+  const isDebug = sessionStorage.getItem('debug_mode_buy') === 'true';
+  toggleBtn.classList.toggle('active', isDebug);
+
+  toggleBtn.addEventListener('click', () => {
+    const nextState = !(sessionStorage.getItem('debug_mode_buy') === 'true');
+    sessionStorage.setItem('debug_mode_buy', nextState);
+    sessionStorage.setItem('debug_skip_min_ccq', nextState);
+    sessionStorage.setItem('debug_skip_max_ccq', nextState);
+    sessionStorage.setItem('debug_skip_lot_size', nextState);
+
+    toggleBtn.classList.toggle('active', nextState);
+
+    Swal.fire({
+      icon: 'info',
+      title: nextState ? 'Debug Mode ON' : 'Debug Mode OFF',
+      text: nextState ? 'Bỏ qua các ràng buộc số lượng tối thiểu/tối đa và lô 100.' : 'Đã khôi phục các ràng buộc đặt lệnh.',
+      timer: 1500,
+      showConfirmButton: false
+    });
+  });
+}
 
 function clearOrderSession() {
   console.log('[Session] Clearing order session data');
@@ -308,7 +348,7 @@ function clearOrderSession() {
 
 function generateOrderToken() {
   // Generate unique token for this order flow
-  const token = crypto.randomUUID ? crypto.randomUUID() : 
+  const token = crypto.randomUUID ? crypto.randomUUID() :
     `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   sessionStorage.setItem('order_token', token);
   console.log('[Session] Generated order_token:', token);
@@ -316,12 +356,11 @@ function generateOrderToken() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  
+
   initFundSelect();
   initShareQuantityInput();
   initPaymentButton();
-  initDebugButton();
-  initFundBuyDebugToggle(); // Thêm init debug toggle
+  initFundBuyDebugToggle(); // Debug toggle (replaces old initDebugButton)
   initOrderModeTabs(); // Order Mode Tabs (Thường vs Thỏa thuận)
 
   const amountInput = document.getElementById('amount-input');
@@ -356,43 +395,43 @@ function initOrderModeTabs() {
   const tabNormal = document.getElementById('tab-normal');
   const negotiatedForm = document.getElementById('negotiated-order-form');
   const normalFormContainer = document.getElementById('normal-order-form-container');
-  
+
   if (!tabNegotiated || !tabNormal) {
     console.log('[OrderMode] Tabs not found, skipping...');
     return;
   }
-  
+
   // Tab click handlers
   tabNegotiated.addEventListener('click', () => setOrderMode('negotiated'));
   tabNormal.addEventListener('click', () => setOrderMode('normal'));
-  
+
   // Load saved mode from session
   const savedMode = sessionStorage.getItem('current_order_mode');
   if (savedMode && ['negotiated', 'normal'].includes(savedMode)) {
     setOrderMode(savedMode);
   }
-  
+
   console.log('[OrderMode] Initialized, current mode:', currentOrderMode);
 }
 
 function setOrderMode(mode) {
   currentOrderMode = mode;
   sessionStorage.setItem('current_order_mode', mode);
-  
+
   const tabNegotiated = document.getElementById('tab-negotiated');
   const tabNormal = document.getElementById('tab-normal');
   const negotiatedForm = document.getElementById('negotiated-order-form');
   const normalFormContainer = document.getElementById('normal-order-form-container');
-  
+
   // Update tab active states
   if (tabNegotiated && tabNormal) {
     tabNegotiated.classList.toggle('active', mode === 'negotiated');
     tabNormal.classList.toggle('active', mode === 'normal');
   }
-  
+
   // Toggle body class for CSS-based field hiding
   document.body.classList.toggle('normal-order-mode', mode === 'normal');
-  
+
   // Toggle form visibility
   if (mode === 'normal') {
     if (negotiatedForm) negotiatedForm.classList.add('d-none');
@@ -405,38 +444,38 @@ function setOrderMode(mode) {
     if (negotiatedForm) negotiatedForm.classList.remove('d-none');
     if (normalFormContainer) normalFormContainer.classList.add('d-none');
   }
-  
+
   console.log('[OrderMode] Changed to:', mode);
 }
 
 function initNormalOrderContent() {
   const container = document.getElementById('normal-order-form-container');
   if (!container || container.dataset.initialized === 'true') return;
-  
+
   if (container.dataset.mounting === 'true') return;
   container.dataset.mounting = 'true';
-  
+
   const mountComponent = () => {
     if (window.NormalOrderFormMount && typeof window.NormalOrderFormMount.mount === 'function') {
-        window.NormalOrderFormMount.mount('normal-order-form-container')
+      window.NormalOrderFormMount.mount('normal-order-form-container')
         .then(() => {
-            container.dataset.initialized = 'true';
-            delete container.dataset.mounting;
-            delete container.dataset.retryCount;
+          container.dataset.initialized = 'true';
+          delete container.dataset.mounting;
+          delete container.dataset.retryCount;
         })
         .catch(error => {
-            console.error('[NormalOrder] Failed to mount OWL component:', error);
-            container.innerHTML = '<div class="alert alert-danger">Lỗi tải form đặt lệnh: ' + error.message + '</div>';
-            delete container.dataset.mounting;
+          console.error('[NormalOrder] Failed to mount OWL component:', error);
+          container.innerHTML = '<div class="alert alert-danger">Lỗi tải form đặt lệnh: ' + error.message + '</div>';
+          delete container.dataset.mounting;
         });
     } else {
-        let retryCount = Number(container.dataset.retryCount || 0);
-        if (retryCount < 50) {
-            container.dataset.retryCount = retryCount + 1;
-            setTimeout(mountComponent, 100);
-        } else {
-             console.error('[NormalOrder] OWL module load timeout');
-        }
+      let retryCount = Number(container.dataset.retryCount || 0);
+      if (retryCount < 50) {
+        container.dataset.retryCount = retryCount + 1;
+        setTimeout(mountComponent, 100);
+      } else {
+        console.error('[NormalOrder] OWL module load timeout');
+      }
     }
   };
   mountComponent();
@@ -446,12 +485,12 @@ function initNormalOrderContent() {
 function _unused_initNormalOrderContentLegacy() {
   const container = document.getElementById('normal-order-form-container');
   if (!container || container.dataset.initialized === 'true') return;
-  
+
   // Get fund info
   const fundSelect = document.getElementById('fund-select');
   const fundId = fundSelect?.options[fundSelect.selectedIndex]?.dataset?.id;
   const navPrice = window.currentNavPrice || parseFloat(document.getElementById('current-nav')?.textContent?.replace(/[^0-9]/g, '')) || 10000;
-  
+
   // Render with proper wrapper classes matching SCSS
   container.innerHTML = `
     <div class="normal-order-form-container">
@@ -528,9 +567,9 @@ function _unused_initNormalOrderContentLegacy() {
       </div>
     </div>
   `;
-  
+
   container.dataset.initialized = 'true';
-  
+
   // Setup event handlers
   initNormalOrderHandlers();
   initNormalOrderTypeGrid();
@@ -553,7 +592,7 @@ function initNormalOrderHandlers() {
   const amountInput = document.getElementById('normal-investment-amount');
   const orderTypeSelect = document.getElementById('normal-order-type');
   const submitBtn = document.getElementById('normal-submit-btn');
-  
+
   if (amountInput) {
     amountInput.addEventListener('input', (e) => {
       const rawValue = e.target.value.replace(/[^0-9]/g, '');
@@ -562,11 +601,11 @@ function initNormalOrderHandlers() {
       calculateNormalQuantity();
     });
   }
-  
+
   if (orderTypeSelect) {
     orderTypeSelect.addEventListener('change', updateOrderTypeHint);
   }
-  
+
   if (submitBtn) {
     submitBtn.addEventListener('click', submitNormalOrder);
   }
@@ -577,15 +616,15 @@ function calculateNormalQuantity() {
   const quantityInput = document.getElementById('normal-share-quantity');
   const estimatedEl = document.getElementById('normal-estimated-total');
   const submitBtn = document.getElementById('normal-submit-btn');
-  
+
   const amount = parseInt((amountInput?.value || '').replace(/[^0-9]/g, '')) || 0;
   const navPrice = window.currentNavPrice || 10000;
   const LOT_SIZE = 100;
-  
+
   if (navPrice > 0 && amount > 0) {
     const rawQty = Math.floor(amount / navPrice);
     const lotQty = Math.floor(rawQty / LOT_SIZE) * LOT_SIZE;
-    
+
     if (quantityInput) quantityInput.value = lotQty.toLocaleString('vi-VN');
     if (estimatedEl) estimatedEl.textContent = `${(lotQty * navPrice).toLocaleString('vi-VN')} VNĐ`;
     if (submitBtn) submitBtn.disabled = lotQty <= 0;
@@ -599,14 +638,14 @@ function calculateNormalQuantity() {
 function updateOrderTypeHint() {
   const orderType = document.getElementById('normal-order-type')?.value || 'MTL';
   const hintEl = document.getElementById('normal-order-type-hint');
-  
+
   const hints = {
     'MTL': 'Khớp ngay với giá tốt nhất, phần dư chuyển thành lệnh giới hạn',
     'ATO': 'Khớp tại giá mở cửa (9h00-9h15, chỉ sàn HOSE)',
     'ATC': 'Khớp tại giá đóng cửa (14h30-14h45)',
     'LO': 'Đặt lệnh với giá cố định'
   };
-  
+
   if (hintEl) {
     hintEl.innerHTML = `<i class="fas fa-info-circle"></i> ${hints[orderType] || ''}`;
   }
@@ -619,22 +658,22 @@ async function loadPurchasingPower() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', method: 'call', params: {} })
     });
-    
+
     const result = await response.json();
     if (result.result && result.result.success) {
       const purchasingPower = result.result.purchasing_power || 0;
       // const holdings = balance.holdings || 0; // Info not yet available in new endpoint
-      
+
       const navPrice = window.currentNavPrice || 10000;
       const LOT_SIZE = 100;
-      
+
       const maxBuy = navPrice > 0 ? Math.floor(Math.floor(purchasingPower / navPrice) / LOT_SIZE) * LOT_SIZE : 0;
       // const maxSell = Math.floor(holdings / LOT_SIZE) * LOT_SIZE;
-      
+
       const ppAmountEl = document.getElementById('normal-pp-amount');
       const maxBuyEl = document.getElementById('normal-max-buy');
       // const maxSellEl = document.getElementById('normal-max-sell');
-      
+
       if (ppAmountEl) ppAmountEl.textContent = `${purchasingPower.toLocaleString('vi-VN')} VNĐ`;
       if (maxBuyEl) maxBuyEl.textContent = maxBuy.toLocaleString('vi-VN');
       // if (maxSellEl) maxSellEl.textContent = maxSell.toLocaleString('vi-VN');
@@ -650,14 +689,14 @@ async function submitNormalOrder() {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
   }
-  
+
   try {
     const fundSelect = document.getElementById('fund-select');
     const fundId = fundSelect?.options[fundSelect.selectedIndex]?.dataset?.id;
     const quantity = parseInt((document.getElementById('normal-share-quantity')?.value || '').replace(/[^0-9]/g, '')) || 0;
     const orderType = document.getElementById('normal-order-type')?.value || 'MTL';
     const price = window.currentNavPrice || 10000;
-    
+
     const response = await fetch('/api/fund/normal-order/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -673,13 +712,13 @@ async function submitNormalOrder() {
         }
       })
     });
-    
+
     const result = await response.json();
-    
+
     if (result.result && result.result.success) {
       sessionStorage.setItem('normal_order_id', result.result.order_id);
       sessionStorage.setItem('result_order_mode', 'normal');
-      
+
       Swal.fire({
         icon: 'success',
         title: 'Đặt lệnh thành công!',
@@ -687,7 +726,7 @@ async function submitNormalOrder() {
         timer: 2000,
         showConfirmButton: false
       });
-      
+
       setTimeout(() => {
         window.location.href = '/fund_result';
       }, 2000);
@@ -709,178 +748,6 @@ async function submitNormalOrder() {
   }
 }
 
-// Khởi tạo debug toggle cho fund_buy
-function initFundBuyDebugToggle() {
-  const debugToggle = document.getElementById('fund-buy-debug-toggle');
-  const debugWarning = document.getElementById('fund-buy-debug-warning');
-  const debugOptions = document.getElementById('fund-buy-debug-options');
-  const debugWarningText = document.getElementById('debug-warning-text');
-
-  if (!debugToggle) return;
-
-  // Load từ localStorage
-  const savedDebugMode = localStorage.getItem('fund_buy_debug_mode') === 'true';
-  debugToggle.checked = savedDebugMode;
-  
-  // Load các debug options từ localStorage
-  loadDebugOptions();
-  
-  // Hiển thị/ẩn debug options và warning
-  updateDebugUI(savedDebugMode);
-
-  // Lắng nghe thay đổi debug toggle
-  debugToggle.addEventListener('change', (e) => {
-    const isEnabled = e.target.checked;
-    localStorage.setItem('fund_buy_debug_mode', isEnabled.toString());
-    
-    updateDebugUI(isEnabled);
-
-    console.log('[Fund Buy Debug] Debug mode:', isEnabled ? 'ENABLED' : 'DISABLED');
-
-    // Trigger lại check profitability để cập nhật button state
-    triggerValidationRefresh();
-  });
-  
-  // Lắng nghe thay đổi các debug options
-  const optionCheckboxes = document.querySelectorAll('.debug-option');
-  optionCheckboxes.forEach(checkbox => {
-    checkbox.addEventListener('change', () => {
-      saveDebugOptions();
-      updateDebugWarningText();
-      triggerValidationRefresh();
-    });
-  });
-}
-
-// Load debug options từ localStorage
-function loadDebugOptions() {
-  const options = getDebugOptions();
-  
-  const skipMinCcq = document.getElementById('debug-skip-min-ccq');
-  const skipMaxCcq = document.getElementById('debug-skip-max-ccq');
-  const skipLotSize = document.getElementById('debug-skip-lot-size');
-  const skipProfitCheck = document.getElementById('debug-skip-profit-check');
-  
-  if (skipMinCcq) skipMinCcq.checked = options.skipMinCcq;
-  if (skipMaxCcq) skipMaxCcq.checked = options.skipMaxCcq;
-  if (skipLotSize) skipLotSize.checked = options.skipLotSize;
-  if (skipProfitCheck) skipProfitCheck.checked = options.skipProfitCheck;
-}
-
-// Lưu debug options vào localStorage
-function saveDebugOptions() {
-  const options = {
-    skipMinCcq: document.getElementById('debug-skip-min-ccq')?.checked || false,
-    skipMaxCcq: document.getElementById('debug-skip-max-ccq')?.checked || false,
-    skipLotSize: document.getElementById('debug-skip-lot-size')?.checked || false,
-    skipProfitCheck: document.getElementById('debug-skip-profit-check')?.checked || false
-  };
-  localStorage.setItem('fund_buy_debug_options', JSON.stringify(options));
-}
-
-// Lấy debug options từ localStorage
-function getDebugOptions() {
-  try {
-    const saved = localStorage.getItem('fund_buy_debug_options');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-  } catch (_) {}
-  // Default options
-  return {
-    skipMinCcq: true,
-    skipMaxCcq: false,
-    skipLotSize: true,
-    skipProfitCheck: true
-  };
-}
-
-// Cập nhật UI debug
-function updateDebugUI(isEnabled) {
-  const debugOptions = document.getElementById('fund-buy-debug-options');
-  const debugWarning = document.getElementById('fund-buy-debug-warning');
-  
-  if (debugOptions) {
-    debugOptions.classList.toggle('d-none', !isEnabled);
-  }
-  if (debugWarning) {
-    debugWarning.classList.toggle('d-none', !isEnabled);
-    if (isEnabled) {
-      updateDebugWarningText();
-    }
-  }
-}
-
-// Cập nhật text warning dựa trên các option được chọn
-function updateDebugWarningText() {
-  const warningText = document.getElementById('debug-warning-text');
-  if (!warningText) return;
-  
-  const options = getDebugOptions();
-  const skipped = [];
-  
-  if (options.skipMinCcq) skipped.push('min CCQ');
-  if (options.skipMaxCcq) skipped.push('max CCQ');
-  if (options.skipLotSize) skipped.push('lô 100');
-  if (options.skipProfitCheck) skipped.push('lãi/lỗ');
-  
-  if (skipped.length > 0) {
-    warningText.textContent = `Debug mode ON - Bỏ qua: ${skipped.join(', ')}`;
-  } else {
-    warningText.textContent = 'Debug mode ON';
-  }
-}
-
-// Trigger lại validation khi thay đổi debug options
-function triggerValidationRefresh() {
-  const fundSelect = document.getElementById('fund-select');
-  const termSelect = document.getElementById('term-select');
-  if (fundSelect && termSelect && fundSelect.selectedIndex > 0) {
-    const selectedOption = fundSelect.options[fundSelect.selectedIndex];
-    const fundId = selectedOption.dataset.id;
-    const selectedTermOption = termSelect.options[termSelect.selectedIndex];
-    const months = parseInt(selectedTermOption.value, 10) || 0;
-    const rate = parseFloat(selectedTermOption.dataset.rate) || 0;
-
-    if (fundId && months > 0 && rate > 0) {
-      const investmentAmountInput = document.getElementById('investment-amount-input');
-      const shareQuantityInput = document.getElementById('share-quantity-input');
-      let amount = parseFloat(investmentAmountInput.value.replace(/[^0-9]/g, "")) || 0;
-      if (amount === 0) {
-        const rawShares = shareQuantityInput.value.replace(/[^0-9]/g, '');
-        const shares = parseFloat(rawShares) || 0;
-        const nav = window.currentNavPrice || 0;
-        amount = shares * nav;
-      }
-
-      if (amount >= 1000000) {
-        checkProfitability(fundId, amount, months, rate);
-      }
-    }
-  }
-}
-
-// Helper function kiểm tra debug mode có được bật không
-function isDebugModeEnabled() {
-  return localStorage.getItem('fund_buy_debug_mode') === 'true';
-}
-
-// Helper functions để kiểm tra từng option
-function shouldSkipMinCcq() {
-  return isDebugModeEnabled() && getDebugOptions().skipMinCcq;
-}
-
-function shouldSkipMaxCcq() {
-  return isDebugModeEnabled() && getDebugOptions().skipMaxCcq;
-}
-
-function shouldSkipLotSize() {
-  return isDebugModeEnabled() && getDebugOptions().skipLotSize;
-}
-
-function shouldSkipProfitCheck() {
-  return isDebugModeEnabled() && getDebugOptions().skipProfitCheck;
-}
 
 function format_date_today() {
   const today = new Date();
@@ -891,173 +758,6 @@ function format_date_today() {
   }
 }
 
-// DEBUG: Hiển thị phân tích tính toán đáo hạn và lãi/lỗ
-function initDebugButton() {
-  const btn = document.getElementById('debug-btn');
-  if (!btn) return;
-
-  btn.addEventListener('click', async () => {
-    try {
-      const fundName = document.getElementById('summary-fund-name')?.textContent || '';
-      const termSelect = document.getElementById('term-select');
-      const selectedOption = termSelect?.options[termSelect.selectedIndex];
-      const months = selectedOption ? (parseInt(selectedOption.value, 10) || 0) : 0;
-      let rate = selectedOption ? (parseFloat(selectedOption.dataset.rate) || 0) : 0;
-
-      // Lấy số tiền từ input đã chuẩn hóa (amount-input) hoặc từ investment-amount-input
-      const actualAmountInput = document.getElementById('amount-input');
-      const investmentAmountInput = document.getElementById('investment-amount-input');
-      let amount = 0;
-      if (actualAmountInput && actualAmountInput.value) {
-        amount = parseFloat(actualAmountInput.value.replace(/[^0-9]/g, '')) || 0;
-      }
-      if (!amount && investmentAmountInput && investmentAmountInput.value) {
-        amount = parseFloat(investmentAmountInput.value.replace(/[^0-9]/g, '')) || 0;
-      }
-
-      const shareQuantityInput = document.getElementById('share-quantity-input');
-       const rawShares = shareQuantityInput?.value.replace(/[^0-9]/g, '') || '0';
-       let shares = parseFloat(rawShares) || 0;
-      const nav = window.currentNavPrice || 0;
-      if (!amount && shares > 0 && nav > 0) amount = shares * nav;
-      if (amount > 0 && shares === 0 && nav > 0) shares = Math.floor(amount / nav);
-
-      if (amount <= 0 || months === 0 || rate === 0) {
-        Swal.fire({ icon: 'warning', title: 'Thiếu dữ liệu', text: 'Vui lòng nhập số tiền/kỳ hạn/lãi suất hợp lệ.' });
-        return;
-      }
-
-      // Ngày và số ngày kỳ hạn - tính giống Python backend
-      const today = new Date();
-      const maturityDate = calculateMaturityDate(today, months);
-      const days = calculateDaysBetween(today, maturityDate);
-
-      // Lấy giá CCQ tại thời điểm mua (J) từ currentNavPrice
-      const pricePerUnit = nav; // J: Giá CCQ tại thời điểm mua
-
-      // Lấy phí mua (K) từ fee-input hoặc summary-fee (số tiền tuyệt đối)
-      const feeInput = document.getElementById('fee-input');
-      const summaryFee = document.getElementById('summary-fee');
-      let feeAmount = 0;
-      if (feeInput && feeInput.value) {
-        feeAmount = parseFloat(feeInput.value.replace(/[^0-9]/g, '')) || 0;
-      } else if (summaryFee && summaryFee.textContent) {
-        feeAmount = parseFloat(summaryFee.textContent.replace(/[^0-9]/g, '')) || 0;
-      }
-
-      // L: Giá trị mua = I * J + K (I = shares, J = pricePerUnit, K = feeAmount)
-      const purchaseValue = (shares * pricePerUnit) + feeAmount;
-
-      // Giá trị bán 1 (U) theo công thức nav_management
-      const sellValue1 = purchaseValue * (rate / 100) / 365 * days + purchaseValue;
-      // Giá bán 1 (S) = ROUND(Giá trị bán 1 / Số lượng CCQ, 0)
-      const sellPrice1 = shares > 0 ? Math.round(sellValue1 / shares) : 0;
-      // Giá bán 2 (T) = MROUND25(Giá bán 1, 50) - dưới 25đ làm tròn xuống, từ 25đ làm tròn lên
-      const sellPrice2 = sellPrice1 ? mround25(sellPrice1, 50) : 0;
-
-      // Lấy cap config để kiểm tra lãi/lỗ nếu có
-      let capUpper = null, capLower = null, rNew = 0, delta = 0, isProfitable = null;
-      try {
-        const capResponse = await fetch('/nav_management/api/cap_config');
-        const capData = await capResponse.json();
-        if (capData && capData.success && days > 0 && sellPrice2 > 0) {
-          // J = Giá CCQ tại thời điểm mua = pricePerUnit
-          // Lãi suất quy đổi (O) = (Giá bán 2 / Giá mua - 1) * 365 / Số ngày * 100
-          rNew = (pricePerUnit > 0) ? ((sellPrice2 / pricePerUnit - 1) * 365 / days * 100) : 0;
-          // Chênh lệch lãi suất (Q) = Lãi suất quy đổi - Lãi suất
-          delta = rNew - rate;
-          capUpper = parseFloat(capData.cap_upper);
-          capLower = parseFloat(capData.cap_lower);
-          isProfitable = delta >= capLower && delta <= capUpper;
-        }
-      } catch (_) { }
-
-      const sellValueRounded = mround25(sellValue1, 50);
-
-      const summarySection = createDebugCard({
-        title: fundName || 'Chưa chọn quỹ',
-        subtitle: 'Bối cảnh giao dịch',
-        items: [
-          { label: 'Kỳ hạn', value: `${months} tháng (${days} ngày)` },
-          { label: 'Lãi suất cam kết', value: formatPercent(rate) },
-          { label: 'Giá NAV đang dùng', value: formatCurrency(nav) },
-          { label: 'Ngày đáo hạn', value: maturityDate ? maturityDate.toLocaleDateString('vi-VN') : '-' },
-        ],
-      });
-
-      const inputSection = createDebugCard({
-        title: 'Thông số đầu vào',
-        subtitle: 'Những gì bạn nhập',
-        items: [
-          { label: 'Số tiền đầu tư', value: formatCurrency(amount) },
-          { label: 'Số lượng CCQ', value: shares || 0 },
-          { label: 'Giá CCQ khi mua', value: formatCurrency(pricePerUnit) },
-          { label: 'Phí mua áp dụng', value: formatCurrency(feeAmount) },
-        ],
-      });
-
-      const formulaTimeline = createFormulaTimeline([
-        {
-          title: 'Giá trị mua',
-          expression: `Số lượng × Giá + Phí = ${shares} × ${formatCurrency(pricePerUnit)} + ${formatCurrency(feeAmount)}`,
-          result: formatCurrency(purchaseValue),
-        },
-        {
-          title: 'Giá trị bán mục tiêu',
-          expression: `Giá trị mua × Lãi suất / 365 × Số ngày + Giá trị mua`,
-          result: formatCurrency(sellValue1),
-        },
-        {
-          title: 'Giá bán sau làm tròn',
-          expression: `ROUND(${formatCurrency(sellValue1)} / ${shares || 1}, 0) → MROUND(…, 50)`,
-          result: `${formatCurrency(sellPrice1)} → ${formatCurrency(sellPrice2)} / CCQ`,
-        },
-      ]);
-
-      const profitItems = [];
-      if (isProfitable !== null && capUpper !== null && capLower !== null) {
-        profitItems.push(
-          {
-            label: 'Lãi suất quy đổi',
-            value: formatPercent(rNew, 4),
-            note: '(Giá bán sau làm tròn / Giá mua - 1) × 365 / Số ngày × 100',
-          },
-          { label: 'Chênh lệch lãi suất', value: formatPercent(delta, 4) },
-          { label: 'Ngưỡng cho phép', value: `${capLower}% → ${capUpper}%` },
-          {
-            label: 'Kết luận',
-            value: createDebugBadge(
-              isProfitable ? 'Trong ngưỡng lợi nhuận' : 'Ngoài ngưỡng quy định',
-              isProfitable ? 'success' : 'warning'
-            ),
-          }
-        );
-      } else {
-        profitItems.push({
-          label: 'Trạng thái',
-          value: createDebugBadge('Thiếu dữ liệu cấu hình để đánh giá', 'warning'),
-        });
-      }
-
-      const profitSection = createDebugCard({
-        title: 'Đánh giá lợi nhuận',
-        subtitle: 'So với biên kiểm soát nội bộ',
-        items: profitItems,
-      });
-
-      Swal.fire({
-        icon: 'info',
-        title: 'Bóc tách phép tính',
-        html: buildDebugModal([summarySection, inputSection, formulaTimeline, profitSection]),
-        width: 760,
-        showConfirmButton: true,
-      });
-    } catch (err) {
-      console.error('DEBUG error', err);
-      Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể hiển thị DEBUG.' });
-    }
-  });
-}
 
 // Load kỳ hạn từ nav_management API
 async function loadTermRates() {
@@ -1293,7 +993,7 @@ function initFundSelect() {
         };
 
         fundSearch.addEventListener('input', doFilter);
-        
+
         // Reset search on click/focus to show full list
         fundSearch.addEventListener('click', () => {
           fundSearch.value = '';
@@ -1448,7 +1148,7 @@ function initFundSelect() {
             window.currentNavBase = openingPrice;
             window.capitalCostPercent = capitalCostPercent;
 
-            // Cập nhật hint số tiền đầu tư tối thiểu = giá CCQ * 20,000 CCQ
+            // Cập nhật hint số tiền đầu tư tối thiểu = giá CCQ * 100 CCQ
             updateMinInvestmentHint(finalPrice);
 
           } catch (error) {
@@ -1468,7 +1168,7 @@ function initFundSelect() {
             window.currentNavPrice = fallbackPrice;
             window.currentNavBase = fallbackPrice;
             window.capitalCostPercent = 0;
-            
+
             // Cập nhật hint số tiền đầu tư tối thiểu
             updateMinInvestmentHint(fallbackPrice);
           }
@@ -1507,12 +1207,6 @@ async function checkProfitability(fundId, amount, months, rate) {
   }
 
   try {
-    // Kiểm tra debug skip profit check
-    if (shouldSkipProfitCheck()) {
-      paymentBtn.disabled = false;
-      paymentBtn.style.opacity = '1';
-      return;
-    }
 
     // Lấy cấu hình chặn trên/dưới từ nav_management
     const capResponse = await fetch('/nav_management/api/cap_config');
@@ -1627,14 +1321,13 @@ function initPaymentButton() {
 
   // Kiểm tra lãi/lỗ và enable/disable button
   function checkProfitabilityAndUpdateButton() {
-    // Kiểm tra debug skip profit check trước
-    if (shouldSkipProfitCheck()) {
-      paymentBtn.disabled = false;
-      paymentBtn.style.opacity = '1';
-      return;
-    }
 
     const selectedOption = fundSelect.options[fundSelect.selectedIndex];
+    if (!selectedOption) {
+      paymentBtn.disabled = true;
+      paymentBtn.style.opacity = '0.5';
+      return;
+    }
     const fundId = selectedOption.dataset.id;
     const investmentAmountInput = document.getElementById('investment-amount-input');
     const shareQuantityInput = document.getElementById('share-quantity-input');
@@ -1649,7 +1342,9 @@ function initPaymentButton() {
 
 
     // Debug mode: bỏ qua check min amount nếu option được chọn
-    const minAmount = shouldSkipMinCcq() ? 0 : 20000;
+    const MIN_UNITS = 100;
+    const nav = window.currentNavPrice || 0;
+    const minAmount = (MIN_UNITS * nav);
     if (!fundId || amount < minAmount) {
       paymentBtn.disabled = true;
       paymentBtn.style.opacity = '0.5';
@@ -1721,12 +1416,12 @@ function initPaymentButton() {
 
     // Validate CCQ units
     const unitsInt = parseInt(units.replace(/[^0-9]/g, '')) || 0;
-    
-    // Min 20,000 CCQ validation (skip if debug option enabled)
-    if (!shouldSkipMinCcq() && unitsInt < 20000) {
+
+    // Min 100 CCQ validation (skip if debug option enabled)
+    if (unitsInt < 100) {
       Swal.fire({
         title: "Số lượng CCQ quá thấp!",
-        text: "Số lượng CCQ tối thiểu là 20,000 CCQ/lệnh.",
+        text: "Số lượng CCQ tối thiểu là 100 CCQ/lệnh.",
         icon: "warning",
         confirmButtonText: "OK",
         confirmButtonColor: "#36A2EB"
@@ -1735,7 +1430,7 @@ function initPaymentButton() {
     }
 
     // Max 500,000 CCQ validation (skip if debug option enabled)
-    if (!shouldSkipMaxCcq() && unitsInt > 500000) {
+    if (unitsInt > 500000) {
       Swal.fire({
         title: "Số lượng CCQ quá cao!",
         text: "Số lượng CCQ tối đa là 500,000 CCQ/lệnh.",
@@ -1746,7 +1441,7 @@ function initPaymentButton() {
       return;
     }
     // Lot size 100 CCQ validation (skip if debug option enabled)
-    if (!shouldSkipLotSize() && unitsInt > 0 && unitsInt % 100 !== 0) {
+    if (unitsInt > 0 && unitsInt % 100 !== 0) {
       Swal.fire({
         title: "Số lượng CCQ không hợp lệ!",
         text: "Số lượng CCQ phải theo lô 100 CCQ).",
@@ -1759,7 +1454,7 @@ function initPaymentButton() {
 
     // Kiểm tra trạng thái lệnh từ widget (skip if debug option enabled)
     const profitStatus = document.getElementById('profit-status');
-    const isLossOrder = profitStatus && profitStatus.textContent.includes('[Lỗ]') && !shouldSkipProfitCheck();
+    const isLossOrder = profitStatus && profitStatus.textContent.includes('[Lỗ]');
 
     if (isLossOrder) {
       Swal.fire({
@@ -1813,7 +1508,7 @@ function initPaymentButton() {
     // Kiểm tra sức mua từ tài khoản đầu tư chứng khoán
     let hasSufficientFunds = false;
     const totalToPay = parseInt((document.getElementById('summary-total')?.textContent || '0').replace(/[^0-9]/g, ''), 10) || finalAmount;
-    
+
     try {
       const resp = await fetch('/my-account/get_balance', {
         method: 'POST',
@@ -1823,7 +1518,7 @@ function initPaymentButton() {
       });
       const j = await resp.json().catch(() => ({}));
       const bal = (j && j.status === 'success') ? (Number(j.balance?.available_cash || j.balance?.purchasing_power || 0) || 0) : 0;
-      
+
       // Kiểm tra sức mua
       if (bal > 0 && totalToPay <= bal) {
         hasSufficientFunds = true;
@@ -2008,10 +1703,10 @@ function initInvestmentAmountCalculation() {
     if (nav > 0 && investmentAmount > 0) {
       // Tính số lượng CCQ = Số tiền đầu tư / Giá CCQ
       const sharesRaw = investmentAmount / nav;
-      // Làm tròn số CCQ theo bội số 50 gần nhất
-      const shares = Math.round(sharesRaw / 50) * 50;
+      // Làm tròn số CCQ theo lô 100 gần nhất
+      const shares = Math.round(sharesRaw / 100) * 100;
       // Cập nhật số lượng CCQ (đảm bảo không âm)
-      shareQuantityInput.value = shares > 0 ? shares : '';
+      shareQuantityInput.value = shares > 0 ? shares.toLocaleString('vi-VN') : '';
 
       // Tính lại số tiền đầu tư theo số CCQ đã làm tròn
       let actualAmount = shares * nav;
@@ -2076,7 +1771,7 @@ function initInvestmentAmountCalculation() {
     isUpdatingFromInvestment = false;
   });
 
-  // Commit khi Enter/blur: làm tròn shares theo bội số 50 và cập nhật lại số tiền đầu tư tương ứng
+  // Commit khi Enter/blur: làm tròn shares theo lô 100 và cập nhật lại số tiền đầu tư tương ứng
   const commitFromInvestment = () => {
     if (isUpdatingFromInvestment) return;
     const nav = window.currentNavPrice || 0;
@@ -2088,35 +1783,36 @@ function initInvestmentAmountCalculation() {
     let shares = Math.floor(investmentAmount / nav);
 
     // Validate min/max/lot cho shares (skip if debug options enabled)
-    if (!shouldSkipMinCcq() && shares < 20000) shares = 20000;
+    // Validate min/max/lot cho shares (skip if debug options enabled)
+    if (!shouldSkipMinCcq() && shares < 100) shares = 100;
     if (!shouldSkipMaxCcq() && shares > 500000) shares = 500000;
     if (!shouldSkipLotSize()) shares = Math.round(shares / 100) * 100;
 
     // Cập nhật số CCQ đã làm tròn
     shareQuantityInput.value = shares > 0 ? shares.toLocaleString('vi-VN') : '';
-    
+
     // Tính lại investment amount thực tế theo shares đã chuẩn hóa
     const actualAmount = shares * nav;
-    
+
     // Cập nhật Investment Input (hiển thị số tiền thực tế cần đầu tư)
     investmentAmountInput.value = actualAmount.toLocaleString('vi-VN');
     amountInput.value = actualAmount.toLocaleString('vi-VN');
 
     // Kích hoạt lại luồng tính toán để cập nhật fee/summary
     shareQuantityInput.dispatchEvent(new Event('input'));
-    
+
     // Validate số lượng CCQ tối thiểu sau khi tính
     validateCCQUnits(shares);
   };
-  
+
   // Validate số lượng CCQ tối thiểu/tối đa (skip if debug options enabled)
   function validateCCQUnits(shares) {
-    const MIN_UNITS = 20000;
+    const MIN_UNITS = 100;
     const MAX_UNITS = 500000;
     const LOT_SIZE = 100;
-    
+
     if (shares === 0) return;
-    
+
     // Skip min validation if debug option enabled
     if (!shouldSkipMinCcq() && shares < MIN_UNITS) {
       const nav = window.currentNavPrice || 0;
@@ -2130,7 +1826,7 @@ function initInvestmentAmountCalculation() {
       });
       return;
     }
-    
+
     // Skip max validation if debug option enabled
     if (!shouldSkipMaxCcq() && shares > MAX_UNITS) {
       Swal.fire({
@@ -2142,12 +1838,12 @@ function initInvestmentAmountCalculation() {
       });
       return;
     }
-    
+
     // Skip lot size validation if debug option enabled
     if (!shouldSkipLotSize() && shares % LOT_SIZE !== 0) {
       Swal.fire({
         title: "Số lượng CCQ không hợp lệ!",
-        text: `Số lượng CCQ phải là bội số của ${LOT_SIZE} (lô ${LOT_SIZE} CCQ).`,
+        text: `Số lượng CCQ phải theo lô ${LOT_SIZE} CCQ.`,
         icon: "warning",
         confirmButtonText: "OK",
         confirmButtonColor: "#36A2EB"
@@ -2355,7 +2051,7 @@ function initShareQuantityCalculation() {
   });
 
 
-  // Thêm validation cho bội số 100 và tối thiểu 20,000 (có thông báo lỗi trước khi làm tròn)
+  // Thêm validation cho lô 100 và tối thiểu 100 (có thông báo lỗi trước khi làm tròn)
   shareInput.addEventListener('blur', () => {
     // Strip non-numeric chars (thousands separators) before parsing
     let value = parseInt(shareInput.value.replace(/[^0-9]/g, ''), 10);
@@ -2368,38 +2064,38 @@ function initShareQuantityCalculation() {
       // Không cần alert ở đây vì người dùng có thể xóa hết input
     }
 
-    // Nếu nhỏ hơn tối thiểu 20,000 (skip if debug option enabled)
-    if (!shouldSkipMinCcq() && value < 20000) {
+    // Nếu nhỏ hơn tối thiểu 100 (skip if debug option enabled)
+    if (!shouldSkipMinCcq() && value < 100) {
       Swal.fire({
-          title: "Số lượng quá thấp",
-          text: "Số lượng CCQ mua tối thiểu là 20.000.",
-          icon: "warning",
-          confirmButtonColor: "#F26522"
+        title: "Số lượng quá thấp",
+        text: "Số lượng CCQ mua tối thiểu là 100.",
+        icon: "warning",
+        confirmButtonColor: "#F26522"
       });
-      value = 20000;
+      value = 100;
       hasError = true;
-    } 
+    }
     // Nếu lớn hơn tối đa 500,000 (skip if debug option enabled)
     else if (!shouldSkipMaxCcq() && value > 500000) {
       Swal.fire({
-          title: "Số lượng quá cao",
-          text: "Số lượng CCQ mua tối đa là 500.000.",
-          icon: "warning",
-          confirmButtonColor: "#F26522"
+        title: "Số lượng quá cao",
+        text: "Số lượng CCQ mua tối đa là 500.000.",
+        icon: "warning",
+        confirmButtonColor: "#F26522"
       });
       value = 500000;
       hasError = true;
     }
-    // Check bội số 100 (skip if debug option enabled)
+    // Check lô 100 (skip if debug option enabled)
     else if (!shouldSkipLotSize() && value % 100 !== 0) {
-       Swal.fire({
-          title: "Số lượng không hợp lệ",
-          text: "Số lượng CCQ phải là bội số của 100.",
-          icon: "warning",
-          confirmButtonColor: "#F26522"
+      Swal.fire({
+        title: "Số lượng không hợp lệ",
+        text: "Số lượng CCQ phải theo lô 100.",
+        icon: "warning",
+        confirmButtonColor: "#F26522"
       });
-       value = Math.round(value / 100) * 100;
-       hasError = true;
+      value = Math.round(value / 100) * 100;
+      hasError = true;
     }
 
     // Cập nhật giá trị (đã làm tròn và đảm bảo tối thiểu/tối đa)
@@ -2419,7 +2115,7 @@ function initRealtimeClock() {
     const dateStr = now.toLocaleDateString('vi-VN'); // dd/MM/yyyy
     clockEl.textContent = `${timeStr} ${dateStr}`;
   }
-  
+
   update(); // run immediately
   setInterval(update, 1000); // update every second
 }
@@ -2501,7 +2197,7 @@ function formatAmountInputWithRaw(inputElement) {
     const raw = inputElement.value.replace(/[^0-9]/g, '');
     let amount = parseFloat(raw) || 0;
     const nav = window.currentNavPrice || 0;
-    
+
     if (amount <= 0 || nav <= 0) return;
 
     // Convert sang số lượng CCQ tương ứng
@@ -2509,53 +2205,53 @@ function formatAmountInputWithRaw(inputElement) {
     let originalShares = shares;
     let hasChanged = false;
 
-    // 1. Check Min: 20,000 CCQ (skip if debug option enabled)
-    if (!shouldSkipMinCcq() && shares < 20000) {
-        Swal.fire({
-          title: "Số tiền đầu tư quá thấp",
-          text: `Tương đương ${shares.toLocaleString('vi-VN', {maximumFractionDigits: 2})} CCQ. Tối thiểu cần 20.000 CCQ.`,
-          icon: "warning",
-          confirmButtonColor: "#F26522"
-        });
-        shares = 20000;
-        hasChanged = true;
+    // 1. Check Min: 100 CCQ (skip if debug option enabled)
+    if (!shouldSkipMinCcq() && shares < 100) {
+      Swal.fire({
+        title: "Số tiền đầu tư quá thấp",
+        text: `Tương đương ${shares.toLocaleString('vi-VN', { maximumFractionDigits: 2 })} CCQ. Tối thiểu cần 100 CCQ.`,
+        icon: "warning",
+        confirmButtonColor: "#F26522"
+      });
+      shares = 100;
+      hasChanged = true;
     }
     // 2. Check Max: 500,000 CCQ (skip if debug option enabled)
     else if (!shouldSkipMaxCcq() && shares > 500000) {
-        Swal.fire({
-          title: "Số tiền đầu tư quá cao",
-          text: `Tương đương ${shares.toLocaleString('vi-VN', {maximumFractionDigits: 2})} CCQ. Tối đa cho phép 500.000 CCQ.`,
-          icon: "warning",
-          confirmButtonColor: "#F26522"
-        });
-        shares = 500000;
-        hasChanged = true;
+      Swal.fire({
+        title: "Số tiền đầu tư quá cao",
+        text: `Tương đương ${shares.toLocaleString('vi-VN', { maximumFractionDigits: 2 })} CCQ. Tối đa cho phép 500.000 CCQ.`,
+        icon: "warning",
+        confirmButtonColor: "#F26522"
+      });
+      shares = 500000;
+      hasChanged = true;
     }
     // 3. Check Lot: 100 CCQ (skip if debug option enabled)
     else if (!shouldSkipLotSize()) {
-        // Làm tròn shares để check lot
-        let roundedShares = Math.round(shares);
-        if (roundedShares % 100 !== 0) {
-             Swal.fire({
-                title: "Số tiền lẻ lô",
-                text: `Số lượng CCQ quy đổi (${shares.toLocaleString('vi-VN', {maximumFractionDigits: 2})}) phải là bội số của 100.`,
-                icon: "warning",
-                confirmButtonColor: "#F26522"
-             });
-             shares = Math.round(shares / 100) * 100;
-             hasChanged = true;
-        }
+      // Làm tròn shares để check lot
+      let roundedShares = Math.round(shares);
+      if (roundedShares % 100 !== 0) {
+        Swal.fire({
+          title: "Số tiền lẻ lô",
+          text: `Số lượng CCQ quy đổi (${shares.toLocaleString('vi-VN', { maximumFractionDigits: 2 })}) phải theo lô 100.`,
+          icon: "warning",
+          confirmButtonColor: "#F26522"
+        });
+        shares = Math.round(shares / 100) * 100;
+        hasChanged = true;
+      }
     }
 
     if (hasChanged) {
-        // Tính lại số tiền theo shares đã correct (làm tròn lên bội số 50đ của amount nếu cần)
-        let newAmount = shares * nav;
-        // Có thể cần làm tròn amount
-        newAmount = Math.ceil(newAmount); 
-        
-        inputElement.value = newAmount.toLocaleString('vi-VN');
-        inputElement.dataset.raw = newAmount;
-        inputElement.dispatchEvent(new Event('input'));
+      // Tính lại số tiền theo shares đã correct (làm tròn lên theo lô 50đ của amount nếu cần)
+      let newAmount = shares * nav;
+      // Có thể cần làm tròn amount
+      newAmount = Math.ceil(newAmount);
+
+      inputElement.value = newAmount.toLocaleString('vi-VN');
+      inputElement.dataset.raw = newAmount;
+      inputElement.dispatchEvent(new Event('input'));
     }
   });
 }
@@ -2621,7 +2317,7 @@ function initShareQuantityInput() {
   const input = document.getElementById('share-quantity-input');
   if (!input) return;
 
-  // Tạo nút tăng/giảm bội số 50 nếu chưa có
+  // Tạo nút tăng/giảm theo lô 100 nếu chưa có
   try {
     const wrapper = input.parentElement;
     if (wrapper && !wrapper.querySelector('.share-input-group')) {
@@ -2639,13 +2335,13 @@ function initShareQuantityInput() {
       btnDec.addEventListener('click', () => {
         const current = parseInt(input.value.replace(/[^0-9]/g, ''), 10) || 0;
         const nextRaw = Math.max(0, current - 100); // step 100
-        const next = nextRaw > 0 ? Math.round(nextRaw / 50) * 50 : 0; // chuẩn hóa bội số 50 như nhập tay
+        const next = nextRaw > 0 ? Math.round(nextRaw / 100) * 100 : 0; // chuẩn hóa theo lô 100
         input.value = next > 0 ? next.toLocaleString('vi-VN') : '';
         // Cập nhật amount-input ngay để thuật toán đáo hạn dùng đúng dữ liệu như nhập tay
         const amountEl = document.getElementById('amount-input');
         const nav = window.currentNavPrice || 0;
         const investmentAmount = (next > 0 && nav > 0) ? (next * nav) : 0;
-        const actualAmount = Math.round(investmentAmount / 50) * 50;
+        const actualAmount = Math.round(investmentAmount / 100) * 100; // Changed to 100-lot rounding
         if (amountEl) {
           amountEl.value = actualAmount ? actualAmount.toLocaleString('vi-VN') : '';
           amountEl.dispatchEvent(new Event('input'));
@@ -2660,13 +2356,13 @@ function initShareQuantityInput() {
       btnInc.addEventListener('click', () => {
         const current = parseInt(input.value.replace(/[^0-9]/g, ''), 10) || 0;
         const nextRaw = current + 100; // step 100
-        const next = Math.round(nextRaw / 50) * 50; // chuẩn hóa bội số 50 như nhập tay
+        const next = Math.round(nextRaw / 100) * 100; // chuẩn hóa theo lô 100
         input.value = next.toLocaleString('vi-VN');
         // Cập nhật amount-input ngay để thuật toán đáo hạn dùng đúng dữ liệu như nhập tay
         const amountEl = document.getElementById('amount-input');
         const nav = window.currentNavPrice || 0;
         const investmentAmount = (next > 0 && nav > 0) ? (next * nav) : 0;
-        const actualAmount = Math.round(investmentAmount / 50) * 50;
+        const actualAmount = Math.round(investmentAmount / 100) * 100; // Changed to 100-lot rounding
         if (amountEl) {
           amountEl.value = actualAmount ? actualAmount.toLocaleString('vi-VN') : '';
           amountEl.dispatchEvent(new Event('input'));
@@ -2689,13 +2385,13 @@ function initShareQuantityInput() {
   input.addEventListener('input', () => {
     let raw = input.value.replace(/[^0-9]/g, '');
     if (raw && parseInt(raw, 10) < 0) raw = '';
-    
+
     // Lưu vị trí con trỏ để UX tốt hơn (đơn giản hoá: để cuối nếu xoá hết)
     // Nếu đang nhập, format lại
     if (raw) {
-       input.value = Number(raw).toLocaleString('vi-VN');
+      input.value = Number(raw).toLocaleString('vi-VN');
     } else {
-       input.value = '';
+      input.value = '';
     }
   });
 
@@ -2705,7 +2401,7 @@ function initShareQuantityInput() {
     const value = parseInt(raw, 10) || 0;
     if (value === 0) return; // Bỏ qua nếu chưa nhập
 
-    const MIN_UNITS = 20000;
+    const MIN_UNITS = 100;
     const MAX_UNITS = 500000;
     const LOT_SIZE = 100;
 
@@ -2737,7 +2433,7 @@ function initShareQuantityInput() {
     if (!shouldSkipLotSize() && value % LOT_SIZE !== 0) {
       Swal.fire({
         title: "Số lượng CCQ không hợp lệ!",
-        text: `Số lượng CCQ phải là bội số của ${LOT_SIZE} (lô ${LOT_SIZE} CCQ).`,
+        text: `Số lượng CCQ phải theo lô ${LOT_SIZE} CCQ.`,
         icon: "warning",
         confirmButtonText: "OK",
         confirmButtonColor: "#36A2EB"
@@ -2883,7 +2579,7 @@ function initInvestmentCalculator() {
         // Cập nhật ngày đáo hạn và ngày bán lại (trừ 2 ngày làm việc)
         if (maturityDateField) maturityDateField.textContent = formatDateDDMMYYYY(maturityDate);
         if (resaleDateField) resaleDateField.textContent = formatDateDDMMYYYY(subtractBusinessDays(maturityDate, 2));
-        
+
         if (summaryMaturityDate) summaryMaturityDate.textContent = formatDateDDMMYYYY(maturityDate);
         if (summaryResaleDate) summaryResaleDate.textContent = formatDateDDMMYYYY(subtractBusinessDays(maturityDate, 2));
 
@@ -2926,7 +2622,7 @@ function initInvestmentCalculator() {
 
         // V: Giá trị bán 2 = I * T
         const sellValue2 = shares * sellPrice2;
-        
+
 
 
         // Tính lãi suất quy đổi (O) = (T / J - 1) * 365 / G * 100
@@ -3066,7 +2762,7 @@ function initInvestmentCalculator() {
 
       // Định dạng VNĐ với màu sắc và chỉ báo trực quan
       updateFinalValueDisplay(finalValue, isProfitable, delta);
-      
+
       // Update Summary Final Value with the correct Z value
       if (summaryFinalValue) summaryFinalValue.textContent = finalValue.toLocaleString('vi-VN') + ' đ';
 
@@ -3129,7 +2825,7 @@ function initInvestmentCalculator() {
 
       // Hiển thị với trạng thái không xác định
       updateFinalValueDisplay(finalValue, null, 0);
-      
+
       // Update Summary Final Value with the correct Z value (fallback)
       if (summaryFinalValue) summaryFinalValue.textContent = finalValue.toLocaleString('vi-VN') + ' đ';
 

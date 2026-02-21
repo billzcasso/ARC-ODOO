@@ -20,13 +20,17 @@ class HolidayWidget extends Component {
                         <input type="number" min="1900" max="2100" class="form-control form-control-sm" style="width: 80px;"
                             t-model="state.syncYear"
                         />
-                         <button t-on-click="syncFromApi" t-att-disabled="state.syncingApi" class="btn btn-sm btn-light border fw-semibold">
-                            <t t-if="state.syncingApi"><i class="fas fa-spinner fa-spin me-1"></i>API</t>
-                            <t t-else=""><i class="fas fa-cloud-download-alt me-1"></i>API</t>
+                         <button t-on-click="syncFromApi" t-att-disabled="state.syncingApi" class="btn btn-fmc-light d-flex align-items-center gap-2">
+                             <i t-if="state.syncingApi" class="fas fa-spinner fa-spin text-primary"></i>
+                             <i t-else="" class="fas fa-cloud-download-alt text-primary"></i>
+                             <span t-if="state.syncingApi">Đang đồng bộ...</span>
+                             <span t-else="">API</span>
                         </button>
-                        <button t-on-click="syncInternal" t-att-disabled="state.syncingInternal" class="btn btn-sm btn-light border fw-semibold">
-                             <t t-if="state.syncingInternal"><i class="fas fa-spinner fa-spin me-1"></i>Nội bộ</t>
-                            <t t-else=""><i class="fas fa-sync me-1"></i>Nội bộ</t>
+                        <button t-on-click="syncInternal" t-att-disabled="state.syncingInternal" class="btn btn-fmc-light d-flex align-items-center gap-2">
+                             <i t-if="state.syncingInternal" class="fas fa-spinner fa-spin text-primary"></i>
+                             <i t-else="" class="fas fa-sync text-primary"></i>
+                             <span t-if="state.syncingInternal">Đang đồng bộ...</span>
+                             <span t-else="">Nội bộ</span>
                         </button>
                     </div>
                 </div>
@@ -118,15 +122,15 @@ class HolidayWidget extends Component {
             <nav aria-label="Page navigation" class="d-flex justify-content-end">
               <ul class="pagination pagination-sm mb-0">
                 <li t-attf-class="page-item #{state.currentPage === 1 ? 'disabled' : ''}">
-                  <a class="page-link" href="#" t-on-click.prevent="() => this.changePage(state.currentPage - 1)">«</a>
+                  <a class="page-link shadow-none" href="#" t-on-click.prevent="() => this.changePage(state.currentPage - 1)">«</a>
                 </li>
-                <t t-foreach="Array.from({ length: totalPages }, (_, i) => i + 1)" t-as="page" t-key="page">
-                    <li t-attf-class="page-item #{page === state.currentPage ? 'active' : ''}">
-                         <a class="page-link" href="#" t-on-click.prevent="() => this.changePage(page)" t-esc="page"/>
+                <t t-foreach="visiblePages" t-as="page" t-key="page_index">
+                    <li t-attf-class="page-item #{page === state.currentPage ? 'active' : ''} #{page === '...' ? 'disabled' : ''}">
+                         <a class="page-link shadow-none" href="#" t-on-click.prevent="() => page !== '...' &amp;&amp; this.changePage(page)" t-esc="page"/>
                     </li>
                 </t>
                 <li t-attf-class="page-item #{state.currentPage === totalPages ? 'disabled' : ''}">
-                  <a class="page-link" href="#" t-on-click.prevent="() => this.changePage(state.currentPage + 1)">»</a>
+                  <a class="page-link shadow-none" href="#" t-on-click.prevent="() => this.changePage(state.currentPage + 1)">»</a>
                 </li>
               </ul>
             </nav>
@@ -158,6 +162,35 @@ class HolidayWidget extends Component {
         return Math.ceil(this.state.totalRecords / this.state.limit);
     }
 
+    get visiblePages() {
+        const current = this.state.currentPage;
+        const total = this.totalPages;
+        const delta = 2;
+        const range = [];
+        const rangeWithDots = [];
+        let l;
+
+        for (let i = 1; i <= total; i++) {
+            if (i === 1 || i === total || (i >= current - delta && i <= current + delta)) {
+                range.push(i);
+            }
+        }
+
+        for (const i of range) {
+            if (l) {
+                if (i - l === 2) {
+                    rangeWithDots.push(l + 1);
+                } else if (i - l !== 1) {
+                    rangeWithDots.push('...');
+                }
+            }
+            rangeWithDots.push(i);
+            l = i;
+        }
+
+        return rangeWithDots;
+    }
+
     async loadData() {
         console.log("Loading holiday data...");
         this.state.loading = true;
@@ -165,25 +198,25 @@ class HolidayWidget extends Component {
         try {
             const url = `/get_holiday_data?page=${this.state.currentPage}&limit=${this.state.limit}&search=${searchTerm}`;
             console.log("Fetching from URL:", url);
-            
+
             const response = await fetch(url);
             console.log("Response status:", response.status);
-            
+
             if (!response.ok) {
                 throw new Error(`Network response was not ok: ${response.statusText}`);
             }
-            
+
             const result = await response.json();
             console.log("API Response:", result);
-            
+
             if (result.error) {
                 throw new Error(result.error);
             }
-            
+
             this.state.holidays = result.records || [];
             this.state.totalRecords = result.total_records || 0;
             console.log("Loaded holidays:", this.state.holidays.length);
-            
+
         } catch (error) {
             console.error("Error fetching holidays:", error);
             this.state.holidays = [];
@@ -200,7 +233,7 @@ class HolidayWidget extends Component {
             this.loadData();
         }
     }
-    
+
     onSearchKeyup(ev) {
         if (ev.key === 'Enter') {
             this.performSearch();
@@ -211,11 +244,11 @@ class HolidayWidget extends Component {
         this.state.currentPage = 1;
         this.loadData();
     }
-    
-    handleEdit(holidayId) { 
-        window.location.href = `/holiday/edit/${holidayId}`; 
+
+    handleEdit(holidayId) {
+        window.location.href = `/holiday/edit/${holidayId}`;
     }
-    
+
     handleDelete(holidayId) {
         if (confirm('Bạn có chắc muốn xóa ngày lễ này?')) {
             const form = document.createElement('form');
@@ -225,8 +258,8 @@ class HolidayWidget extends Component {
             form.submit();
         }
     }
-    
-    createNew() { 
+
+    createNew() {
         window.location.href = '/holiday/new';
     }
 

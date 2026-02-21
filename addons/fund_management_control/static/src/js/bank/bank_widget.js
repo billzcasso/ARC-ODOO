@@ -15,10 +15,10 @@ class BankWidget extends Component {
                         <i class="fas fa-plus"></i>
                         <span>Tạo mới</span>
                     </button>
-                    <button t-on-click="syncVietQR" t-att-disabled="state.syncing" class="btn btn-outline-primary fw-semibold">
-                        <i class="fas fa-sync me-2" t-att-class="{'fa-spin': state.syncing}"></i>
-                        <t t-if="state.syncing">Đang đồng bộ...</t>
-                        <t t-else="">Đồng bộ VietQR</t>
+                    <button t-on-click="syncVietQR" t-att-disabled="state.syncing" class="btn btn-fmc-light d-flex align-items-center gap-2">
+                        <i class="fas fa-sync text-primary" t-att-class="{'fa-spin': state.syncing}"></i>
+                        <span t-if="state.syncing">Đang đồng bộ...</span>
+                        <span t-else="">Đồng bộ VietQR</span>
                     </button>
                 </div>
                 <div class="row g-2 align-items-center">
@@ -118,15 +118,15 @@ class BankWidget extends Component {
             <nav aria-label="Page navigation" class="d-flex justify-content-end">
               <ul class="pagination pagination-sm mb-0">
                 <li t-attf-class="page-item #{state.currentPage === 1 ? 'disabled' : ''}">
-                  <a class="page-link" href="#" t-on-click.prevent="() => this.changePage(state.currentPage - 1)">«</a>
+                  <a class="page-link shadow-none" href="#" t-on-click.prevent="() => this.changePage(state.currentPage - 1)">«</a>
                 </li>
-                <t t-foreach="Array.from({ length: totalPages }, (_, i) => i + 1)" t-as="page" t-key="page">
-                    <li t-attf-class="page-item #{page === state.currentPage ? 'active' : ''}">
-                        <a class="page-link" href="#" t-on-click.prevent="() => this.changePage(page)" t-esc="page"/>
+                <t t-foreach="visiblePages" t-as="page" t-key="page_index">
+                    <li t-attf-class="page-item #{page === state.currentPage ? 'active' : ''} #{page === '...' ? 'disabled' : ''}">
+                        <a class="page-link shadow-none" href="#" t-on-click.prevent="() => page !== '...' &amp;&amp; this.changePage(page)" t-esc="page"/>
                     </li>
                 </t>
                 <li t-attf-class="page-item #{state.currentPage === totalPages ? 'disabled' : ''}">
-                  <a class="page-link" href="#" t-on-click.prevent="() => this.changePage(state.currentPage + 1)">»</a>
+                  <a class="page-link shadow-none" href="#" t-on-click.prevent="() => this.changePage(state.currentPage + 1)">»</a>
                 </li>
               </ul>
             </nav>
@@ -139,6 +139,35 @@ class BankWidget extends Component {
         onMounted(() => this.loadData());
     }
     get totalPages() { return Math.ceil(this.state.totalRecords / this.state.limit); }
+
+    get visiblePages() {
+        const current = this.state.currentPage;
+        const total = this.totalPages;
+        const delta = 2;
+        const range = [];
+        const rangeWithDots = [];
+        let l;
+
+        for (let i = 1; i <= total; i++) {
+            if (i === 1 || i === total || (i >= current - delta && i <= current + delta)) {
+                range.push(i);
+            }
+        }
+
+        for (const i of range) {
+            if (l) {
+                if (i - l === 2) {
+                    rangeWithDots.push(l + 1);
+                } else if (i - l !== 1) {
+                    rangeWithDots.push('...');
+                }
+            }
+            rangeWithDots.push(i);
+            l = i;
+        }
+
+        return rangeWithDots;
+    }
     async loadData() {
         this.state.loading = true;
         const url = `/get_bank_data?page=${this.state.currentPage}&limit=${this.state.limit}&search=${encodeURIComponent(this.state.searchTerm.trim())}`;

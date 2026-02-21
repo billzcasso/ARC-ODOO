@@ -249,16 +249,15 @@ export class FundCertificateWidget extends Component {
                         <nav aria-label="Page navigation">
                             <ul class="pagination pagination-sm mb-0">
                                 <li t-attf-class="page-item #{state.currentPage === 1 ? 'disabled' : ''}">
-                                    <a class="page-link" href="#" t-on-click.prevent="() => this.changePage(state.currentPage - 1)">«</a>
+                                    <a class="page-link shadow-none" href="#" t-on-click.prevent="() => this.changePage(state.currentPage - 1)">«</a>
                                 </li>
-                                <t t-foreach="getPaginationRange()" t-as="page" t-key="page">
-                                    <li t-if="page === '...'" class="page-item disabled"><span class="page-link">...</span></li>
-                                    <li t-else="" t-attf-class="page-item #{page === state.currentPage ? 'active' : ''}">
-                                        <a class="page-link" href="#" t-on-click.prevent="() => this.changePage(page)" t-esc="page"></a>
+                                <t t-foreach="visiblePages" t-as="page" t-key="page_index">
+                                    <li t-attf-class="page-item #{page === state.currentPage ? 'active' : ''} #{page === '...' ? 'disabled' : ''}">
+                                        <a class="page-link shadow-none" href="#" t-on-click.prevent="() => page !== '...' &amp;&amp; this.changePage(page)" t-esc="page"/>
                                     </li>
                                 </t>
                                 <li t-attf-class="page-item #{state.currentPage === totalPages ? 'disabled' : ''}">
-                                    <a class="page-link" href="#" t-on-click.prevent="() => this.changePage(state.currentPage + 1)">»</a>
+                                    <a class="page-link shadow-none" href="#" t-on-click.prevent="() => this.changePage(state.currentPage + 1)">»</a>
                                 </li>
                             </ul>
                         </nav>
@@ -343,7 +342,7 @@ export class FundCertificateWidget extends Component {
 
         this.searchTimeout = null;
         this._refreshInterval = null;  // Auto-refresh interval
-        
+
         // Bus service for realtime updates
         try {
             this.bus = useService?.('bus_service');
@@ -353,14 +352,14 @@ export class FundCertificateWidget extends Component {
 
         onMounted(() => {
             this.loadFundData();
-            
+
             // Realtime updates via Bus
             try {
                 if (this.bus && typeof this.bus.addEventListener === 'function') {
                     // Subscribe to stock_data_live channel (Odoo 18 bus)
                     this.bus.addChannel('stock_data_live');
                     this.bus.start();
-                    
+
                     this.bus.addEventListener('notification', ({ detail }) => {
                         const notifs = detail || [];
                         // Check for stock_data/price_update notification
@@ -410,14 +409,14 @@ export class FundCertificateWidget extends Component {
 
             const response = await fetch(`/get_fund_certificate_data?${params.toString()}`);
             if (!response.ok) return;
-            
+
             const result = await response.json();
             if (result.error) return;
-            
+
             // Only update if data changed (compare by checking prices)
             const newCerts = result.records || [];
             let changedCount = 0;
-            
+
             for (const newCert of newCerts) {
                 const existing = this.state.certificates.find(c => c.id === newCert.id);
                 if (existing) {
@@ -428,11 +427,11 @@ export class FundCertificateWidget extends Component {
                     }
                 }
             }
-            
+
             // Update data without affecting selection
             this.state.certificates = newCerts;
             this.state.totalRecords = result.total_records || 0;
-            
+
             if (changedCount > 0) {
                 console.log(`[FundCertificate] Smart refresh: ${changedCount} price changes`);
             }
@@ -447,22 +446,33 @@ export class FundCertificateWidget extends Component {
         return Math.ceil(this.state.totalRecords / this.state.limit);
     }
 
-    getPaginationRange() {
+    get visiblePages() {
         const current = this.state.currentPage;
         const total = this.totalPages;
+        const delta = 2;
         const range = [];
-        if (total <= 7) {
-            for (let i = 1; i <= total; i++) range.push(i);
-        } else {
-            if (current < 5) {
-                range.push(1, 2, 3, 4, 5, '...', total);
-            } else if (current > total - 4) {
-                range.push(1, '...', total - 4, total - 3, total - 2, total - 1, total);
-            } else {
-                range.push(1, '...', current - 1, current, current + 1, '...', total);
+        const rangeWithDots = [];
+        let l;
+
+        for (let i = 1; i <= total; i++) {
+            if (i === 1 || i === total || (i >= current - delta && i <= current + delta)) {
+                range.push(i);
             }
         }
-        return range;
+
+        for (const i of range) {
+            if (l) {
+                if (i - l === 2) {
+                    rangeWithDots.push(l + 1);
+                } else if (i - l !== 1) {
+                    rangeWithDots.push('...');
+                }
+            }
+            rangeWithDots.push(i);
+            l = i;
+        }
+
+        return rangeWithDots;
     }
 
     async loadFundData() {
@@ -481,7 +491,7 @@ export class FundCertificateWidget extends Component {
             if (!response.ok) throw new Error(`Network response was not ok`);
             const result = await response.json();
             if (result.error) throw new Error(result.error);
-            
+
             this.state.certificates = result.records || [];
             this.state.totalRecords = result.total_records || 0;
         } catch (error) {
@@ -499,7 +509,7 @@ export class FundCertificateWidget extends Component {
             this.loadFundData();
         }
     }
-    
+
     onSearchInput() {
         clearTimeout(this.searchTimeout);
         this.searchTimeout = setTimeout(() => {
@@ -534,7 +544,7 @@ export class FundCertificateWidget extends Component {
             alert("Vui lòng chọn ít nhất một mục.");
             return;
         }
-        
+
         const selectedIds = Array.from(this.state.selectedIds);
         if (confirm(`Bạn có chắc muốn ${action} ${selectedCount} mục đã chọn?`)) {
             console.log(`Performing action '${action}' on IDs:`, selectedIds);
@@ -599,15 +609,15 @@ export class FundCertificateWidget extends Component {
             toast.show();
         }
     }
-    
-    handleEdit(certId) { 
+
+    handleEdit(certId) {
         window.location.href = `/fund_certificate/edit/${certId}`;
     }
-    
-    createNewFund() { 
+
+    createNewFund() {
         window.location.href = '/fund_certificate/new';
     }
-    
+
     formatCurrency(value) {
         if (typeof value !== 'number') return value;
         return new Intl.NumberFormat('vi-VN', { style: 'decimal' }).format(value);
@@ -615,7 +625,7 @@ export class FundCertificateWidget extends Component {
 
     getFundColor(symbol) {
         if (!symbol) return '#4A90E2';
-        
+
         // Palette of premium, distinct colors
         const colors = [
             '#2563EB', // Blue 600
@@ -631,13 +641,13 @@ export class FundCertificateWidget extends Component {
             '#BE185D', // Rose 700
             '#0D9488', // Teal 600
         ];
-        
+
         // Simple hash function to get consistent index
         let hash = 0;
         for (let i = 0; i < symbol.length; i++) {
             hash = symbol.charCodeAt(i) + ((hash << 5) - hash);
         }
-        
+
         const index = Math.abs(hash) % colors.length;
         return colors[index];
     }
