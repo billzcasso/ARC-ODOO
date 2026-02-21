@@ -7,125 +7,140 @@
         <field name="arch" type="xml">
             <form string="SSI API Configuration">
                 <header>
-                    <button name="action_start_streaming" type="object" string="▶ Start Streaming" class="btn-primary" invisible="streaming_status == 'running'"/>
-                    <button name="action_stop_streaming" type="object" string="■ Stop Streaming" class="btn-danger" invisible="streaming_status != 'running'"/>
+                    <field name="connection_state" invisible="1"/>
+
+                    <button name="action_start_streaming" type="object" string="Active" class="btn-primary" invisible="connection_state in ('connecting', 'reconnecting', 'connected')"/>
+
+                    <button name="action_stop_streaming" type="object" string="Inactive" class="btn-danger" invisible="connection_state in ('disconnected', 'error')"/>
+
                     <button name="action_check_streaming_status" type="object" string="Check Status" class="btn-secondary"/>
-                    <field name="streaming_status" widget="badge" decoration-success="streaming_status == 'running'" decoration-danger="streaming_status == 'error'" decoration-muted="streaming_status == 'stopped'"/>
+
+                    <field name="streaming_status" widget="badge" decoration-success="connection_state == 'connected'" decoration-warning="connection_state in ('connecting', 'reconnecting')" decoration-danger="connection_state == 'error'" decoration-muted="connection_state == 'disconnected'"/>
                 </header>
                 <sheet>
-                    <group>
-                        <field name="name"/>
-                        <field name="is_active"/>
-                    </group>
-                    <notebook>
-                        <page string="API Credentials" name="credentials">
-                            <group>
-                                <field name="consumer_id" password="True"/>
-                                <field name="consumer_secret" password="True"/>
-                            </group>
-                        </page>
-                        <page string="API URLs" name="urls">
-                            <group>
-                                <field name="api_url"/>
-                                <field name="stream_url"/>
-                            </group>
-                        </page>
-                        <page string="Streaming" name="streaming">
-                            <group string="Streaming Configuration">
-                                <field name="streaming_enabled" readonly="1"/>
-                                <field name="streaming_channel"/>
-                                <field name="streaming_enable_bus"/>
-                            </group>
-                            <group string="Info">
-                                <div class="alert alert-info" role="alert">
-                                    <strong>Lưu ý:</strong>
-                                    <ul>
-                                        <li>Streaming chỉ hoạt động trong giờ giao dịch (9:00 - 15:30)</li>
-                                        <li>Channel X (Best Prices) được khuyến nghị cho cập nhật giá realtime</li>
-                                        <li>Để khống chế dữ liệu, hãy chỉ định symbols cụ thể</li>
-                                    </ul>
-                                </div>
-                            </group>
-                        </page>
-                        <page string="Tracked Symbols" name="priority_symbols">
-                            <group string="Selected Securities">
-                                <div class="text-muted mb-2" colspan="2">
-                                    Select specific securities from the database to prioritize:
-                                </div>
-                                <field name="priority_securities_ids" nolabel="1" widget="many2many_tags" options="{'no_create': False}" placeholder="Search securities..."/>
-                            </group>
-
-                            <group string="Manual Input">
-                                <field name="streaming_symbols" placeholder="e.g. VNM,VIC,FPT. Enter 'ALL' to stream entire market."/>
-                            </group>
-
+                    <!-- Crash Detection Alert -->
+                    <div class="alert alert-warning" role="alert" invisible="streaming_status != 'running' or connection_state != 'disconnected'">
+                        <strong>
+                            <i class="fa fa-exclamation-triangle"/>
+ Streaming Service Disconnected</strong>
+                        <p>
+                            Server restart detected. The database indicates 'Running', but the background service is stopped.<br/>
+                            Please click <b>Start Streaming</b> to resume.
+                    </p>
+                </div>
+                <group>
+                    <field name="name"/>
+                    <field name="is_active"/>
+                </group>
+                <notebook>
+                    <page string="API Credentials" name="credentials">
+                        <group>
+                            <field name="consumer_id" password="True"/>
+                            <field name="consumer_secret" password="True"/>
+                        </group>
+                    </page>
+                    <page string="API URLs" name="urls">
+                        <group>
+                            <field name="api_url"/>
+                            <field name="stream_url"/>
+                        </group>
+                    </page>
+                    <page string="Streaming" name="streaming">
+                        <group string="Streaming Configuration">
+                            <field name="streaming_enabled" readonly="1"/>
+                            <field name="streaming_channel"/>
+                            <field name="streaming_enable_bus"/>
+                        </group>
+                        <group string="Info">
                             <div class="alert alert-info" role="alert">
-                                <strong>Instructions:</strong>
+                                <strong>Lưu ý:</strong>
                                 <ul>
-                                    <li>
-                                        Enter <code>ALL</code> in Manual Input to stream valid data for all market symbols (Channel <code>X:ALL</code>).
-                                    </li>
-                                    <li>
-                                        Or specify symbols (e.g. <code>VNM,VIC</code>) to reduce bandwidth and database load.
-                                    </li>
+                                    <li>Streaming chỉ hoạt động trong giờ giao dịch (9:00 - 15:30)</li>
+                                    <li>Channel X (Best Prices) được khuyến nghị cho cập nhật giá realtime</li>
+                                    <li>Để khống chế dữ liệu, hãy chỉ định symbols cụ thể</li>
                                 </ul>
                             </div>
-                        </page>
-                        <page string="Advanced Settings" name="advanced">
-                            <group string="Batch Processing">
-                                <field name="streaming_batch_size"/>
-                                <field name="streaming_batch_timeout"/>
-                                <field name="streaming_queue_size"/>
-                            </group>
-                            <group string="Performance Notes">
-                                <div class="alert alert-warning" role="alert">
-                                    <strong>Cấu hình nâng cao:</strong>
-                                    <ul>
-                                        <li>
-                                            <b>Batch Size</b>: Số messages xử lý cùng lúc. Tăng để giảm DB writes.</li>
-                                        <li>
-                                            <b>Batch Timeout</b>: Thời gian chờ tối đa để batch đầy.</li>
-                                        <li>
-                                            <b>Queue Size</b>: Kích thước queue. Tăng nếu có nhiều symbols.</li>
-                                    </ul>
-                                </div>
-                            </group>
-                        </page>
-                        <page string="Status &amp; Logs" name="status">
-                            <group string="Sync Status">
-                                <field name="last_sync_date" readonly="1"/>
-                                <field name="last_sync_status" readonly="1"/>
-                            </group>
-                            <group string="Streaming Status">
-                                <field name="streaming_started_at" readonly="1"/>
-                                <field name="streaming_last_error" readonly="1"/>
-                            </group>
-                        </page>
-                    </notebook>
-                </sheet>
-            </form>
-        </field>
-    </record>
+                        </group>
+                    </page>
+                    <page string="Tracked Symbols" name="priority_symbols">
+                        <group string="Selected Securities">
+                            <div class="text-muted mb-2" colspan="2">
+                                    Select specific securities from the database to prioritize:
+                            </div>
+                            <field name="priority_securities_ids" nolabel="1" widget="many2many_tags" options="{'no_create': False}" placeholder="Search securities..."/>
+                        </group>
 
-    <record id="view_ssi_api_config_tree" model="ir.ui.view">
-        <field name="name">ssi.api.config.tree</field>
-        <field name="model">ssi.api.config</field>
-        <field name="arch" type="xml">
-            <list string="SSI API Configurations">
-                <field name="name"/>
-                <field name="is_active"/>
-                <field name="streaming_status" widget="badge" decoration-success="streaming_status == 'running'" decoration-danger="streaming_status == 'error'" decoration-muted="streaming_status == 'stopped'"/>
-                <field name="last_sync_date"/>
-                <field name="last_sync_status"/>
-            </list>
-        </field>
-    </record>
+                        <group string="Manual Input">
+                            <field name="streaming_symbols" placeholder="e.g. VNM,VIC,FPT. Enter 'ALL' to stream entire market."/>
+                        </group>
 
-    <record id="action_ssi_api_config" model="ir.actions.act_window">
-        <field name="name">SSI API Configuration</field>
-        <field name="res_model">ssi.api.config</field>
-        <field name="view_mode">list,form</field>
-    </record>
+                        <div class="alert alert-info" role="alert">
+                            <strong>Instructions:</strong>
+                            <ul>
+                                <li>
+                                        Enter <code>ALL</code> in Manual Input to stream valid data for all market symbols (Channel <code>X:ALL</code>).
+                                </li>
+                                <li>
+                                        Or specify symbols (e.g. <code>VNM,VIC</code>) to reduce bandwidth and database load.
+                                </li>
+                            </ul>
+                        </div>
+                    </page>
+                    <page string="Advanced Settings" name="advanced">
+                        <group string="Batch Processing">
+                            <field name="streaming_batch_size"/>
+                            <field name="streaming_batch_timeout"/>
+                            <field name="streaming_queue_size"/>
+                        </group>
+                        <group string="Performance Notes">
+                            <div class="alert alert-warning" role="alert">
+                                <strong>Cấu hình nâng cao:</strong>
+                                <ul>
+                                    <li>
+                                        <b>Batch Size</b>: Số messages xử lý cùng lúc. Tăng để giảm DB writes.</li>
+                                    <li>
+                                        <b>Batch Timeout</b>: Thời gian chờ tối đa để batch đầy.</li>
+                                    <li>
+                                        <b>Queue Size</b>: Kích thước queue. Tăng nếu có nhiều symbols.</li>
+                                </ul>
+                            </div>
+                        </group>
+                    </page>
+                    <page string="Status &amp; Logs" name="status">
+                        <group string="Sync Status">
+                            <field name="last_sync_date" readonly="1"/>
+                            <field name="last_sync_status" readonly="1"/>
+                        </group>
+                        <group string="Streaming Status">
+                            <field name="streaming_started_at" readonly="1"/>
+                            <field name="streaming_last_error" readonly="1"/>
+                        </group>
+                    </page>
+                </notebook>
+            </sheet>
+        </form>
+    </field>
+</record>
+
+<record id="view_ssi_api_config_tree" model="ir.ui.view">
+    <field name="name">ssi.api.config.tree</field>
+    <field name="model">ssi.api.config</field>
+    <field name="arch" type="xml">
+        <list string="SSI API Configurations">
+            <field name="name"/>
+            <field name="is_active"/>
+            <field name="streaming_status" widget="badge" decoration-success="streaming_status == 'running'" decoration-danger="streaming_status == 'error'" decoration-muted="streaming_status == 'stopped'"/>
+            <field name="last_sync_date"/>
+            <field name="last_sync_status"/>
+        </list>
+    </field>
+</record>
+
+<record id="action_ssi_api_config" model="ir.actions.act_window">
+    <field name="name">SSI API Configuration</field>
+    <field name="res_model">ssi.api.config</field>
+    <field name="view_mode">list,form</field>
+</record>
 
 </odoo>
 

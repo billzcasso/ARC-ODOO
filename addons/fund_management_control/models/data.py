@@ -394,15 +394,87 @@ class BankBranch(models.Model):
     address = fields.Char(string="Địa chỉ")
 
     def sync_basic_branches(self):
+        """Đồng bộ chi nhánh ngân hàng toàn quốc (63 tỉnh/thành phố)."""
         Bank = self.env["data.bank"].sudo()
         banks = Bank.search([])
 
         if not banks:
             raise UserError(_("Chưa có dữ liệu ngân hàng. Vui lòng đồng bộ VietQR trước."))
 
+        # Danh sách 63 tỉnh/thành phố Việt Nam
         regions = [
+            # 5 thành phố trực thuộc trung ương
             ("Chi nhánh Hà Nội", "HN", "Hà Nội"),
             ("Chi nhánh TP. Hồ Chí Minh", "HCM", "TP. Hồ Chí Minh"),
+            ("Chi nhánh Đà Nẵng", "DN", "Đà Nẵng"),
+            ("Chi nhánh Hải Phòng", "HP", "Hải Phòng"),
+            ("Chi nhánh Cần Thơ", "CT", "Cần Thơ"),
+            # Đồng bằng sông Hồng
+            ("Chi nhánh Bắc Ninh", "BN", "Bắc Ninh"),
+            ("Chi nhánh Hà Nam", "HNA", "Hà Nam"),
+            ("Chi nhánh Hải Dương", "HD", "Hải Dương"),
+            ("Chi nhánh Hưng Yên", "HY", "Hưng Yên"),
+            ("Chi nhánh Nam Định", "ND", "Nam Định"),
+            ("Chi nhánh Ninh Bình", "NB", "Ninh Bình"),
+            ("Chi nhánh Thái Bình", "TB", "Thái Bình"),
+            ("Chi nhánh Vĩnh Phúc", "VP", "Vĩnh Phúc"),
+            # Đông Bắc
+            ("Chi nhánh Bắc Giang", "BG", "Bắc Giang"),
+            ("Chi nhánh Bắc Kạn", "BK", "Bắc Kạn"),
+            ("Chi nhánh Cao Bằng", "CB", "Cao Bằng"),
+            ("Chi nhánh Hà Giang", "HG", "Hà Giang"),
+            ("Chi nhánh Lạng Sơn", "LS", "Lạng Sơn"),
+            ("Chi nhánh Phú Thọ", "PT", "Phú Thọ"),
+            ("Chi nhánh Quảng Ninh", "QN", "Quảng Ninh"),
+            ("Chi nhánh Thái Nguyên", "TN", "Thái Nguyên"),
+            ("Chi nhánh Tuyên Quang", "TQ", "Tuyên Quang"),
+            ("Chi nhánh Yên Bái", "YB", "Yên Bái"),
+            # Tây Bắc
+            ("Chi nhánh Điện Biên", "DB", "Điện Biên"),
+            ("Chi nhánh Hòa Bình", "HB", "Hòa Bình"),
+            ("Chi nhánh Lai Châu", "LC", "Lai Châu"),
+            ("Chi nhánh Lào Cai", "LCA", "Lào Cai"),
+            ("Chi nhánh Sơn La", "SL", "Sơn La"),
+            # Bắc Trung Bộ
+            ("Chi nhánh Hà Tĩnh", "HT", "Hà Tĩnh"),
+            ("Chi nhánh Nghệ An", "NA", "Nghệ An"),
+            ("Chi nhánh Quảng Bình", "QB", "Quảng Bình"),
+            ("Chi nhánh Quảng Trị", "QT", "Quảng Trị"),
+            ("Chi nhánh Thanh Hóa", "TH", "Thanh Hóa"),
+            ("Chi nhánh Thừa Thiên Huế", "TTH", "Thừa Thiên Huế"),
+            # Duyên hải Nam Trung Bộ
+            ("Chi nhánh Bình Định", "BD", "Bình Định"),
+            ("Chi nhánh Bình Thuận", "BTH", "Bình Thuận"),
+            ("Chi nhánh Khánh Hòa", "KH", "Khánh Hòa"),
+            ("Chi nhánh Ninh Thuận", "NT", "Ninh Thuận"),
+            ("Chi nhánh Phú Yên", "PY", "Phú Yên"),
+            ("Chi nhánh Quảng Nam", "QNA", "Quảng Nam"),
+            ("Chi nhánh Quảng Ngãi", "QNG", "Quảng Ngãi"),
+            # Tây Nguyên
+            ("Chi nhánh Đắk Lắk", "DL", "Đắk Lắk"),
+            ("Chi nhánh Đắk Nông", "DNO", "Đắk Nông"),
+            ("Chi nhánh Gia Lai", "GL", "Gia Lai"),
+            ("Chi nhánh Kon Tum", "KT", "Kon Tum"),
+            ("Chi nhánh Lâm Đồng", "LD", "Lâm Đồng"),
+            # Đông Nam Bộ
+            ("Chi nhánh Bà Rịa - Vũng Tàu", "VT", "Bà Rịa - Vũng Tàu"),
+            ("Chi nhánh Bình Dương", "BDU", "Bình Dương"),
+            ("Chi nhánh Bình Phước", "BP", "Bình Phước"),
+            ("Chi nhánh Đồng Nai", "DNA", "Đồng Nai"),
+            ("Chi nhánh Tây Ninh", "TNI", "Tây Ninh"),
+            # Đồng bằng sông Cửu Long
+            ("Chi nhánh An Giang", "AG", "An Giang"),
+            ("Chi nhánh Bạc Liêu", "BL", "Bạc Liêu"),
+            ("Chi nhánh Bến Tre", "BT", "Bến Tre"),
+            ("Chi nhánh Cà Mau", "CM", "Cà Mau"),
+            ("Chi nhánh Đồng Tháp", "DT", "Đồng Tháp"),
+            ("Chi nhánh Hậu Giang", "HGI", "Hậu Giang"),
+            ("Chi nhánh Kiên Giang", "KG", "Kiên Giang"),
+            ("Chi nhánh Long An", "LA", "Long An"),
+            ("Chi nhánh Sóc Trăng", "ST", "Sóc Trăng"),
+            ("Chi nhánh Tiền Giang", "TG", "Tiền Giang"),
+            ("Chi nhánh Trà Vinh", "TV", "Trà Vinh"),
+            ("Chi nhánh Vĩnh Long", "VL", "Vĩnh Long"),
         ]
 
         created = updated = 0
@@ -428,6 +500,10 @@ class BankBranch(models.Model):
                     self.create(vals)
                     created += 1
 
+        _logger.info(
+            "Đồng bộ chi nhánh toàn quốc hoàn tất: created=%s updated=%s (63 tỉnh/thành × %d ngân hàng)",
+            created, updated, len(banks),
+        )
         return {"success": True, "created": created, "updated": updated}
 
 

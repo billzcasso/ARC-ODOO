@@ -37,7 +37,7 @@
                             <div class="col-md-3">
                                 <div class="card bg-light">
                                     <div class="card-body text-center py-2">
-                                        <h4 class="mb-0"><field name="total_ccq" readonly="1"/></h4>
+                                        <h4 class="mb-0"><field name="total_ccq"/></h4>
                                         <small class="text-muted">Tổng CCQ</small>
                                     </div>
                                 </div>
@@ -45,7 +45,7 @@
                             <div class="col-md-3">
                                 <div class="card bg-success text-white">
                                     <div class="card-body text-center py-2">
-                                        <h4 class="mb-0"><field name="available_units" readonly="1"/></h4>
+                                        <h4 class="mb-0"><field name="available_units"/></h4>
                                         <small>CCQ khả dụng</small>
                                     </div>
                                 </div>
@@ -53,7 +53,7 @@
                             <div class="col-md-3">
                                 <div class="card bg-warning">
                                     <div class="card-body text-center py-2">
-                                        <h4 class="mb-0"><field name="pending_t2_units" readonly="1"/></h4>
+                                        <h4 class="mb-0"><field name="pending_t2_units"/></h4>
                                         <small>Chờ về (T+2)</small>
                                     </div>
                                 </div>
@@ -61,7 +61,7 @@
                             <div class="col-md-3">
                                 <div class="card bg-primary text-white">
                                     <div class="card-body text-center py-2">
-                                        <h4 class="mb-0"><field name="total_value" widget="monetary" readonly="1"/></h4>
+                                        <h4 class="mb-0"><field name="total_value" widget="monetary"/></h4>
                                         <small>Tổng giá trị</small>
                                     </div>
                                 </div>
@@ -76,10 +76,10 @@
                                 <field name="currency_id" invisible="1"/>
                             </group>
                             <group string="Phân loại CCQ">
-                                <field name="normal_order_units" readonly="1"/>
-                                <field name="normal_available_units" readonly="1" decoration-success="normal_available_units &gt; 0"/>
-                                <field name="negotiated_order_units" readonly="1"/>
-                                <field name="negotiated_available_units" readonly="1" decoration-success="negotiated_available_units &gt; 0"/>
+                                <field name="normal_order_units"/>
+                                <field name="normal_available_units" decoration-success="normal_available_units &gt; 0"/>
+                                <field name="negotiated_order_units"/>
+                                <field name="negotiated_available_units" decoration-success="negotiated_available_units &gt; 0"/>
                                 <field name="total_ccq" invisible="1"/>
                             </group>
                         </group>
@@ -87,7 +87,7 @@
                         <!-- Holdings Notebooks -->
                         <notebook>
                             <page string="Lệnh thường" name="normal_orders">
-                                <field name="normal_transaction_ids" readonly="1">
+                                <field name="normal_transaction_ids">
                                     <list decoration-warning="t2_date &gt; current_date">
                                         <field name="created_at" string="Ngày đặt"/>
                                         <field name="order_mode" string="Loại đầu tư"/>
@@ -100,7 +100,7 @@
                                 </field>
                             </page>
                             <page string="Lệnh thỏa thuận" name="negotiated_orders">
-                                <field name="negotiated_transaction_ids" readonly="1">
+                                <field name="negotiated_transaction_ids">
                                     <list>
                                         <field name="created_at" string="Ngày đặt"/>
                                         <field name="order_mode" string="Loại đầu tư"/>

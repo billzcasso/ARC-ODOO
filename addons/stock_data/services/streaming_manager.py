@@ -570,16 +570,15 @@ class StreamingManager:
         if symbols:
             # Handle special case for ALL
             if symbols == 'ALL' or (isinstance(symbols, list) and 'ALL' in symbols):
-                 return f"{chan_str}:ALL"
+                 selected_channel = f"{chan_str}:ALL"
             elif isinstance(symbols, list):
-                # Check for empty strings in list and STRIP
-                valid_symbols = [s.strip() for s in symbols if s and s.strip()]
+                # Check for empty strings in list and STRIP whitespace
+                valid_symbols = [str(s).strip().upper() for s in symbols if s and str(s).strip()]
                 if valid_symbols:
-                     # Return LIST of channels for multiple symbols
-                     # Expectation: SwitchChannels accepts List<string>
-                     return [f"{chan_str}:{s}" for s in valid_symbols]
+                     # USER FIX: Use hyphen '-' as separator instead of comma ','
+                     selected_channel = f"{chan_str}:{'-'.join(valid_symbols)}"
             else:
-                return f"{chan_str}:{symbols.strip()}"
+                selected_channel = f"{chan_str}:{str(symbols).strip()}"
         
         return selected_channel
 

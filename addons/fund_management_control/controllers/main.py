@@ -160,35 +160,14 @@ class FundManagementProduct(http.Controller):
                 "short_name_vn": post.get("short_name_vn"),
                 "short_name_en": post.get("short_name_en"),
                 "fund_color": post.get("fund_color"),
-                "current_price": float(post.get("current_price", 0)),
-                "reference_price": float(post.get("reference_price", 0)),
-                "ceiling_price": float(post.get("ceiling_price", 0)),
-                "floor_price": float(post.get("floor_price", 0)),
-                # Odoo tự động chuyển đổi chuỗi ngày/giờ sang định dạng Datetime
-                "inception_date": (
-                    post.get("inception_date") if post.get("inception_date") else None
-                ),
-                "closure_date": (
-                    post.get("closure_date") if post.get("closure_date") else None
-                ),
-                "receive_money_time": (
-                    post.get("receive_money_time")
-                    if post.get("receive_money_time")
-                    else None
-                ),
-                "payment_deadline": int(post.get("payment_deadline", 0)),
-                "redemption_time": int(post.get("redemption_time", 0)),
-                "report_website": post.get("report_website"),
-                "fund_type": post.get("fund_type"),
-                "risk_level": post.get("risk_level"),
-                "product_type": post.get("product_type"),
-                "product_status": post.get("product_status"),
+                "fund_type": post.get("fund_type") or "equity",
+                "risk_level": post.get("risk_level") or "3",
                 "fund_description": post.get("fund_description"),
                 "fund_image": fund_image_data,
-                # Trường tồn kho ban đầu (quỹ đóng)
-                "initial_certificate_quantity": int(post.get("initial_certificate_quantity", 0)),
-                "initial_certificate_price": float(post.get("initial_certificate_price", 0)),
-                "capital_cost": float(post.get("capital_cost", 1.09)),
+                # Trường tồn kho ban đầu
+                "initial_certificate_quantity": int(post.get("initial_certificate_quantity") or 0),
+                "initial_certificate_price": float(post.get("initial_certificate_price") or 0),
+                "capital_cost": float(post.get("capital_cost") or 0),
                 **weekdays,
             }
 

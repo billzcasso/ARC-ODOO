@@ -56,19 +56,14 @@
                                         <span class="d-sm-none">Bước 1</span>
                                     </div>
                                     <div class="step-nav-item" id="stepNav2">
-                                        <i class="fas fa-calendar-alt me-1"></i>
-                                        <span class="d-none d-sm-inline">Thời gian</span>
+                                        <i class="fas fa-sitemap me-1"></i>
+                                        <span class="d-none d-sm-inline">Phân loại</span>
                                         <span class="d-sm-none">Bước 2</span>
                                     </div>
                                     <div class="step-nav-item" id="stepNav3">
-                                        <i class="fas fa-sitemap me-1"></i>
-                                        <span class="d-none d-sm-inline">Phân loại</span>
-                                        <span class="d-sm-none">Bước 3</span>
-                                    </div>
-                                    <div class="step-nav-item" id="stepNav4">
                                         <i class="fas fa-puzzle-piece me-1"></i>
                                         <span class="d-none d-sm-inline">Hoàn thiện</span>
-                                        <span class="d-sm-none">Bước 4</span>
+                                        <span class="d-sm-none">Bước 3</span>
                                     </div>
                                 </div>
                             </div>
@@ -144,82 +139,35 @@
                                                     <input type="color" class="form-control form-control-color" id="fund_color" name="fund_color" value="#667eea"/>
                                                 </div>
                                                 
-                                                <div class="col-xl-4 col-lg-6 col-md-6">
-                                                    <label for="current_price" class="form-label">Giá hiện tại
-                                                        <i class="fas fa-question-circle tooltip-icon" data-bs-toggle="tooltip" title="Giá giao dịch hiện tại của chứng khoán."></i>
+                                                <div class="col-xl-4 col-lg-6 col-md-12">
+                                                    <label for="initial_certificate_quantity" class="form-label">Số lượng CCQ ban đầu
+                                                        <i class="fas fa-question-circle tooltip-icon" data-bs-toggle="tooltip" title="Tổng số chứng chỉ quỹ được phát hành ban đầu."></i>
                                                     </label>
                                                     <div class="input-group">
-                                                        <input type="number" step="0.01" class="form-control" id="current_price" name="current_price" 
-                                                               placeholder="10000"/>
-                                                        <span class="input-group-text">VND</span>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="col-xl-4 col-lg-6 col-md-6">
-                                                    <label for="reference_price" class="form-label">Giá tham chiếu
-                                                        <i class="fas fa-question-circle tooltip-icon" data-bs-toggle="tooltip" title="Giá tham chiếu để tính giá trần và giá sàn."></i>
-                                                    </label>
-                                                    <div class="input-group">
-                                                        <input type="number" step="0.01" class="form-control" id="reference_price" name="reference_price" 
-                                                               placeholder="10000"/>
-                                                        <span class="input-group-text">VND</span>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="col-xl-4 col-lg-6 col-md-6">
-                                                    <label for="ceiling_price" class="form-label">Giá trần
-                                                        <i class="fas fa-question-circle tooltip-icon" data-bs-toggle="tooltip" title="Giá cao nhất có thể giao dịch trong ngày."></i>
-                                                    </label>
-                                                    <div class="input-group">
-                                                        <input type="number" step="0.01" class="form-control" id="ceiling_price" name="ceiling_price" 
-                                                               placeholder="11000"/>
-                                                        <span class="input-group-text">VND</span>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="col-xl-4 col-lg-6 col-md-6">
-                                                    <label for="floor_price" class="form-label">Giá sàn
-                                                        <i class="fas fa-question-circle tooltip-icon" data-bs-toggle="tooltip" title="Giá thấp nhất có thể giao dịch trong ngày."></i>
-                                                    </label>
-                                                    <div class="input-group">
-                                                        <input type="number" step="0.01" class="form-control" id="floor_price" name="floor_price" 
-                                                               placeholder="9000"/>
-                                                        <span class="input-group-text">VND</span>
-                                                    </div>
-                                                </div>
-                                                
-                                                <!-- Bỏ Khối lượng: volume được tính từ initial_certificate_quantity -->
-                                                
-                                                <!-- Trường mới cho quỹ đóng -->
-                                                <div class="col-xl-6 col-lg-6 col-md-12">
-                                                    <label for="initial_certificate_quantity" class="form-label">Số lượng chứng chỉ quỹ đóng ban đầu
-                                                        <i class="fas fa-question-circle tooltip-icon" data-bs-toggle="tooltip" title="Tổng số chứng chỉ quỹ được phát hành ban đầu cho quỹ đóng."></i>
-                                                    </label>
-                                                    <div class="input-group">
-                                                        <input type="number" class="form-control" id="initial_certificate_quantity" name="initial_certificate_quantity" 
-                                                               placeholder="1000000" value="1000000"/>
+                                                        <input type="text" inputmode="numeric" class="form-control number-format" id="initial_certificate_quantity" name="initial_certificate_quantity" 
+                                                               placeholder="1.000.000"/>
                                                         <span class="input-group-text">chứng chỉ</span>
                                                     </div>
                                                 </div>
                                                 
-                                                <div class="col-xl-6 col-lg-6 col-md-12">
-                                                    <label for="initial_certificate_price" class="form-label">Giá chứng chỉ quỹ ban đầu
+                                                <div class="col-xl-4 col-lg-6 col-md-12">
+                                                    <label for="initial_certificate_price" class="form-label">Giá CCQ ban đầu
                                                         <i class="fas fa-question-circle tooltip-icon" data-bs-toggle="tooltip" title="Giá phát hành ban đầu của mỗi chứng chỉ quỹ."></i>
                                                     </label>
                                                     <div class="input-group">
-                                                        <input type="number" step="0.01" class="form-control" id="initial_certificate_price" name="initial_certificate_price" 
-                                                               placeholder="10000" value="10000"/>
+                                                        <input type="text" inputmode="numeric" class="form-control number-format" id="initial_certificate_price" name="initial_certificate_price" 
+                                                               placeholder="10.000"/>
                                                         <span class="input-group-text">VND</span>
                                                     </div>
                                                 </div>
                                                 
-                                                <div class="col-xl-6 col-lg-6 col-md-12">
+                                                <div class="col-xl-4 col-lg-6 col-md-12">
                                                     <label for="capital_cost" class="form-label">Chi phí vốn
                                                         <i class="fas fa-question-circle tooltip-icon" data-bs-toggle="tooltip" title="Tỷ lệ chi phí vốn của quỹ (%)."></i>
                                                     </label>
                                                     <div class="input-group">
                                                         <input type="number" step="0.01" class="form-control" id="capital_cost" name="capital_cost" 
-                                                               placeholder="9.00" value="9.00"/>
+                                                               placeholder="1,09"/>
                                                         <span class="input-group-text">%</span>
                                                     </div>
                                                 </div>
@@ -227,97 +175,8 @@
                                         </div>
                                     </div>
                                     
-                                    <!-- Step 2: Timing Information -->
+                                    <!-- Step 2: Product Classification -->
                                     <div class="form-step" id="step2">
-                                        <div class="form-section">
-                                            <div class="section-header">
-                                                <div class="section-icon"><i class="fas fa-calendar-alt fa-lg text-info"></i></div>
-                                                <div>
-                                                    <h5 class="mb-1">Thông tin thời gian</h5>
-                                                    <small class="text-muted">Cấu hình lịch giao dịch và các thời hạn quan trọng.</small>
-                                                </div>
-                                            </div>
-                                            <div class="row g-4">
-                                                <div class="col-md-6 required-field">
-                                                    <label for="inception_date" class="form-label">Thời gian đóng sổ lệnh
-                                                        <i class="fas fa-question-circle tooltip-icon" data-bs-toggle="tooltip" title="Thời điểm ngừng nhận lệnh giao dịch trong ngày."></i>
-                                                    </label>
-                                                    <input type="datetime-local" class="form-control" id="inception_date" name="inception_date" required="1"/>
-                                                    <div class="field-error" id="inception_date_error" style="display: none;">
-                                                        <i class="fas fa-exclamation-circle"></i>
-                                                        <span>Trường này là bắt buộc</span>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="col-md-6 required-field">
-                                                    <label for="closure_date" class="form-label">Ngày đóng sổ lệnh
-                                                        <i class="fas fa-question-circle tooltip-icon" data-bs-toggle="tooltip" title="Ngày cuối cùng trong kỳ nhận lệnh đặt mua/bán."></i>
-                                                    </label>
-                                                    <input type="date" class="form-control" id="closure_date" name="closure_date" required="1"/>
-                                                    <div class="field-error" id="closure_date_error" style="display: none;">
-                                                        <i class="fas fa-exclamation-circle"></i>
-                                                        <span>Trường này là bắt buộc</span>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="col-md-6 required-field">
-                                                    <label for="receive_money_time" class="form-label">Thời điểm ghi nhận tiền
-                                                        <i class="fas fa-question-circle tooltip-icon" data-bs-toggle="tooltip" title="Thời điểm chính thức ghi nhận tiền từ nhà đầu tư vào quỹ."></i>
-                                                    </label>
-                                                    <input type="datetime-local" class="form-control" id="receive_money_time" name="receive_money_time" required="1"/>
-                                                    <div class="field-error" id="receive_money_time_error" style="display: none;">
-                                                        <i class="fas fa-exclamation-circle"></i>
-                                                        <span>Trường này là bắt buộc</span>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="col-md-6 required-field">
-                                                    <label for="payment_deadline" class="form-label">Thời hạn thanh toán bán
-                                                        <i class="fas fa-question-circle tooltip-icon" data-bs-toggle="tooltip" title="Số ngày làm việc tối đa để hoàn tất thanh toán cho lệnh bán."></i>
-                                                    </label>
-                                                    <div class="input-group">
-                                                        <input type="number" class="form-control" id="payment_deadline" name="payment_deadline" 
-                                                               placeholder="5" required="1"/>
-                                                        <span class="input-group-text">ngày</span>
-                                                    </div>
-                                                    <div class="field-error" id="payment_deadline_error" style="display: none;">
-                                                        <i class="fas fa-exclamation-circle"></i>
-                                                        <span>Trường này là bắt buộc</span>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="col-md-6 required-field">
-                                                    <label for="redemption_time" class="form-label">Thời gian xử lý hoán đổi
-                                                        <i class="fas fa-question-circle tooltip-icon" data-bs-toggle="tooltip" title="Số ngày làm việc để xử lý lệnh chuyển đổi giữa các quỹ."></i>
-                                                    </label>
-                                                    <div class="input-group">
-                                                        <input type="number" class="form-control" id="redemption_time" name="redemption_time" 
-                                                               placeholder="3" required="1"/>
-                                                        <span class="input-group-text">ngày</span>
-                                                    </div>
-                                                    <div class="field-error" id="redemption_time_error" style="display: none;">
-                                                        <i class="fas fa-exclamation-circle"></i>
-                                                        <span>Trường này là bắt buộc</span>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="col-md-6 required-field">
-                                                    <label for="report_website" class="form-label">Website báo cáo
-                                                        <i class="fas fa-question-circle tooltip-icon" data-bs-toggle="tooltip" title="Địa chỉ website công bố báo cáo tài chính của quỹ."></i>
-                                                    </label>
-                                                    <input type="url" class="form-control" id="report_website" name="report_website" 
-                                                           placeholder="https://example.com/reports" required="1"/>
-                                                    <div class="field-error" id="report_website_error" style="display: none;">
-                                                        <i class="fas fa-exclamation-circle"></i>
-                                                        <span>Trường này là bắt buộc</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Step 3: Product Classification -->
-                                    <div class="form-step" id="step3">
                                         <div class="form-section">
                                             <div class="section-header">
                                                 <div class="section-icon"><i class="fas fa-sitemap fa-lg text-warning"></i></div>
@@ -355,40 +214,12 @@
                                                         <span>Vui lòng chọn mức độ rủi ro</span>
                                                     </div>
                                                 </div>
-                                                
-                                                <div class="col-xl-6 col-lg-6 col-md-12 required-field">
-                                                    <label for="product_type" class="form-label">Loại sản phẩm</label>
-                                                    <select class="form-select" id="product_type" name="product_type" required="1">
-                                                        <option value="" selected="1" disabled="1">-- Chọn loại sản phẩm --</option>
-                                                        <t t-foreach="product_types" t-as="pt">
-                                                            <option t-att-value="pt[0]" t-esc="pt[1]"/>
-                                                        </t>
-                                                    </select>
-                                                    <div class="field-error" id="product_type_error" style="display: none;">
-                                                        <i class="fas fa-exclamation-circle"></i>
-                                                        <span>Vui lòng chọn loại sản phẩm</span>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="col-xl-6 col-lg-6 col-md-12 required-field">
-                                                    <label for="product_status" class="form-label">Trạng thái</label>
-                                                    <select class="form-select" id="product_status" name="product_status" required="1">
-                                                        <option value="" selected="1" disabled="1">-- Chọn trạng thái --</option>
-                                                        <t t-foreach="product_statuses" t-as="ps">
-                                                            <option t-att-value="ps[0]" t-esc="ps[1]"/>
-                                                        </t>
-                                                    </select>
-                                                    <div class="field-error" id="product_status_error" style="display: none;">
-                                                        <i class="fas fa-exclamation-circle"></i>
-                                                        <span>Vui lòng chọn trạng thái</span>
-                                                    </div>
-                                                </div>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <!-- Step 4: Additional Information -->
-                                    <div class="form-step" id="step4">
+                                    <!-- Step 3: Additional Information -->
+                                    <div class="form-step" id="step3">
                                         <div class="form-section">
                                             <div class="section-header">
                                                 <div class="section-icon"><i class="fas fa-puzzle-piece fa-lg text-success"></i></div>
@@ -436,7 +267,7 @@
                                     </button>
                                     
                                     <div class="step-info text-muted">
-                                        <small id="stepInfo">Bước 1 của 4</small>
+                                        <small id="stepInfo">Bước 1 của 3</small>
                                     </div>
                                     
                                     <button type="button" class="btn btn-step btn-step-next" id="nextBtn">
@@ -466,7 +297,7 @@
                     
                     // REFACTOR: Multi-step form implementation
                     let currentStep = 1;
-                    const totalSteps = 4;
+                    const totalSteps = 3;
                     const formSteps = document.querySelectorAll('.form-step');
                     const stepNavItems = document.querySelectorAll('.step-nav-item');
                     const progressFill = document.getElementById('progressFill');
@@ -805,7 +636,32 @@
 
                     // Initialize the form
                     updateStepDisplay();
-                    
+
+                    // === Number Formatting (thousand separators) ===
+                    function formatNumber(value) {
+                        const num = value.replace(/[^0-9]/g, '');
+                        return num.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                    }
+
+                    document.querySelectorAll('.number-format').forEach(function(input) {
+                        input.addEventListener('input', function() {
+                            const cursorPos = this.selectionStart;
+                            const oldLen = this.value.length;
+                            this.value = formatNumber(this.value);
+                            const newLen = this.value.length;
+                            this.setSelectionRange(cursorPos + (newLen - oldLen), cursorPos + (newLen - oldLen));
+                        });
+                    });
+
+                    // Strip dots before submit so server gets raw numbers
+                    // (uses the `form` variable already declared above)
+                    if (form) {
+                        form.addEventListener('submit', function(event) {
+                            document.querySelectorAll('.number-format').forEach(function(input) {
+                                input.value = input.value.replace(/\./g, '');
+                            });
+                        }, true); // capture phase, runs before the other submit handler
+                    }
                     console.log('Enhanced multi-step form initialized successfully');
                 });
                 ]]>

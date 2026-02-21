@@ -3,7 +3,7 @@
     <data>
         <!-- Root Menu -->
         <menuitem id="menu_stock_data_root" 
-                  name="Stock Data" 
+                  name="Market Data" 
                   web_icon="stock_data,static/description/icon.png" 
                   sequence="10"/>
 

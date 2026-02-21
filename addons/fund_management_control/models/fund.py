@@ -82,9 +82,9 @@ class FundCertificate(models.Model):
     fund_image = fields.Binary(string="Hình ảnh của Quỹ")
     
     # Trường cho quỹ đóng
-    initial_certificate_quantity = fields.Integer(string="Số lượng tồn kho ban đầu", default=0)
-    initial_certificate_price = fields.Float(string="Giá tồn kho ban đầu", default=0.0)
-    capital_cost = fields.Float(string="Chi phí vốn (%)", default=1.09, digits=(5, 2))
+    initial_certificate_quantity = fields.Integer(string="Số lượng tồn kho ban đầu")
+    initial_certificate_price = fields.Float(string="Giá tồn kho ban đầu")
+    capital_cost = fields.Float(string="Chi phí vốn (%)", digits=(5, 2))
 
     # Trading Days
     monday = fields.Boolean(string="Thứ hai", default=True)
@@ -215,6 +215,11 @@ class FundCertificate(models.Model):
             rec._propagate_to_portfolio_fund()
         except Exception:
             _logger.debug('Skip portfolio fund propagation on create', exc_info=True)
+        # Auto-add symbol to streaming
+        try:
+            rec._auto_add_to_streaming()
+        except Exception:
+            _logger.debug('Skip auto-add to streaming on create for %s', rec.symbol, exc_info=True)
         return rec
 
     def write(self, vals):
@@ -228,7 +233,42 @@ class FundCertificate(models.Model):
     _sql_constraints = [
         ('symbol_market_unique', 'unique(symbol, market)', 'Sự kết hợp Mã chứng khoán và Sàn giao dịch phải duy nhất!')
     ]
-    
+
+    def _auto_add_to_streaming(self):
+        """Tự động thêm mã CCQ vào danh sách streaming sau khi tạo mới."""
+        for rec in self:
+            if not rec.symbol:
+                continue
+            try:
+                Securities = self.env['ssi.securities'].sudo()
+                # Tìm security record theo symbol
+                security = Securities.search([('symbol', '=', rec.symbol)], limit=1)
+                if not security:
+                    # Tạo mới security record từ thông tin CCQ
+                    security = Securities.create({
+                        'symbol': rec.symbol,
+                        'market': rec.market or 'HOSE',
+                        'floor_code': rec.floor_code or rec.market or '',
+                        'security_type': rec.security_type or '',
+                        'stock_name_vn': rec.short_name_vn or rec.symbol,
+                        'stock_name_en': rec.short_name_en or rec.symbol,
+                        'reference_price': rec.reference_price or 0.0,
+                        'ceiling_price': rec.ceiling_price or 0.0,
+                        'floor_price': rec.floor_price or 0.0,
+                        'current_price': rec.current_price or 0.0,
+                        'is_active': True,
+                    })
+                    _logger.info("Auto-created ssi.securities for symbol %s", rec.symbol)
+
+                # Thêm vào priority streaming list
+                ApiConfig = self.env['ssi.api.config'].sudo()
+                config = ApiConfig.search([('is_active', '=', True)], limit=1)
+                if config and security:
+                    config.add_priority_securities_safely([security.id])
+                    _logger.info("Auto-added symbol %s to streaming priority list", rec.symbol)
+            except Exception as e:
+                _logger.warning("Failed to auto-add %s to streaming: %s", rec.symbol, e)
+
     @api.model
     def sync_from_stock_data(self, market=None, page_size=200):
         """Đồng bộ dữ liệu từ ssi.securities (realtime streaming) vào fund.certificate.

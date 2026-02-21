@@ -58,12 +58,14 @@ class Investment(models.Model):
         string='Lệnh thường',
         compute='_compute_units_breakdown',
         store=True,
+        readonly=False,
         help='Tổng CCQ từ các lệnh thường đã khớp'
     )
     negotiated_order_units = fields.Float(
         string='Lệnh thỏa thuận',
         compute='_compute_units_breakdown',
         store=True,
+        readonly=False,
         help='Tổng CCQ từ các lệnh thỏa thuận đã khớp'
     )
     
@@ -72,18 +74,21 @@ class Investment(models.Model):
         string='CCQ chờ về (T+2)',
         compute='_compute_units_breakdown',
         store=True,
+        readonly=False,
         help='CCQ từ lệnh thường đã mua nhưng chưa về tài khoản (T+2 chưa qua)'
     )
     available_units = fields.Float(
         string='CCQ khả dụng',
         compute='_compute_units_breakdown',
         store=True,
+        readonly=False,
         help='CCQ có thể bán (đã qua T+2 hoặc từ lệnh thỏa thuận)'
     )
     total_ccq = fields.Float(
         string='Tổng CCQ',
         compute='_compute_units_breakdown',
         store=True,
+        readonly=False,
         help='Tổng CCQ từ tất cả giao dịch mua đã hoàn thành'
     )
     
@@ -92,12 +97,14 @@ class Investment(models.Model):
         string='CCQ Khả dụng (Lệnh thường)',
         compute='_compute_units_breakdown',
         store=True,
+        readonly=False,
         help='CCQ lệnh thường đã về và chưa đặt bán'
     )
     negotiated_available_units = fields.Float(
         string='CCQ Khả dụng (Thỏa thuận)',
         compute='_compute_units_breakdown',
         store=True,
+        readonly=False,
         help='CCQ thỏa thuận đã về và chưa đặt bán'
     )
     
@@ -106,6 +113,7 @@ class Investment(models.Model):
         string='Tổng giá trị',
         compute='_compute_total_value',
         store=True,
+        readonly=False,
         currency_field='currency_id'
     )
 
