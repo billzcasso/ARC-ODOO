@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="ai_trading_assistant.AIChatbot" owl="1">
+        <t t-teleport="'body'">
+            <div class="ai-chatbot-widget">
+                <!-- Toggler Button -->
+                <div t-if="!state.isOpen" class="ai-chatbot-toggler" t-on-click="toggleChat">
+                    <img src="/ai_trading_assistant/static/src/img/technical-support.png" alt="ARC Intelligence" class="ai-chatbot-logo"/>
+                </div>
+                
+                <!-- Chat Window -->
+                <div class="ai-chatbot-window" t-att-class="{'hidden': !state.isOpen}">
+                    <div class="ai-chat-header">
+                        <div class="ai-chat-header-title">
+                            <i class="fa fa-robot"></i> ARC Intelligence
+                        </div>
+                        <div class="ai-chat-close" t-on-click="toggleChat">
+                            <i class="fa fa-times"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="ai-chat-body" t-ref="chatBody">
+                        <t t-foreach="state.messages" t-as="msg" t-key="msg.id">
+                            <div class="ai-message" t-att-class="msg.sender == 'user' ? 'user' : 'bot'">
+                                <t t-if="msg.isHtml">
+                                    <t t-out="msg.text"/>
+                                </t>
+                                <t t-else="">
+                                    <t t-esc="msg.text"/>
+                                </t>
+                            </div>
+                        </t>
+                        
+                        <t t-if="state.isTyping">
+                            <div class="ai-typing-indicator">
+                                <i class="fa fa-circle-o-notch fa-spin"></i> Hệ thống đang phân tích dữ liệu...
+                            </div>
+                        </t>
+                    </div>
+                    
+                    <div class="ai-chat-suggestions">
+                        <button class="ai-suggestion-btn" t-on-click="() => sendSuggestedMessage('Hôm nay thị trường thế nào, nên tập trung mua ngành nào?')">Hôm nay mua gì?</button>
+                        <button class="ai-suggestion-btn" t-on-click="() => sendSuggestedMessage('Đánh giá biến động thị trường và xu hướng dòng tiền hiện nay')">Biến động thị trường</button>
+                        <button class="ai-suggestion-btn" t-on-click="() => sendSuggestedMessage('Nhận định xu hướng chỉ số VN-Index (VNI) thời gian tới')">Xu hướng VNI</button>
+                        <button class="ai-suggestion-btn" t-on-click="() => sendSuggestedMessage('Tư vấn phương pháp quản trị rủi ro khi thị trường giảm')">Quản trị rủi ro</button>
+                    </div>
+                    
+                    <div class="ai-chat-input-area">
+                        <input type="text" class="ai-chat-input" 
+                               placeholder="Hỏi về mã cổ phiếu (VD: FPT)..." 
+                               t-model="state.inputValue" 
+                               t-on-keyup="onKeyUp"/>
+                        <button class="ai-chat-send" t-on-click="sendMessage" t-att-disabled="state.isTyping">
+                            <i class="fa fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </t>
+</templates>

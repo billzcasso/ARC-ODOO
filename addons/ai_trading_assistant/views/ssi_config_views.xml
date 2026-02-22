@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_ssi" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.ssi</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="90"/>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="AI Trading" id="ai_trading_settings" string="AI Trading" name="ai_trading_settings">
+                    <block title="Cấu hình Kết nối SSI API" name="ssi_api_setting_container" string="Cấu hình Kết nối SSI API">
+                        <setting string="URL API" help="URL gốc của SSI API (vd: https://fc-data.ssi.com.vn/)">
+                            <field name="ssi_api_url"/>
+                        </setting>
+                        <setting string="Consumer ID">
+                            <field name="ssi_consumer_id"/>
+                        </setting>
+                        <setting string="Consumer Secret">
+                            <field name="ssi_consumer_secret" password="1"/>
+                        </setting>
+                        <setting>
+                            <button name="action_test_ssi_connection" type="object" string="Kiểm tra Kết nối SSI" class="btn-primary"/>
+                        </setting>
+                    </block>
+                    
+                    <block title="Cấu hình Models" name="llm_api_setting_container" string="Cấu hình OpenRouter">
+                        <setting string="Trạng thái" help="Sử dụng Trinity Large Preview (Free) qua OpenRouter.">
+                            <field name="llm_provider" readonly="1"/>
+                        </setting>
+                        <setting string="API Key" help="Lấy mã khóa API từ OpenRouter.ai để kích hoạt Robot Trinity.">
+                            <field name="llm_api_key" password="1"/>
+                        </setting>
+                        <setting>
+                            <button name="action_test_llm_connection" type="object" string="Kiểm tra Kết nối OpenRouter" class="btn-primary"/>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="action_ai_trading_settings" model="ir.actions.act_window">
+        <field name="name">Cấu hình AI Trading</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="target">inline</field>
+        <field name="context">{'module' : 'ai_trading_assistant', 'bin_size': False}</field>
+    </record>
+
+    <menuitem id="menu_ai_trading_settings" name="Cấu hình" parent="menu_ai_trading_root" sequence="100" action="action_ai_trading_settings" groups="base.group_system"/>
+
+</odoo>

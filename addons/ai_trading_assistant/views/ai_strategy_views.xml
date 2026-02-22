@@ -1,60 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_ai_strategy_list" model="ir.ui.view">
-        <field name="name">ai.strategy.list</field>
+    <record id="view_ai_strategy_tree" model="ir.ui.view">
+        <field name="name">ai.strategy.tree</field>
         <field name="model">ai.strategy</field>
         <field name="arch" type="xml">
             <list string="AI Strategies">
                 <field name="name"/>
-                <field name="selection_mode"/>
-                <field name="index_id" optional="show"/>
-                <field name="security_ids" widget="many2many_tags" optional="hide"/>
-                <field name="market"/>
-                <field name="state" widget="badge" decoration-success="state == 'active'" decoration-warning="state == 'trained'" decoration-info="state == 'training'"/>
-                <field name="model_accuracy"/>
+                <field name="algorithm"/>
+                <field name="status"/>
+                <field name="sharpe_ratio"/>
             </list>
-        </field>
-    </record>
-
-    <record id="view_ai_strategy_kanban" model="ir.ui.view">
-        <field name="name">ai.strategy.kanban</field>
-        <field name="model">ai.strategy</field>
-        <field name="arch" type="xml">
-            <kanban class="o_kanban_mobile">
-                <field name="name"/>
-                <field name="state"/>
-                <field name="market"/>
-                <field name="model_accuracy"/>
-                <field name="user_id"/>
-                <field name="security_ids"/>
-                <templates>
-                    <t t-name="card">
-                        <div class="oe_kanban_global_click">
-                            <div class="row mb4">
-                                <div class="col-8">
-                                    <strong><field name="name"/></strong>
-                                </div>
-                                <div class="col-4 text-end">
-                                    <field name="state" widget="label_selection" options="{'classes': {'draft': 'default', 'trained': 'warning', 'active': 'success'}}"/>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-6">
-                                    <span class="text-muted"><field name="market"/></span>
-                                </div>
-                                <div class="col-6 text-end">
-                                    <field name="user_id" widget="many2one_avatar_user"/>
-                                </div>
-                            </div>
-                            <div class="mt8 text-center" t-if="record.state.raw_value != 'draft'">
-                                <div t-if="record.model_accuracy.raw_value > 0">
-                                    <field name="model_accuracy" widget="percentpie"/>
-                                </div>
-                            </div>
-                        </div>
-                    </t>
-                </templates>
-            </kanban>
         </field>
     </record>
 
@@ -64,190 +19,42 @@
         <field name="arch" type="xml">
             <form string="AI Strategy">
                 <header>
-                    <button name="action_train_model"
-                            string="Train Model"
-                            type="object"
-                            class="btn-primary"
-                            invisible="state == 'training'"/>
-                    <button name="%(action_backtest_wizard)d"
-                            string="Run Backtest"
-                            type="action"
-                            class="btn-secondary"
-                            invisible="state not in ('trained', 'active')"/>
-                    <button name="action_generate_predictions"
-                            string="Generate Prediction"
-                            type="object"
-                            class="btn-secondary"
-                            invisible="state not in ('trained', 'active')"/>
-                    <button name="action_activate"
-                            string="Activate"
-                            type="object"
-                            class="btn-primary"
-                            invisible="state != 'trained'"/>
-                    <button name="action_pause"
-                            string="Pause"
-                            type="object"
-                            invisible="state != 'active'"/>
-                    <field name="state" widget="statusbar" statusbar_visible="draft,training,trained,active"/>
+                    <button name="action_activate" string="Sử dụng chiến lược này" type="object" class="oe_highlight" invisible="status == 'active'"/>
+                    <button name="action_draft" string="Chuyển về Nháp" type="object" invisible="status == 'draft'"/>
+                    <field name="status" widget="statusbar" statusbar_visible="draft,trained,active"/>
                 </header>
                 <sheet>
                     <div class="oe_title">
                         <h1>
-                            <field name="name" placeholder="E.g. VN30 Momentum Strategy"/>
+                            <field name="name" placeholder="Tên chiến lược..."/>
                         </h1>
                     </div>
-                    <div class="oe_button_box" name="button_box">
-                        <button name="action_view_trainings" type="object" class="oe_stat_button" icon="fa-tasks">
-                            <field name="training_count" widget="statinfo" string="Trainings"/>
-                        </button>
-                        <button name="action_view_predictions" type="object" class="oe_stat_button" icon="fa-line-chart">
-                            <field name="prediction_count" widget="statinfo" string="Predictions"/>
-                        </button>
-                    </div>
-                    <widget name="web_ribbon" title="Active" bg_color="bg-success" invisible="state != 'active'"/>
                     <group>
-                        <group name="basic_info" string="Basic Information">
-                            <field name="user_id" widget="many2one_avatar_user"/>
-                            <field name="config_id" options="{'no_create': True}"/>
-                            <field name="model_type"/>
-                            <field name="market"/>
-                            <field name="currency_id" invisible="1"/>
-                            <field name="current_balance" widget="monetary" options="{'currency_field': 'currency_id'}"/>
-                            <label for="use_algo_ppo" string="Ensemble Algorithms" invisible="model_type != 'ensemble'"/>
-                            <div invisible="model_type != 'ensemble'">
-                                <field name="use_algo_ppo" class="oe_inline"/> PPO
-                                <field name="use_algo_a2c" class="oe_inline" class_margin="ms-2"/> A2C
-                                <field name="use_algo_sac" class="oe_inline" class_margin="ms-2"/> SAC
-                                <field name="use_algo_td3" class="oe_inline" class_margin="ms-2"/> TD3
-                                <field name="use_algo_ddpg" class="oe_inline" class_margin="ms-2"/> DDPG
-                            </div>
+                        <group>
+                            <field name="algorithm"/>
+                            <field name="ticker_ids" widget="many2many_tags" placeholder="Chọn các mã áp dụng model này..."/>
+                            <field name="model_file" filename="model_filename"/>
+                            <field name="model_filename" invisible="1"/>
                         </group>
-                        <group name="data_config" string="Data Configuration">
-                            <field name="selection_mode" widget="radio" options="{'horizontal': true}"/>
-                            <field name="index_id" 
-                                   invisible="selection_mode != 'index'" 
-                                   options="{'no_create': True}"
-                                   placeholder="Select an index (VN30, VNX50, etc.)"/>
-                            <field name="security_ids" 
-                                   widget="many2many_tags" 
-                                   invisible="selection_mode != 'manual'"
-                                   options="{'no_create': True, 'no_create_edit': True}"/>
-                            <field name="effective_security_ids" 
-                                   widget="many2many_tags" 
-                                   readonly="1"
-                                   invisible="selection_mode != 'index'"
-                                   string="Index Components"/>
-                            <field name="data_type"/>
-                            <field name="intraday_resolution" invisible="data_type != 'intraday'"/>
+                        <group>
+                            <field name="sharpe_ratio"/>
+                            <field name="expected_return"/>
                         </group>
                     </group>
-                    <div class="alert alert-info" role="alert" invisible="selection_mode == 'index' or security_ids">
-                        <i class="fa fa-info-circle"/> <strong>Pro Tip:</strong> Select specific stocks to target. If empty, the model will train on the entire <strong><field name="market"/></strong> market.
-                    </div>
-                    <div class="alert alert-success" role="alert" invisible="selection_mode != 'index' or not index_id">
-                        <i class="fa fa-check-circle"/> Training will be performed on <strong><field name="index_id"/></strong> index. Each stock will have its own prediction record for comparison.
-                    </div>
-                    <notebook>
-                        <page string="Strategy Parameters">
-                            <group>
-                                <group string="RSI Parameters">
-                                    <field name="rsi_length"/>
-                                    <field name="rsi_buy_level"/>
-                                    <field name="rsi_sell_level"/>
-                                </group>
-                                <group string="Golden Cross / Death Cross">
-                                    <field name="ma_short_period" readonly="1" help="SMA 50"/>
-                                    <field name="ma_long_period" readonly="1" help="SMA 200"/>
-                                    <div class="alert alert-info" role="alert">
-                                        <p><strong>Vietnamese Market Strategy:</strong></p>
-                                        <ul>
-                                            <li><strong>Golden Cross (Buy Signal):</strong> SMA 50 crosses above SMA 200 - bullish signal</li>
-                                            <li><strong>Death Cross (Sell Signal):</strong> SMA 50 crosses below SMA 200 - bearish signal</li>
-                                        </ul>
-                                        <p>Fixed: SMA 50 and SMA 200 for Vietnamese market</p>
-                                    </div>
-                                </group>
-                                <group string="MACD Confirmation">
-                                    <field name="macd_fast_period"/>
-                                    <field name="macd_slow_period"/>
-                                    <field name="macd_signal_period"/>
-                                </group>
-                                <group string="Volume Filter">
-                                    <field name="volume_ma_period"/>
-                                    <field name="volume_threshold" help="Volume phải lớn hơn trung bình bao nhiêu lần? (mặc định: 1.2)"/>
-                                </group>
-                                <group string="Risk Management">
-                                    <field name="stoploss_pct" help="Stop Loss % (mặc định: -4.0%)"/>
-                                    <field name="takeprofit_pct" help="Take Profit % (mặc định: 8.0%)"/>
-                                </group>
-                            </group>
-                            <group>
-                                <field name="buy_signal_logic" readonly="1"/>
-                                <field name="sell_signal_logic" readonly="1"/>
-                                <field name="current_signal" widget="badge" decoration-success="current_signal == 'golden_cross'" decoration-danger="current_signal == 'death_cross'"/>
-                            </group>
-                        </page>
-                        <page string="Training &amp; Performance">
-                            <group string="Training Configuration">
-                                <field name="from_date"/>
-                                <field name="to_date"/>
-                            </group>
-
-                            <group string="Model Performance">
-                                <group string="Overall Score">
-                                    <field name="model_accuracy" widget="percentpie" string="Win Rate"/>
-                                    <field name="model_f1_score" widget="percentpie" string="Combined Score"/>
-                                </group>
-                                <group string="Detailed Metrics">
-                                    <field name="model_precision" widget="progressbar" string="Profit Factor"/>
-                                    <field name="model_recall" widget="progressbar" string="Risk Retention"/>
-                                </group>
-                            </group>
-                            <separator string="Recent Training History"/>
-                            <field name="training_ids" readonly="1">
-                                <list decoration-success="state == 'completed'" decoration-danger="state == 'failed'" decoration-info="state == 'training'">
-                                    <field name="create_date" string="Date"/>
-                                    <field name="name"/>
-                                    <field name="finrl_algorithm" string="Algorithm"/>
-                                    <field name="sharpe_ratio" string="Sharpe" widget="float"/>
-                                    <field name="cumulative_reward" string="Return"/>
-                                    <field name="state" widget="badge"/>
-                                </list>
-                            </field>
-                        </page>
-
-                            <page string="Predictions &amp; Orders">
-                                <field name="prediction_ids" readonly="1">
-                                    <list>
-                                        <field name="name"/>
-                                        <field name="prediction_date"/>
-                                        <field name="final_signal" widget="badge"/>
-                                        <field name="prediction_confidence"/>
-                                    </list>
-                                </field>
-                            </page>
-
-
-                        <page string="Settings &amp; Notes">
-                            <group string="Settings">
-                            </group>
-                            <group string="Notes">
-                            <field name="notes" placeholder="Additional notes..."/>
-                            </group>
-                        </page>
-                    </notebook>
+                    <label for="description"/>
+                    <field name="description"/>
                 </sheet>
-                <chatter/>
             </form>
         </field>
     </record>
 
     <record id="action_ai_strategy" model="ir.actions.act_window">
-        <field name="name">AI Strategies</field>
+        <field name="name">Danh sách Chiến lược AI</field>
         <field name="res_model">ai.strategy</field>
-        <field name="view_mode">kanban,list,form</field>
-        <field name="domain">[('user_id', '=', uid)]</field>
-        <field name="context">{'default_user_id': uid}</field>
+        <field name="view_mode">list,form</field>
     </record>
-</odoo>
 
+    <menuitem id="menu_ai_trading_strategies" name="AI Strategies Workspace" parent="menu_ai_trading_root" sequence="20" groups="base.group_system"/>
+    <menuitem id="menu_ai_strategy" name="Quản lý Mô hình" parent="menu_ai_trading_strategies" action="action_ai_strategy" sequence="10" groups="base.group_system"/>
+
+</odoo>

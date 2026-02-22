@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- View cho Stock Ticker -->
+    <record id="view_stock_ticker_tree" model="ir.ui.view">
+        <field name="name">stock.ticker.tree</field>
+        <field name="model">stock.ticker</field>
+        <field name="arch" type="xml">
+            <list string="Stock Tickers">
+                <field name="name"/>
+                <field name="market"/>
+                <field name="company_name"/>
+                <field name="sector"/>
+                <field name="is_active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_stock_ticker_form" model="ir.ui.view">
+        <field name="name">stock.ticker.form</field>
+        <field name="model">stock.ticker</field>
+        <field name="arch" type="xml">
+            <form string="Stock Ticker">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Symbol (VD: FPT)"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="market"/>
+                            <field name="company_name"/>
+                        </group>
+                        <group>
+                            <field name="sector"/>
+                            <field name="is_active"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Lịch sử giá (OHLCV)">
+                            <field name="candle_ids">
+                                <list editable="bottom" limit="50">
+                                    <field name="date"/>
+                                    <field name="open"/>
+                                    <field name="high"/>
+                                    <field name="low"/>
+                                    <field name="close"/>
+                                    <field name="volume"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_stock_ticker" model="ir.actions.act_window">
+        <field name="name">Danh sách Mã Cổ phiếu</field>
+        <field name="res_model">stock.ticker</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- Menus -->
+    <menuitem id="menu_ai_trading_root" name="AI Trading" web_icon="ai_trading_assistant,static/description/icon.png" sequence="10"/>
+    <menuitem id="menu_ai_trading_market_data" name="Market Data" parent="menu_ai_trading_root" sequence="10"/>
+    <menuitem id="menu_stock_ticker" name="Mã Chứng Khoán" parent="menu_ai_trading_market_data" action="action_stock_ticker" sequence="10"/>
+
+</odoo>

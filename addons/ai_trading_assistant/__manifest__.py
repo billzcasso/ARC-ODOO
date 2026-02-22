@@ -1,79 +1,35 @@
-# -*- coding: utf-8 -*-
 {
-    'name': 'FMS - AI Consultant',
-    'version': '18.0.2.0.0',
+    'name': 'FMS - AI',
+    'version': '1.0',
     'category': 'Finance',
-    'summary': 'AI Trading Assistant with FinRL Deep Reinforcement Learning',
+    'summary': 'Tích hợp dữ liệu SSI, huấn luyện bằng FinRL để phân tích cổ phiếu & gợi ý giao dịch',
     'description': """
-FMS - AI Consultant (Odoo 18)
-=============================
-
-AI-powered trading assistant integrating FinRL Deep Reinforcement Learning 
-with SSI FastConnect API for Vietnamese stock market.
-
-Key Features:
-- SSI FastConnect integration for HOSE, HNX, UPCOM data
-- Multiple DRL algorithms: PPO, A2C, SAC, TD3, DDPG
-- Technical indicators: RSI, MACD, Bollinger Bands, ATR, SMA
-- Model training with TensorBoard visualization
-- Backtesting with Sharpe ratio, max drawdown metrics
-- Automated trading with dry-run and live modes
-- AI investment chatbot with chart generation
+        Module Odoo hỗ trợ:
+        - Kết nối API SSI (REST & Streaming) để lấy dữ liệu OHLCV.
+        - Tự động train AI model sử dụng Reinforcement Learning (FinRL).
+        - Cung cấp Chatbot / Trợ lý ra quyết định Mua/Bán/Nắm giữ trên Odoo.
     """,
-    'author': 'https://github.com/billzcasso',
-    'license': 'LGPL-3',
-    'depends': [
-        # Odoo Core
-        'base',
-        'web',
-        'mail',
-        'bus',
-        # FMS Modules
-        'stock_data',      # Market data source
-        'stock_trading',   # Trading order execution
-    ],
-    'external_dependencies': {
-        'python': [
-            'stable_baselines3',  # DRL algorithms
-            'gymnasium',          # RL environment
-            'torch',              # PyTorch backend
-            'pandas',
-            'pandas_ta',          # Technical analysis
-            'numpy',
-            'plotly',             # Interactive charts
-            'matplotlib',
-            'requests',
-            'openai',             # OpenRouter chatbot SDK
-        ],
-    },
+    'author': 'Your Company',
+    'website': 'https://www.yourcompany.com',
+    'depends': ['base', 'mail', 'web'], # mail is used for chatter/bot features if needed
     'data': [
-        # Security
+        'data/ssi_api_config.xml',
         'security/ir.model.access.csv',
-        # Data
-        'data/ai_trading_config_data.xml',
-        # Views
-        'views/ai_trading_config_views.xml',
-        'views/backtest_wizard_views.xml',
+        'views/stock_ticker_views.xml',
+        'views/ssi_config_views.xml',
+        'views/ssi_data_fetcher_views.xml',
+        'views/ai_training_history_views.xml',
         'views/ai_strategy_views.xml',
-        'views/ai_model_training_views.xml',
-        'views/ai_prediction_views.xml',
-        'views/ai_chatbot_global_config_views.xml',
-        'views/ai_chatbot_views.xml',
-        'views/ai_trading_menus.xml',
     ],
     'assets': {
         'web.assets_backend': [
-            # Technical Chart Widget
-            'ai_trading_assistant/static/src/js/technical_chart/technical_chart_widget.js',
-            'ai_trading_assistant/static/src/js/technical_chart/entrypoint.js',
-            'ai_trading_assistant/static/src/scss/technical_chart.scss',
-            # AI Chatbot
-            'ai_trading_assistant/static/src/js/website_chatbot.js',
-            'ai_trading_assistant/static/src/xml/website_chatbot.xml',
-            'ai_trading_assistant/static/src/scss/website_chatbot.scss',
+            'ai_trading_assistant/static/src/scss/ai_chatbot.scss',
+            'ai_trading_assistant/static/src/js/ai_chatbot.js',
+            'ai_trading_assistant/static/src/xml/ai_chatbot.xml',
         ],
     },
-    'installable': True,
     'application': True,
+    'installable': True,
     'auto_install': False,
+    'license': 'LGPL-3',
 }

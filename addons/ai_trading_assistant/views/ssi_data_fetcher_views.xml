@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- View Wizard form Fetcher -->
+    <record id="view_ssi_data_fetcher_form" model="ir.ui.view">
+        <field name="name">ssi.data.fetcher.form</field>
+        <field name="model">ssi.data.fetcher</field>
+        <field name="arch" type="xml">
+            <form string="Lấy Dữ liệu SSI">
+                <sheet>
+                    <p class="oe_grey">
+                        Sử dụng chức năng này để kéo danh sách mã chứng khoán hoặc dữ liệu nến ngày 
+                        từ hệ thống SSI FastConnect Data về Odoo.
+                    </p>
+                    <notebook>
+                        <page string="Danh sách Mã CK (Tickers)">
+                            <button string="Fetch Tickers (HNX)" name="fetch_tickers" type="object" class="btn-primary" context="{'default_market': 'HNX'}"/>
+                            <button string="Fetch Tickers (HOSE)" name="fetch_tickers" type="object" class="btn-primary" context="{'default_market': 'HOSE'}"/>
+                            <button string="Fetch Tickers (UPCOM)" name="fetch_tickers" type="object" class="btn-primary" context="{'default_market': 'UPCOM'}"/>
+                        </page>
+                        <page string="Dữ liệu giá OHLCV">
+                            <group>
+                                <group>
+                                    <field name="ticker_id" options="{'no_create': True, 'no_open': True}"/>
+                                </group>
+                                <group>
+                                    <field name="from_date"/>
+                                    <field name="to_date"/>
+                                </group>
+                            </group>
+                            <button string="Fetch Giá Cổ Phiếu này" name="action_fetch_ohlcv" type="object" class="btn-primary mt-2 mb-2"/>
+                            <p class="text-muted">Tính năng Fetch OHLCV theo lô lớn (nhiều mã cùng lúc) sẽ được hỗ trợ chạy nền thông qua Scheduled Actions để tránh đơ màn hình.</p>
+                        </page>
+                    </notebook>
+                </sheet>
+                <footer>
+                    <button string="Đóng" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_ssi_data_fetcher" model="ir.actions.act_window">
+        <field name="name">Đồng bộ Dữ liệu SSI</field>
+        <field name="res_model">ssi.data.fetcher</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_ssi_data_fetcher" name="Đồng bộ Dữ liệu" parent="menu_ai_trading_market_data" action="action_ssi_data_fetcher" sequence="20"/>
+
+</odoo>

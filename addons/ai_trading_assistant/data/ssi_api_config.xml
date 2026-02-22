@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <data>
+        <!-- SSI Consumer ID -->
+        <record id="ssi_api_consumer_id" model="ir.config_parameter">
+            <field name="key">ai_trading.ssi_consumer_id</field>
+            <field name="value">557bbed885344578a5870677ae6701e3</field>
+        </record>
+
+        <!-- SSI Consumer Secret -->
+        <record id="ssi_api_consumer_secret" model="ir.config_parameter">
+            <field name="key">ai_trading.ssi_consumer_secret</field>
+            <field name="value">4fe137225f6b45d59fcc80040b817cfc</field>
+        </record>
+
+        <!-- SSI API URL -->
+        <record id="ssi_api_base_url" model="ir.config_parameter">
+            <field name="key">ai_trading.ssi_api_url</field>
+            <field name="value">https://fc-data.ssi.com.vn/</field>
+        </record>
+    </data>
+</odoo>

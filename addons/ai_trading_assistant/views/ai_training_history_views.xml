@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_ai_training_history_tree" model="ir.ui.view">
+        <field name="name">ai.training.history.tree</field>
+        <field name="model">ai.training.history</field>
+        <field name="arch" type="xml">
+            <list string="Training History">
+                <field name="create_date" string="Ngày Train"/>
+                <field name="name"/>
+                <field name="algorithm"/>
+                <field name="tickers"/>
+                <field name="epochs"/>
+                <field name="sharpe_ratio"/>
+                <field name="model_filename" string="File"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_ai_training_history_form" model="ir.ui.view">
+        <field name="name">ai.training.history.form</field>
+        <field name="model">ai.training.history</field>
+        <field name="arch" type="xml">
+            <form string="Training Result">
+                <header>
+                    <button name="action_create_strategy" string="Bien thanh AI Strategy" type="object" class="oe_highlight"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Cấu hình Model">
+                            <field name="algorithm" readonly="1"/>
+                            <field name="tickers" readonly="1"/>
+                            <field name="epochs" readonly="1"/>
+                            <field name="create_date" string="Ngày Train" readonly="1"/>
+                        </group>
+                        <group string="Chỉ số kết quả">
+                            <field name="final_loss" readonly="1"/>
+                            <field name="final_reward" readonly="1"/>
+                            <field name="sharpe_ratio" readonly="1"/>
+                            <field name="model_file" filename="model_filename" readonly="1"/>
+                            <field name="model_filename" invisible="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Console Log">
+                            <field name="log_text" readonly="1" widget="text"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_ai_training_history" model="ir.actions.act_window">
+        <field name="name">Lịch sử Huấn luyện AI</field>
+        <field name="res_model">ai.training.history</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- Thêm menu Lịch sử vào dưới menu AI Strategies Workspace -->
+    <menuitem id="menu_ai_training_history" name="Lịch sử Huấn luyện" parent="menu_ai_trading_strategies" action="action_ai_training_history" sequence="20" groups="base.group_system"/>
+
+</odoo>
