@@ -11,9 +11,9 @@ class AITrainingHistory(models.Model):
     epochs = fields.Integer(string='Tổng Epochs')
     
     # Hyperparameters
-    learning_rate = fields.Float(string='Learning Rate')
+    learning_rate = fields.Float(string='Learning Rate', digits=(16, 6))
     batch_size = fields.Integer(string='Batch Size')
-    ent_coef = fields.Float(string='Entropy Coefficient')
+    ent_coef = fields.Float(string='Entropy Coefficient', digits=(16, 4))
 
     # Kết quả
     final_loss = fields.Float(string='Final Loss')

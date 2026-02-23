@@ -29,15 +29,20 @@ class StockTicker(models.Model):
     ]
 
     def _render_general_chat_html(self, response_text):
+        html_content = str(response_text)
+        
+        # 1. Style Bold text
+        html_content = re.sub(r'\*\*(.*?)\*\*', r'<strong style="color: #60a5fa; font-size: 15px;">\1</strong>', html_content)
+        # 2. Style Italic text
+        html_content = re.sub(r'\*(.*?)\*', r'<em style="color: #94a3b8;">\1</em>', html_content)
+        
         return f"""
         <div class="ai-general-chat">
-            <div style="background-color: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6; padding: 10px 15px; border-radius: 4px; margin-bottom: 10px;">
-                <i class="fa fa-line-chart" style="color: #3b82f6; margin-right: 5px;"></i>
-                <b>Nhận định Toàn cảnh từ ARC</b>
+            <div style="background: linear-gradient(90deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0) 100%); border-left: 3px solid #3b82f6; padding: 12px 15px; border-radius: 4px; margin-bottom: 15px;">
+                <i class="fa fa-line-chart" style="color: #60a5fa; margin-right: 8px;"></i>
+                <b style="color: #60a5fa; font-size: 15px; text-transform: uppercase;">Nhận định Toàn cảnh từ ARC</b>
             </div>
-            <div style="color: #e2e8f0; line-height: 1.6; font-size: 14px; padding: 0 5px;">
-                {response_text}
-            </div>
+            <div style="color: #f8fafc; line-height: 1.7; font-size: 14.5px; padding: 0 5px; white-space: pre-wrap; word-wrap: break-word;">{html_content}</div>
         </div>
         """
 
@@ -67,7 +72,7 @@ class StockTicker(models.Model):
                               zone_label, zone_value, target_label, target_color, target_value,
                               stars_label, overall_score, khq_color, khq_label, 
                               price_stars, trend_stars, pos_stars, flow_stars, volat_stars, base_stars,
-                              expert_comment):
+                              expert_comment, ai_confidence):
         def render_stars(n):
             return " ".join(['<i class="fa fa-star" style="color: #f59e0b;"></i>' for _ in range(n)])
         def fmt(v): return f"{v/1000:,.2f}"
@@ -164,268 +169,233 @@ class StockTicker(models.Model):
     @api.model
     def ai_chat(self, message):
         """
-        Logic xử lý tin nhắn: Nếu có mã CK -> Phân tích dữ liệu. Nếu không -> Chat tự do chuyên nghiệp.
+        Logic xử lý tin nhắn ĐA NĂNG: Hỗ trợ phân tích nhiều mã cùng lúc và nhận định vĩ mô real-time.
         """
-        # 1. Trích xuất mã chứng khoán (3 chữ cái in hoa)
-        query = message.upper()
-        match = re.search(r'\b[A-Z]{3}\b', query)
-        symbol = match.group(0) if match else None
+        # 1. Trích xuất CÁC mã chứng khoán bằng LLM (OpenRouter)
+        system_prompt_extract = """Bạn là một chuyên gia nhận diện thực thể tài chính.
+Nhiệm vụ của bạn là đọc câu hỏi của người dùng và trích xuất DANH SÁCH CÁC MÃ CHỨNG KHOÁN (ticker symbol) mà họ đang muốn phân tích.
+- Nếu người dùng nhắc đến 1 hoặc nhiều mã (Ví dụ: FPT, ACB, HPG...), hãy trả về các mã đó cách nhau bởi dấu phẩy (Ví dụ: FPT, ACB, HPG).
+- Nếu người dùng CHỈ hỏi chung chung, hãy trả về chữ: NONE.
+KHÔNG giải thích, KHÔNG nói gì thêm. Chỉ trả về danh sách mã cách nhau bởi dấu phẩy hoặc NONE."""
         
-        if not symbol:
-            # Nếu không có mã CK, dùng AI trả lời tư vấn Vĩ mô / Toàn cảnh thị trường hoặc Khuyến nghị danh mục
-            system_prompt = """Bạn là ARC Intelligence - Giám đốc Phân tích và Chuyên gia Tư vấn Đầu tư Chứng khoán cấp cao của hệ thống ARC-ODOO.
-Người dùng đang hỏi các câu hỏi chung về thị trường (VD: Hôm nay mua gì? Nên đầu tư ngành nào? Biến động thị trường, Xu hướng VNI...).
-Nhiệm vụ của bạn:
-1. Đưa ra nhận định chuyên sâu, sắc bén về bối cảnh vĩ mô và xu hướng dòng tiền hiện tại.
-2. NẾU người dùng hỏi "Nên mua gì / đầu tư mã nào?": HÃY MẠNH DẠN ĐỀ XUẤT 3-5 mã cổ phiếu tiềm năng thuộc các nhóm ngành đang dẫn dắt sóng (VD: Ngân hàng, Chứng khoán, Công nghệ, Bán lẻ...). Kèm theo luận điểm đầu tư (Kỹ thuật hoặc Cơ bản) ngắn gọn cho từng mã.
-3. Phân tích phải có cấu trúc rõ ràng, sử dụng dấu hoa thị (*) hoặc gạch đầu dòng, và in đậm (**) các ý chính, tên mã cổ phiếu để trình bày chuyên nghiệp.
-4. Trả lời bằng tiếng Việt cực kỳ chuyên nghiệp, tự tin, quyết đoán mang đúng phong thái của một Giám đốc Phân tích. Không trả lời gượng ép, dè dặt hay thoái thác trách nhiệm.
-5. Luôn kết thúc bằng một câu gọi mở: "Bạn có thể nhập trực tiếp một mã cổ phiếu (VD: FPT, HPG, TCB) để ARC chạy mô hình AI FinRL và Phân tích kỹ thuật chi tiết nhé."."""
+        extract_response = self._call_openrouter(message, system_prompt_extract).strip().upper()
+        
+        symbols = []
+        if "NONE" not in extract_response:
+            # Tìm tất các mã 3 chữ cái trong response
+            symbols = re.findall(r'\b[A-Z0-9]{3,}\b', extract_response)
+            # Loại bỏ các từ khóa không phải mã như SSI, T+1... nếu cần (ở đây SSI là mã nên cứ để)
+            symbols = list(set(symbols)) # Duy nhất
+
+        if not symbols:
+            # --- XỬ LÝ NHẬN ĐỊNH VĨ MÔ TOÀN CẢNH ---
+            market_context = "Hiện chưa lấy được dữ liệu thị trường mới nhất."
+            latest_vni_price = 1100.0
+            
+            ssi_id = self.env['ir.config_parameter'].sudo().get_param('ai_trading.ssi_consumer_id', '')
+            ssi_secret = self.env['ir.config_parameter'].sudo().get_param('ai_trading.ssi_consumer_secret', '')
+            api_url = self.env['ir.config_parameter'].sudo().get_param('ai_trading.ssi_api_url', 'https://fc-data.ssi.com.vn/')
+            
+            if ssi_id and ssi_secret:
+                try:
+                    from ssi_fc_data import fc_md_client, model as ssi_model
+                    class Config: pass
+                    conf = Config()
+                    conf.consumerID, conf.consumerSecret, conf.url = ssi_id, ssi_secret, api_url
+                    client = fc_md_client.MarketDataClient(conf)
+                    
+                    # Lấy data VNINDEX rất gần (3 ngày đổ lại) để đảm bảo tươi mới
+                    end_d = datetime.now()
+                    start_d = end_d - timedelta(days=5)
+                    req = ssi_model.daily_ohlc('VNINDEX', start_d.strftime('%d/%m/%Y'), end_d.strftime('%d/%m/%Y'), 1, 10, True)
+                    res = client.daily_ohlc(conf, req)
+                    
+                    import json
+                    data = res if isinstance(res, dict) else json.loads(res)
+                    if str(data.get('status')) == '200' and data.get('data'):
+                        candles = data.get('data', [])
+                        if candles:
+                            latest = candles[0]
+                            latest_vni_price = float(latest.get('Close', 1100))
+                            market_context = f"VN-Index phiên mới nhất ({latest.get('TradingDate')}): Đóng cửa tại {latest.get('Close')} điểm. Khối lượng: {latest.get('Volume', 0):,} cp."
+                except Exception as e:
+                    market_context = f"Lỗi dữ liệu vĩ mô: {e}"
+
+            system_prompt = f"""Bạn là ARC Intelligence - Giám đốc Phân tích.
+Người dùng đang hỏi về vĩ mô/toàn cảnh thị trường.
+[DỮ LIỆU VN-INDEX MỚI NHẤT]: {market_context}
+Hãy cung cấp nhận định chuyên sâu dựa trên số điểm {latest_vni_price} này. Đề xuất các nhóm ngành hot và 3 mã tiềm năng."""
             
             response = self._call_openrouter(message, system_prompt)
-            # Render response in a styled UI card instead of just text
-            html_response = self._render_general_chat_html(response)
+            return {'status': 'success', 'response_html': self._render_general_chat_html(response)}
             
-            return {
-                'status': 'success',
-                'response_html': html_response
-            }
-            
+        # --- XỬ LÝ PHÂN TÍCH NHIỀU MÃ CHỨNG KHOÁN ---
+        final_html = ""
+        for sym in symbols:
+            try:
+                result = self._analyze_ticker_to_html(sym)
+                if result.get('status') == 'success':
+                    final_html += result.get('response_html', '')
+                else:
+                    final_html += f"<div class='alert alert-warning'>Mã {sym}: {result.get('response_html', 'Không tìm thấy dữ liệu')}</div>"
+            except Exception as e:
+                final_html += f"<div class='alert alert-danger'>Lỗi khi phân tích {sym}: {str(e)}</div>"
+
+        return {
+            'status': 'success', 
+            'response_html': f"<div class='ai-multi-analysis'>{final_html}</div>"
+        }
+
+    def _analyze_ticker_to_html(self, symbol):
+        """Hàm nội bộ thực hiện trọn vẹn quy trình: Fetch -> AI Inference -> Render Card cho 1 mã."""
         ticker = self.sudo().search([('name', '=', symbol)], limit=1)
         if not ticker:
             ticker = self.sudo().create({'name': symbol, 'company_name': f'Mã {symbol}', 'market': 'HOSE', 'is_active': True})
             
-        # 2. Tự động đồng bộ chuẩn dữ liệu lịch sử vào Database
+        # 1. Sync Data
         try:
-            latest_candle = self.env['stock.candle'].sudo().search(
-                [('ticker_id', '=', ticker.id)], 
-                order='date desc', 
-                limit=1
-            )
-            
             to_date_str = datetime.now().strftime('%d/%m/%Y')
-            
-            if latest_candle:
-                # Nếu đã có dữ liệu, chỉ lấy bù khoảng bị thiếu (lùi 2 ngày phòng sai lệch)
-                from_date = latest_candle.date - timedelta(days=2)
-                from_date_str = from_date.strftime('%d/%m/%Y')
-            else:
-                # Nếu mã hoàn toàn mới chưa có dữ liệu, tải mặc định 150 ngày cũ
-                from_date_str = (datetime.now() - timedelta(days=150)).strftime('%d/%m/%Y')
-                
+            latest_c = self.env['stock.candle'].sudo().search([('ticker_id', '=', ticker.id)], order='date desc', limit=1)
+            from_date_str = (latest_c.date - timedelta(days=2)).strftime('%d/%m/%Y') if latest_c else (datetime.now() - timedelta(days=150)).strftime('%d/%m/%Y')
             fetcher = self.env['ssi.data.fetcher'].sudo().create({})
             fetcher.fetch_daily_ohlcv(symbol, from_date_str, to_date_str)
-        except Exception:
-            pass
+        except Exception: pass
             
-        # Lấy dữ liệu 150 nến gần nhất từ Database
-        df = pd.DataFrame()
+        # 2. Chuẩn bị DataFrame
         local_candles = self.env['stock.candle'].sudo().search([('ticker_id', '=', ticker.id)], order='date desc', limit=150)
-        if local_candles:
-            data_list = [{'Close': float(c.close), 'Volume': float(c.volume), 'TradingDate': c.date.strftime('%d/%m/%Y')} for c in local_candles]
-            df = pd.DataFrame(data_list).sort_values('TradingDate', ascending=True)
+        if not local_candles:
+            return {'status': 'error', 'response_html': f'Mã {symbol} thiếu dữ liệu.'}
             
-        if df.empty:
-            return {
-                'status': 'error',
-                'response_html': f'<p>Mã <b>{symbol}</b> hiện không có đủ dữ liệu lịch sử để Robot thực hiện phân tích kỹ thuật. Vui lòng thử mã khác.</p>'
-            }
-            
+        data_list = []
+        for c in local_candles:
+            data_list.append({
+                'date': c.date.strftime('%Y-%m-%d'), 'tic': symbol,
+                'open': float(c.open), 'high': float(c.high), 'low': float(c.low), 'close': float(c.close), 'volume': float(c.volume)
+            })
+        df = pd.DataFrame(data_list).sort_values('date', ascending=True)
+        df['Close'] = df['close']
+        df['TradingDate'] = df['date']
+        
+        # 3. Lấy giá Real-time SSI (để card luôn tươi mới nhất ngay giây phút này)
         real_latest_price = None
         real_latest_date = None
-        
-        # Cố gắng lấy giá intraday của ngày CHÍNH XÁC HÔM NAY từ API (Ưu tiên số 1)
         ssi_id = self.env['ir.config_parameter'].sudo().get_param('ai_trading.ssi_consumer_id', '')
         ssi_secret = self.env['ir.config_parameter'].sudo().get_param('ai_trading.ssi_consumer_secret', '')
-        api_url = self.env['ir.config_parameter'].sudo().get_param('ai_trading.ssi_api_url', 'https://fc-data.ssi.com.vn/')
-        
         if ssi_id and ssi_secret:
             try:
                 from ssi_fc_data import fc_md_client, model as ssi_model
-                class Config:
-                    consumerID = ssi_id
-                    consumerSecret = ssi_secret
-                    url = api_url
-                    stream_url = api_url
-                client = fc_md_client.MarketDataClient(Config())
-                
-                to_date_str = datetime.now().strftime('%d/%m/%Y')
-                req_today = ssi_model.daily_stock_price(symbol, to_date_str, to_date_str, 1, 1, ticker.market.lower())
-                res_today = client.daily_stock_price(Config(), req_today)
-                data_today = res_today if isinstance(res_today, dict) else json.loads(res_today)
-                if str(data_today.get('status')) == '200' and data_today.get('data'):
-                    today_data = data_today['data'][0]
-                    match_price = today_data.get('MatchPrice')
-                    close_price = today_data.get('ClosePrice')
-                    price_val = match_price if match_price else close_price
-                    if price_val:
-                        real_latest_price = float(price_val)
-                        real_latest_date_str = str(today_data.get('TradingDate', to_date_str))
-                        real_latest_date = real_latest_date_str
-                        
-                        # --- Cập nhật trực tiếp nến Hôm nay vào Database để View nhìn thấy ngay ---
-                        try:
-                            trading_date = datetime.strptime(real_latest_date_str, '%d/%m/%Y').date()
-                            existing = self.env['stock.candle'].sudo().search([
-                                ('ticker_id', '=', ticker.id),
-                                ('date', '=', trading_date)
-                            ], limit=1)
-                            
-                            vals = {
-                                'ticker_id': ticker.id,
-                                'date': trading_date,
-                                'close': real_latest_price,
-                                'open': float(today_data.get('OpenPrice') or real_latest_price),
-                                'high': float(today_data.get('HighestPrice') or real_latest_price),
-                                'low': float(today_data.get('LowestPrice') or real_latest_price),
-                                'volume': float(today_data.get('TotalVolumn') or today_data.get('TotalVolume') or 0),
-                            }
-                            if existing:
-                                existing.sudo().write(vals)
-                            else:
-                                self.env['stock.candle'].sudo().create(vals)
-                        except Exception:
-                            pass
+                class Conf: pass
+                conf = Conf(); conf.consumerID, conf.consumerSecret, conf.url = ssi_id, ssi_secret, self.env['ir.config_parameter'].sudo().get_param('ai_trading.ssi_api_url', 'https://fc-data.ssi.com.vn/')
+                client = fc_md_client.MarketDataClient(conf)
+                res_t = client.daily_stock_price(conf, ssi_model.daily_stock_price(symbol, datetime.now().strftime('%d/%m/%Y'), datetime.now().strftime('%d/%m/%Y'), 1, 1, ticker.market.lower()))
+                d_t = res_t if isinstance(res_t, dict) else json.loads(res_t)
+                if str(d_t.get('status')) == '200' and d_t.get('data'):
+                    today = d_t['data'][0]
+                    real_latest_price = float(today.get('MatchPrice') or today.get('ClosePrice'))
+                    real_latest_date = str(today.get('TradingDate', datetime.now().strftime('%d/%m/%Y')))
+                    # Cập nhật DB
+                    t_date = datetime.strptime(real_latest_date, '%d/%m/%Y').date()
+                    ex = self.env['stock.candle'].sudo().search([('ticker_id', '=', ticker.id), ('date', '=', t_date)], limit=1)
+                    vals = {'ticker_id': ticker.id, 'date': t_date, 'close': real_latest_price, 'open': float(today.get('OpenPrice', real_latest_price)), 'high': float(today.get('HighestPrice', real_latest_price)), 'low': float(today.get('LowestPrice', real_latest_price)), 'volume': float(today.get('TotalVolumn', 0))}
+                    if ex: ex.sudo().write(vals)
+                    else: self.env['stock.candle'].sudo().create(vals)
             except Exception: pass
-            
-        # Nếu API lỗi, lấy giá mới nhất toàn cục từ DB (Ưu tiên 2)
-        if not real_latest_price:
-            real_latest_candle = self.env['stock.candle'].sudo().search([('ticker_id', '=', ticker.id)], order='date desc', limit=1)
-            real_latest_price = float(real_latest_candle.close) if real_latest_candle else float(df.iloc[-1]['Close'])
-            real_latest_date = str(real_latest_candle.date) if real_latest_candle else str(df.iloc[-1].get('TradingDate', 'N/A'))
 
-        # Đồng bộ Dữ liệu: Cập nhật DataFrame trước khi tính Pandas Indicators
-        last_date_in_df = str(df.iloc[-1].get('TradingDate', 'N/A'))
-        if last_date_in_df == real_latest_date:
-            df.loc[df.index[-1], 'Close'] = real_latest_price
-        else:
-            new_row = pd.DataFrame([{'TradingDate': real_latest_date, 'Close': real_latest_price, 'Volume': 0}])
-            df = pd.concat([df, new_row], ignore_index=True)
-            
-        # 3. Tính toán Chỉ báo
-        df['sma20'] = df['Close'].rolling(window=20).mean()
-        delta = df['Close'].diff()
+        if not real_latest_price:
+            real_latest_price = df.iloc[-1]['close']
+            real_latest_date = df.iloc[-1]['date']
+
+        # Update DF with latest price
+        if str(df.iloc[-1]['date']) == real_latest_date: df.loc[df.index[-1], 'close'] = real_latest_price
+        else: df = pd.concat([df, pd.DataFrame([{'date': real_latest_date, 'tic': symbol, 'close': real_latest_price, 'Close': real_latest_price}])], ignore_index=True)
+        
+        # 4. Tech Indicators
+        df['sma20'] = df['close'].rolling(window=20).mean()
+        delta = df['close'].diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-        rs = gain / loss
-        df['rsi'] = 100 - (100 / (1 + rs))
-        exp1 = df['Close'].ewm(span=12, adjust=False).mean()
-        exp2 = df['Close'].ewm(span=26, adjust=False).mean()
+        df['rsi'] = 100 - (100 / (1 + (gain / loss)))
+        exp1, exp2 = df['close'].ewm(span=12).mean(), df['close'].ewm(span=26).mean()
         df['macd'] = exp1 - exp2
-        df['signal_line'] = df['macd'].ewm(span=9, adjust=False).mean()
+        df['signal_line'] = df['macd'].ewm(span=9).mean()
         
         latest_row = df.iloc[-1]
-        latest_price = float(latest_row['Close'])
-        latest_date = str(latest_row.get('TradingDate', 'N/A'))
-        rsi_val = float(latest_row['rsi']) if not np.isnan(latest_row['rsi']) else 50
-        sma_val = float(latest_row['sma20']) if not np.isnan(latest_row['sma20']) else latest_price
-        macd_val = float(latest_row['macd'])
-        macd_signal = float(latest_row['signal_line'])
+        l_price, l_date = float(latest_row['close']), str(latest_row['date'])
+        rsi_v, sma_v = float(latest_row['rsi']), float(latest_row['sma20'])
+        macd_v, sig_v = float(latest_row['macd']), float(latest_row['signal_line'])
         
-        # Kiểm tra xem mã này đã được gán vào chiến lược AI (FinRL model) nào chưa
-        active_strategy = self.env['ai.strategy'].sudo().search([
-            ('status', '=', 'active'),
-            '|',
-            ('ticker_ids', '=', False),
-            ('ticker_ids', 'in', ticker.id)
-        ], limit=1, order='id desc')
-        
-        # Nếu chưa có model backtest cho mã này
+        # 5. Inference
+        active_strategy = self.env['ai.strategy'].sudo().search([('status', '=', 'active'), '|', ('ticker_ids', '=', False), ('ticker_ids', 'in', ticker.id)], limit=1, order='id desc')
         if not active_strategy:
-            html_no_model = self._render_no_model_html(symbol, latest_price, sma_val, rsi_val, latest_date)
-            return {'status': 'success', 'response_html': html_no_model}
+            return {'status': 'success', 'response_html': self._render_no_model_html(symbol, l_price, sma_v, rsi_v, l_date)}
+            
+        pred_action = active_strategy.get_inference_action(ticker)
         
-        # 3. Tính toán Chỉ báo (Chỉ chạy khi có model AI)
-        # Tích hợp số liệu thực tế từ FinRL Backtest để có độ chính xác cao nhất
-        ai_return = active_strategy.expected_return or 15.0 # Nay đã là CAGR (Lãi suất Kép Hàng Năm)
-        ai_drawdown = abs(active_strategy.max_drawdown or 5.0)
+        # 6. Logic Signals & Dynamic Metrics (Hardcode fix)
+        tech_signal = "NẮM GIỮ"
+        ai_conf = 0.0
+        if pred_action == -999.0: tech_signal = "LỖI THƯ VIỆN"
+        else:
+            ai_conf = min(abs(pred_action * 100), 100)
+            if pred_action > 0.1: tech_signal = "MUA MẠNH" if pred_action > 0.5 else "CANH MUA"
+            elif pred_action < -0.1: tech_signal = "BÁN MẠNH" if pred_action < -0.5 else "CANH BÁN"
+
+        # Tính toán các star metrics (1-5)
+        # 1. Sức mạnh giá (RSI)
+        price_s = min(max(int(rsi_v / 20) + 1, 1), 5)
+        # 2. Sức mạnh xu hướng (SMA)
+        diff_sma = (l_price - sma_v) / sma_v * 100
+        trend_s = 5 if diff_sma > 5 else (4 if diff_sma > 2 else (3 if diff_sma > -2 else (2 if diff_sma > -5 else 1)))
+        # 3. Vị thế ngắn hạn (MACD)
+        pos_s = 5 if macd_v > sig_v and macd_v > 0 else (4 if macd_v > sig_v else (3 if macd_v > 0 else 2))
+        # 4. Dòng tiền (Volume vs Avg 20)
+        vol_avg = df['volume'].tail(20).mean() or 1.0
+        vol_ratio = latest_row['volume'] / vol_avg
+        flow_s = min(max(int(vol_ratio * 2) + 1, 1), 5)
+        # 5. Độ biến động (Standard Deviation proxy)
+        volat_s = min(max(5 - int(abs(diff_sma) / 3), 1), 5)
+        # 6. Biên nền giá (Distance from 20-day low)
+        low_20 = df['low'].tail(20).min() or 1.0
+        base_s = min(max(int((l_price - low_20) / (low_20 * 0.02 or 1)) + 1, 1), 5)
+
+        # Tỷ lệ lãi lỗ chiết khấu từ model
+        ai_ret = active_strategy.expected_return or 15.0
+        ai_dd = abs(active_strategy.max_drawdown or 5.0)
+        swing_ret = min(max((ai_ret / 252) * 21, 2.0), 15.0)
+        risk_buf = min(max((ai_dd / 252) * 21, 1.5), 8.0)
         
-        # Chiến lược Swing Trade giả định nắm giữ 1 tháng (~21 ngày giao dịch)
-        holding_days = 21
+        # LOGIC CỐ ĐỊNH: Vùng Mua phải ở DƯỚI, Chốt Lời phải ở TRÊN
+        anchor_buy = min(l_price, sma_v)
+        b_low, b_high = anchor_buy * (1 - risk_buf/100), anchor_buy * 1.005
         
-        # Lãi kỳ vọng (Swing Return) được chiết khấu từ Tỷ suất sinh lời năm (CAGR)
-        swing_return = (ai_return / 252) * holding_days
-        # Đảm bảo mức chốt lời tối thiểu 2% để AI có biên độ gợi ý thực tế
-        swing_return = max(swing_return, 2.0)
-        # Nếu model quá xuất sắc, chặn lãi ngắn hạn ở mức 15% để tránh tâm lý fomo
-        swing_return = min(swing_return, 15.0)
-        
-        # Rủi ro ngắn hạn (Risk Buffer) được chiết khấu từ Max Drawdown năm
-        risk_buffer = (ai_drawdown / 252) * holding_days
-        # Ít nhất phải cắt lỗ 1.5% - Tối đa 8%
-        risk_buffer = min(max(risk_buffer, 1.5), 8.0)
-        
-        # Vùng mua động
-        buy_zone_low = sma_val * (1 - (risk_buffer / 100))
-        buy_zone_high = sma_val * 1.01
-        
-        # Mục tiêu chốt lời (Target)
-        target_1 = latest_price * (1 + (swing_return * 0.5 / 100))  # Chốt nửa hàng
-        target_2 = latest_price * (1 + (swing_return / 100))        # Chốt hết
-        
-        tech_signal = "TRUNG TÍNH"
-        if rsi_val > 70: tech_signal = "QUÁ MUA (CẨN TRỌNG)"
-        elif rsi_val < 30: tech_signal = "QUÁ BÁN (CƠ HỘI)"
-        elif macd_val > macd_signal and rsi_val > 50: tech_signal = "TÍCH CỰC (MUA)"
-        elif macd_val < macd_signal: tech_signal = "TIÊU CỰC (BÁN/HOLD)"
-        
-        # 4. LLM API
+        anchor_target = max(l_price, b_high)
+        t1, t2 = anchor_target * (1 + swing_ret*0.5/100), anchor_target * (1 + swing_ret/100)
+
         expert_comment = self._get_llm_expert_analysis(
-            symbol, latest_price, latest_date, tech_signal, buy_zone_low, buy_zone_high, target_1, target_2, rsi_val, sma_val, macd_val,
-            active_strategy.algorithm or 'ppo',
-            active_strategy.sharpe_ratio or 0.0,
-            active_strategy.expected_return or 0.0,
-            active_strategy.max_drawdown or 0.0
+            symbol, l_price, l_date, tech_signal, b_low, b_high, t1, t2, rsi_v, sma_v, macd_v,
+            active_strategy.algorithm or 'ppo', active_strategy.sharpe_ratio or 0.0, ai_ret, ai_dd, pred_action
         )
         
-        # 5. HTML Response & Advanced Metrics Calculation
         def fmt(v): return f"{v/1000:,.2f}"
-        
-        action_color = "#00d084" if "MUA" in tech_signal or "CƠ HỘI" in tech_signal else ("#e74c3c" if "BÁN" in tech_signal else "#f39c12")
-        stars_label = "RẤT MẠNH" if rsi_val < 40 and macd_val > macd_signal else ("MẠNH" if macd_val > macd_signal else "KHÁ")
-        
-        # Logic Lãi kỳ vọng / Rủi ro và Vùng hỗ trợ / Vùng mua / Chốt lời / Cắt lỗ
-        is_negative = "BÁN" in tech_signal or "TIÊU CỰC" in tech_signal
-        if is_negative:
-            zone_label = "Vùng canh bán"
-            zone_value = f"{fmt(buy_zone_low)} - {fmt(buy_zone_high)}"
-            target_label = "Ngưỡng cắt lỗ"
-            target_value = f"{fmt(sma_val * 0.95)}"
-            target_color = "#e74c3c"
-            profit_label = "Rủi ro sụt giảm"
-            drawdown = ((sma_val * 0.95 - latest_price) / latest_price * 100)
-            display_profit = f"{drawdown:.2f}%"
-        else:
-            zone_label = "Vùng canh mua"
-            zone_value = f"{fmt(buy_zone_low)} - {fmt(buy_zone_high)}"
-            target_label = "Mục tiêu chốt lời"
-            target_value = f"{fmt(target_1)} - {fmt(target_2)}"
-            target_color = "#10b981"
-            profit_label = "Lãi kỳ vọng"
-            display_profit = f"+{((target_2 - latest_price) / latest_price * 100):.2f}%"
+        action_c = "#00d084" if "MUA" in tech_signal else ("#e74c3c" if "BÁN" in tech_signal else "#f39c12")
+        score = min(max(int(rsi_v * 0.8 + (20 if macd_v > sig_v else 0)), 10), 95)
+        khq_c = "#10b981" if score > 60 else ("#f59e0b" if score > 40 else "#ef4444")
+        khq_l = "Khả quan" if score > 60 else ("Trung lập" if score > 40 else "Kém khả quan")
 
-        # Calculate Gauge Score & Star Ratings (1-5)
-        overall_score = min(max(int(rsi_val * 0.8 + (20 if macd_val > macd_signal else 0)), 10), 95)
-        khq_color = "#10b981" if overall_score > 60 else ("#f59e0b" if overall_score > 40 else "#ef4444")
-        khq_label = "Khả quan" if overall_score > 60 else ("Trung lập" if overall_score > 40 else "Kém khả quan")
-        
-        latest_vol = float(latest_row['Volume'])
-        sma20_vol = df['Volume'].rolling(window=20).mean().iloc[-1] if 'Volume' in df else 1
-        
-        price_stars = 5 if latest_price > sma_val * 1.05 else (4 if latest_price > sma_val else 3)
-        trend_stars = 5 if macd_val > macd_signal and macd_val > 0 else (4 if macd_val > macd_signal else 3)
-        pos_stars = 4 if 40 < rsi_val < 70 else (3 if rsi_val >= 70 else 2)
-        flow_stars = 5 if latest_vol > sma20_vol * 1.5 else (4 if latest_vol > sma20_vol else 3)
-        volat_stars = 4
-        base_stars = 4
+        is_neg = "BÁN" in tech_signal
+        if is_neg:
+            z_label, z_val = "Vùng canh bán", f"{fmt(l_price * 1.01)} - {fmt(l_price * 1.03)}"
+            t_label, t_val, t_color = "Ngưỡng cắt lỗ", f"{fmt(b_low)}", "#e74c3c"
+            p_label, p_val = "Rủi ro sụt giảm", f"-{risk_buf:.2f}%"
+        else:
+            z_label, z_val = "Vùng canh mua", f"{fmt(b_low)} - {fmt(b_high)}"
+            t_label, t_val, t_color = "Mục tiêu chốt lời", f"{fmt(t1)} - {fmt(t2)}", "#10b981"
+            p_label, p_val = "Lãi kỳ vọng", f"+{swing_ret:.2f}%"
 
         html = self._render_analysis_html(
-            symbol, latest_price, sma_val, rsi_val, latest_date,
-            action_color, tech_signal, display_profit, profit_label,
-            zone_label, zone_value, target_label, target_color, target_value,
-            stars_label, overall_score, khq_color, khq_label,
-            price_stars, trend_stars, pos_stars, flow_stars, volat_stars, base_stars,
-            expert_comment
+            symbol, l_price, sma_v, rsi_v, l_date, action_c, tech_signal, p_val, p_label,
+            z_label, z_val, t_label, t_color, t_val,
+            "MẠNH", score, khq_c, khq_l, price_s, trend_s, pos_s, flow_s, volat_s, base_s, expert_comment, ai_confidence=f"{ai_conf:.1f}"
         )
         return {'status': 'success', 'response_html': html}
 
@@ -456,7 +426,7 @@ Nhiệm vụ của bạn:
         return "Kết nối AI đang bận, vui lòng thử lại sau."
 
     @api.model
-    def _get_llm_expert_analysis(self, symbol, price, date, signal, buy_low, buy_high, t1, t2, rsi, sma, macd, algo, sharpe, return_pct, drawdown):
+    def _get_llm_expert_analysis(self, symbol, price, date, signal, buy_low, buy_high, t1, t2, rsi, sma, macd, algo, sharpe, return_pct, drawdown, pred_action):
         def f(v): return f"{v/1000:,.2f}"
         fallback = f"Mã {symbol} đang giao dịch tại mức {f(price)}. Dữ liệu kỹ thuật cho thấy tín hiệu {signal} với vùng hỗ trợ quanh {f(buy_low)}."
         
@@ -464,19 +434,19 @@ Nhiệm vụ của bạn:
         year_context = date[:4] if date and len(date) >= 4 else "hiện tại"
         
         prompt = f"""
-NGỮ CẢNH THỊ TRƯỜNG & KẾT QUẢ AI BACKTEST:
+NGỮ CẢNH THỊ TRƯỜNG & KẾT QUẢ AI DỰ ĐOÁN:
 - Mã cổ phiếu: {symbol} (Dữ liệu ngày {date} - Năm {year_context})
 - Giá: {f(price)} | SMA20: {f(sma)} | RSI: {rsi:.1f} | MACD: {macd:.2f}
-- Thuật toán AI: {algo.upper()} | Sharpe Ratio: {sharpe:.2f}
-- Hiệu suất Backtest: Lãi kỳ vọng {return_pct:.2f}% | Sụt giảm tối đa (Max Drawdown): {drawdown:.2f}%
-- Tín hiệu Robot: {signal}
-- Vùng giá AI khuyến nghị: Mua {f(buy_low)}-{f(buy_high)} | Chốt lời T+: {f(t1)}-{f(t2)}
+- Thuật toán AI FinRL: {algo.upper()} | Sharpe Ratio (Test Set): {sharpe:.2f}
+- Tín hiệu Mạng Nơ-ron (Agent Action): {pred_action:.3f} (Khoảng từ -1.0 BÁN MẠNH đến +1.0 MUA MẠNH) -> KL: {signal}
+- Vùng giá Khuyến nghị: Mua {f(buy_low)}-{f(buy_high)} | Chốt lời T+: {f(t1)}-{f(t2)}
 
 YÊU CẦU:
-1. Tổng hợp dữ liệu kỹ thuật và kết quả Backtest AI ở trên để đưa ra LỜI KHUYÊN CHÍNH XÁC NHẤT.
-2. Dùng kiến thức của bạn về doanh nghiệp {symbol} và bối cảnh ngành trong năm {year_context} để giải thích tại sao mức Lãi kỳ vọng ({return_pct:.2f}%) này là hợp lý hay rủi ro.
-3. Đưa ra chiến lược giải ngân cụ thể (VD: chia vốn mua tại vùng hỗ trợ, cắt lỗ nếu thủng đáy).
-4. Trình bày súc tích (3-4 câu), phong thái Giám đốc Phân tích, chuyên nghiệp và quyết đoán.
+1. Tổng hợp dữ liệu kỹ thuật và kết quả Backtest AI ở trên để đưa ra CHIẾN LƯỢC ĐẦU TƯ CHUẨN QUỐC TẾ.
+2. Tuyệt đối KHÔNG nhắc lại các con số cụ thể về giá, RSI, SMA hay MACD trong nội dung nhận xét (vì người dùng đã nhìn thấy trên biểu đồ).
+3. Tập trung giải thích bối cảnh ngành, chu kỳ kinh tế và vị thế của doanh nghiệp {symbol} trong năm {year_context}.
+4. Đưa ra chiến lược hành động cụ thể (VD: Chia tỷ trọng giải ngân, điểm cắt lỗ/chốt lời theo xu hướng thị trường chung).
+5. Trình bày súc tích (3-4 câu), phong thái Giám đốc Chiến lược tại các ngân hàng đầu tư lớn, chuyên nghiệp và quyết đoán.
 """
         system_content = "Bạn là ARC Intelligence - Chuyên gia Chiến lược Đầu tư. Nhiệm vụ của bạn là biến những con số kỹ thuật khô khan thành các nhận định có chiều sâu về doanh nghiệp và thị trường. Phân tích phải có tính thời sự, am hiểu đặc tính của từng mã cổ phiếu (Bluechip, Midcap, đầu cơ...) và sử dụng thuật ngữ tài chính chuẩn xác."
         

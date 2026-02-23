@@ -45,11 +45,11 @@
                         </group>
                     </group>
                     <group>
-                        <group string="Chỉ số kết quả">
-                            <field name="final_loss" readonly="1"/>
-                            <field name="episode_reward_mean" readonly="1"/>
-                            <field name="sharpe_ratio" readonly="1"/>
-                            <field name="max_drawdown" readonly="1"/>
+                        <group string="Chỉ số kết quả (Trên tập Trade)">
+                            <field name="final_loss" readonly="1" string="Loss (Tập Train)"/>
+                            <field name="episode_reward_mean" readonly="1" string="Mean Reward"/>
+                            <field name="sharpe_ratio" readonly="1" string="Sharpe Ratio (Trade)"/>
+                            <field name="max_drawdown" readonly="1" string="Max Drawdown (%)"/>
                         </group>
                         <group string="File Model">
                             <field name="model_file" filename="model_filename" readonly="1"/>

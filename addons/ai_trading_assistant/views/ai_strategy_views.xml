@@ -44,10 +44,10 @@
                         </group>
                     </group>
                     <group>
-                        <group string="Chỉ số Kết quả (Backtest)">
-                            <field name="sharpe_ratio"/>
-                            <field name="expected_return"/>
-                            <field name="max_drawdown"/>
+                        <group string="Chỉ số Cắt Khảo (Tập Test/Trade)">
+                            <field name="sharpe_ratio" string="Sharpe Ratio (Thực Tế)"/>
+                            <field name="expected_return" string="CAGR (%)"/>
+                            <field name="max_drawdown" string="Max Drawdown (%)"/>
                         </group>
                         <group string="Hệ thống">
                             <field name="training_time"/>

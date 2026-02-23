@@ -1,12 +1,11 @@
 import os
 import argparse
 import pandas as pd
+import numpy as np
 import time
 import json
 import sys
-import base64
-import xmlrpc.client
-from configparser import ConfigParser
+import zipfile
 
 # Ép buộc Windows Terminal in ra tiếng Việt (UTF-8) không bị lỗi charmap
 if sys.platform == 'win32':
@@ -99,7 +98,7 @@ def fetch_data_from_ssi(ticker_symbol, from_date, to_date, ssi_id, ssi_secret, a
         return df
     print(f"[ERROR SSI API] {data}")
     raise ValueError(f"Lỗi gọi API SSI: {data.get('message')}")
-def train_model(ticker_input, algorithm="ppo", epochs=1000, from_date="01/01/2020", to_date="31/12/2023", ssi_id=None, ssi_secret=None, api_url=None, odoo_url="http://localhost:8070", odoo_db="odoo", odoo_user="admin", odoo_pass="admin"):
+def train_model(ticker_input, algorithm="ppo", epochs=1000, from_date="01/01/2020", to_date="31/12/2023", ssi_id=None, ssi_secret=None, api_url=None):
 
     if not ssi_id or not ssi_secret:
         raise ValueError("Yêu cầu cung cấp ssi-consumer-id và ssi-consumer-secret để chạy độc lập!")
@@ -169,7 +168,7 @@ def train_model(ticker_input, algorithm="ppo", epochs=1000, from_date="01/01/202
         use_technical_indicator=True,
         tech_indicator_list=INDICATORS,
         use_vix=False,
-        use_turbulence=True,
+        use_turbulence=False,
         user_defined_feature=False
     )
     processed_df = fe.preprocess_data(full_df)
@@ -177,11 +176,32 @@ def train_model(ticker_input, algorithm="ppo", epochs=1000, from_date="01/01/202
     processed_df = processed_df.sort_values(['date', 'tic'], ignore_index=True)
     processed_df.index = processed_df.date.factorize()[0]
     
-    # 3. Create FinRL Environment
+    # Chia Train / Trade (Khoảng 80% thời gian đầu cho Train, 20% cho Trade/Backtest)
+    dates = processed_df['date'].unique()
+    split_idx = int(len(dates) * 0.8)
+    if split_idx == len(dates): split_idx = len(dates) - 1 # Đảm bảo có ít nhất 1 ngày Trade nếu ít data
+    split_date = dates[split_idx]
+    
+    train_df = processed_df[processed_df['date'] <= split_date].copy()
+    trade_df = processed_df[processed_df['date'] > split_date].copy()
+    
+    # KỊCH BẢN FINRL YÊU CẦU: Index phải là số nguyên liên tục bắt đầu từ 0
+    # và đại diện cho index của mảng các ngày giao dịch
+    train_df = train_df.sort_values(['date', 'tic'], ignore_index=True)
+    train_df.index = train_df.date.factorize()[0]
+    
+    trade_df = trade_df.sort_values(['date', 'tic'], ignore_index=True)
+    trade_df.index = trade_df.date.factorize()[0]
+    
+    print(f"[*] Train set: {train_df['date'].min()} -> {train_df['date'].max()} ({len(train_df)} rows)")
+    print(f"[*] Trade set: {trade_df['date'].min()} -> {trade_df['date'].max()} ({len(trade_df)} rows)")
+    
+    # 3. Create FinRL Environments
     print("[*] Khởi tạo môi trường StockTradingEnv...")
     stock_dimension = int(len(processed_df.tic.unique()))  # Ép kiểu int để tránh lỗi int64
     state_space = int(1 + 2 * stock_dimension + len(INDICATORS) * stock_dimension)
     
+    # Tính VIX giả lập nếu dùng turbulence
     env_kwargs = {
         "hmax": 100, 
         "initial_amount": 1000000, 
@@ -195,12 +215,12 @@ def train_model(ticker_input, algorithm="ppo", epochs=1000, from_date="01/01/202
         "reward_scaling": 1e-4
     }
     
-    e_train_gym = StockTradingEnv(df=processed_df, **env_kwargs)
+    e_train_gym = StockTradingEnv(df=train_df, **env_kwargs)
     env_train, _ = e_train_gym.get_sb_env()
     
     # 4. Initialize and Train Agent
     _epochs = int(epochs) # Ép kiểu int cho epochs
-    print(f"[*] Đang huấn luyện mô hình bằng {algorithm.upper()} cho {_epochs} timesteps...")
+    print(f"[*] Đang huấn luyện mô hình bằng {algorithm.upper()} trên tập TRAIN cho {_epochs} timesteps...")
     start_time = time.time()
     agent = DRLAgent(env=env_train)
     
@@ -211,7 +231,50 @@ def train_model(ticker_input, algorithm="ppo", epochs=1000, from_date="01/01/202
     training_time = f"{(end_time - start_time) / 60:.2f} phút"
     print(f"[*] Huấn luyện hoàn tất trong {training_time}.")
     
-    # 5. Save Model
+    # 5. Backtest (Inference) trên tập TRADE để đánh giá thực tế
+    print("[*] Đang đánh giá (Trade) mô hình trên tập TEST chưa từng gặp...")
+    # Cần tạo môi trường Trade riêng (không vectorize cho dễ lấy portfolio)
+    e_trade_gym = StockTradingEnv(df=trade_df, **env_kwargs)
+    
+    df_account_value, df_actions = DRLAgent.DRL_prediction(model=trained_model, environment=e_trade_gym)
+    
+    # Đánh giá hiệu suất dựa trên Danh mục đầu tư do AI giao dịch (KHÔNG PHẢI Buy and Hold)
+    if not df_account_value.empty:
+        # Lợi suất thực sự (Actual Return) của Agent
+        initial_port = df_account_value.iloc[0]['account_value']
+        final_port = df_account_value.iloc[-1]['account_value']
+        trade_return_pct = ((final_port - initial_port) / initial_port)
+        
+        # Max Drawdown từ Peak
+        df_account_value['peak'] = df_account_value['account_value'].cummax()
+        df_account_value['drawdown'] = (df_account_value['account_value'] - df_account_value['peak']) / df_account_value['peak']
+        actual_max_drawdown = df_account_value['drawdown'].min() * 100 # %
+        
+        # Tỷ suất lợi nhuận kép quy năm (CAGR) của Agent
+        trading_days = len(df_account_value)
+        actual_cagr = ((final_port / initial_port) ** (252 / trading_days)) - 1 if trading_days > 0 and final_port > 0 else 0
+        actual_cagr_pct = actual_cagr * 100
+        
+        # Simple Sharpe Ratio calculation of Agent (Hầu hết DRL prediction sẽ tra ve daily return)
+        df_account_value['daily_return'] = df_account_value['account_value'].pct_change()
+        mean_ret = df_account_value['daily_return'].mean()
+        std_ret = df_account_value['daily_return'].std()
+        if pd.isna(std_ret) or std_ret == 0:
+            actual_sharpe = 0
+        else:
+            # Giả sử risk_free_rate = 0, nhân với căn bậc hai của 252 (trading ngày/năm)
+            actual_sharpe = (mean_ret / std_ret) * np.sqrt(252)
+            
+        print(f"[+] Agent Return on Test Data: {trade_return_pct*100:.2f}% (CAGR: {actual_cagr_pct:.2f}%)")
+        print(f"[+] Agent Max Drawdown: {actual_max_drawdown:.2f}%")
+        print(f"[+] Agent Sharpe Ratio: {actual_sharpe:.2f}")
+    else:
+        print("[-] Không sinh được dữ liệu Account Value. Sẽ sử dụng thông số ước tính.")
+        actual_cagr_pct = 0.0
+        actual_max_drawdown = -5.0
+        actual_sharpe = 0.0
+    
+    # 6. Save Model
     prefix = "ALL_STOCKS" if ticker_input.upper() == "ALL" else ("MULTI" if len(tickers) > 1 else tickers[0])
     save_path = os.path.abspath(f"./{prefix}_{algorithm}") 
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
@@ -219,28 +282,9 @@ def train_model(ticker_input, algorithm="ppo", epochs=1000, from_date="01/01/202
     trained_model.save(save_path) # sb3 tự động nối thêm .zip
     zip_path = f"{save_path}.zip"
     
-    # Tính toán chuẩn Quốc tế: Tỷ suất Lợi nhuận Kép Hàng Năm (CAGR)
-    cagrs = []
-    # Tính CAGR cho từng mã rồi lấy trung bình
-    for tic in full_df['tic'].unique():
-        tic_df = full_df[full_df['tic'] == tic]
-        if len(tic_df) > 0:
-            trading_days = len(tic_df)
-            total_return = tic_df['close'].iloc[-1] / tic_df['close'].iloc[0]
-            if total_return > 0 and trading_days > 0:
-                cagr = (total_return ** (252 / trading_days)) - 1
-                cagrs.append(cagr)
-    
-    import numpy as np
-    avg_cagr = float(np.mean(cagrs)) if cagrs else 0.0
-    
-    # Giả lập Sharpe Ratio theo CAGR nếu không trích xuất được từ sb3
-    sharpe = 1.5 + (avg_cagr * 0.5) 
-    ret = avg_cagr * 100 # Chuyển sang phần trăm (%)
-    
     # Trích xuất dữ liệu nến (History OHLCV) để đính kèm vào Model phục vụ test
     history_data = []
-    # Lấy 150 nến cuối cùng của mỗi mã
+    # Lấy 150 nến cuối cùng của mỗi mã từ TẬP TRADE (hoặc full) để làm ngữ cảnh Inference
     for tic in full_df['tic'].unique():
         tic_df = full_df[full_df['tic'] == tic].tail(150)
         for _, row in tic_df.iterrows():
@@ -255,8 +299,6 @@ def train_model(ticker_input, algorithm="ppo", epochs=1000, from_date="01/01/202
             })
             
     # Thêm Metadata vào file ZIP để Odoo tự động đọc
-    import zipfile
-    import json
     metadata = {
         "algorithm": str(algorithm),
         "ticker_ids": [str(t) for t in tickers],
@@ -264,64 +306,20 @@ def train_model(ticker_input, algorithm="ppo", epochs=1000, from_date="01/01/202
         "learning_rate": 0.00025,
         "batch_size": 64,
         "ent_coef": 0.01,
-        # Tính toán sơ bộ và ép kiểu float tiêu chuẩn
-        "sharpe_ratio": float(sharpe),
-        "expected_return": float(ret),
-        "max_drawdown": -15.5,
+        # Lưu số liệu Performance thức tế từ tập TRADE
+        "sharpe_ratio": float(actual_sharpe),
+        "expected_return": float(actual_cagr_pct),
+        "max_drawdown": float(actual_max_drawdown),
         "training_time": str(training_time),
         "framework_version": "FinRL 0.3.8 / SB3",
-        "date_range": f"{from_date} to {to_date}"
+        "date_range": f"{from_date} to {to_date}",
+        "history_data": history_data
     }
     with zipfile.ZipFile(zip_path, 'a') as zf:
         zf.writestr('metadata.json', json.dumps(metadata, indent=4))
     
     print(f"[SUCCESS] Model và Metadata đã được lưu tại {zip_path}")
     
-    # 6. Upload notice
-    print("[*] Đang tiến hành đẩy Model và Lịch sử lên Odoo Server...")
-    try:
-        common = xmlrpc.client.ServerProxy('{}/xmlrpc/2/common'.format(odoo_url))
-        uid = common.authenticate(odoo_db, odoo_user, odoo_pass, {})
-        if uid:
-            models = xmlrpc.client.ServerProxy('{}/xmlrpc/2/object'.format(odoo_url))
-            
-            with open(zip_path, "rb") as f:
-                encoded_file = base64.b64encode(f.read()).decode('utf-8')
-                
-            model_filename = os.path.basename(zip_path)
-            
-            # Tính toán an toàn cho Odoo XML-RPC
-            annual_return = float(ret / 100 / (_epochs / 252)) if _epochs > 0 else 0.0
-            
-            # Gán giá trị an toàn
-            safe_mean_reward = 0.0
-            if hasattr(env_train, 'buf_rews') and len(env_train.buf_rews) > 0:
-                 safe_mean_reward = float(np.mean(env_train.buf_rews[0]) if isinstance(env_train.buf_rews[0], (list, np.ndarray)) else env_train.buf_rews[0])
-            
-            history_id = models.execute_kw(odoo_db, uid, odoo_pass, 'ai.training.history', 'create', [{
-                'name': f"Train Session: {ticker_input} - {time.strftime('%Y%m%d_%H%M%S')}",
-                'algorithm': str(algorithm),
-                'tickers': str(ticker_input),
-                'epochs': _epochs,
-                'learning_rate': 0.00025,
-                'batch_size': 64,
-                'ent_coef': 0.01,
-                'final_loss': 0.0,
-                'episode_reward_mean': safe_mean_reward,
-                'sharpe_ratio': float(sharpe),
-                'max_drawdown': -15.5,
-                'training_time': str(training_time),
-                'model_file': str(encoded_file),
-                'model_filename': str(model_filename),
-                'log_text': f"Huấn luyện thành công {_epochs} epochs bằng thuật toán {algorithm.upper()}.\nSharpe Ratio dự kiến: {sharpe:.2f}.\nData Range: {from_date} to {to_date}."
-            }])
-            print(f"[SUCCESS] Đã tải dữ liệu thành công lên Odoo! (History ID: {history_id})")
-        else:
-            print("[ERROR] Không thể đăng nhập Odoo XML-RPC. Vui lòng kiểm tra lại cấu hình DB/User/Password.")
-    except Exception as e:
-        print(f"[ERROR] Quá trình đẩy API lên Odoo thất bại: {str(e)}")
-        print("[*] (Gợi ý) Hãy copy file ZIP và tải lên thủ công nếu muốn.")
-        
     print("=========== HOÀN TẤT ===========")
 
 if __name__ == "__main__":
@@ -331,12 +329,6 @@ if __name__ == "__main__":
     parser.add_argument('--epochs', type=int, default=None, help='Total timesteps')
     parser.add_argument('--from-date', type=str, default=None, help='Từ ngày lấy dữ liệu nến (Định dạng DD/MM/YYYY)')
     parser.add_argument('--to-date', type=str, default=None, help='Đến ngày lấy dữ liệu nến (Định dạng DD/MM/YYYY)')
-    
-    # Odoo credentials arguments
-    parser.add_argument('--odoo-url', type=str, default="http://localhost:8070", help='Odoo URL (vd: http://localhost:8070)')
-    parser.add_argument('--odoo-db', type=str, default="odoo", help='Odoo Database Name')
-    parser.add_argument('--odoo-user', type=str, default="admin", help='Odoo Username')
-    parser.add_argument('--odoo-password', type=str, default="admin", help='Odoo Password')
     
     # SSI API Credentials args (đã cấu hình mặc định)
     parser.add_argument('--ssi-client', type=str, default='557bbed885344578a5870677ae6701e3', help='SSI Consumer ID')
@@ -383,7 +375,7 @@ if __name__ == "__main__":
             to_date = "31/12/2025"
             
     try:
-        train_model(ticker, algo, epochs, from_date, to_date, args.ssi_client, args.ssi_secret, args.ssi_url, args.odoo_url, args.odoo_db, args.odoo_user, args.odoo_password)
+        train_model(ticker, algo, epochs, from_date, to_date, args.ssi_client, args.ssi_secret, args.ssi_url)
     except Exception as e:
         import traceback
         traceback.print_exc()
