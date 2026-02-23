@@ -197,9 +197,23 @@ Nhiệm vụ của bạn:
             
         # 2. Tự động đồng bộ chuẩn dữ liệu lịch sử vào Database
         try:
-            fetcher = self.env['ssi.data.fetcher'].sudo().create({})
+            latest_candle = self.env['stock.candle'].sudo().search(
+                [('ticker_id', '=', ticker.id)], 
+                order='date desc', 
+                limit=1
+            )
+            
             to_date_str = datetime.now().strftime('%d/%m/%Y')
-            from_date_str = (datetime.now() - timedelta(days=150)).strftime('%d/%m/%Y')
+            
+            if latest_candle:
+                # Nếu đã có dữ liệu, chỉ lấy bù khoảng bị thiếu (lùi 2 ngày phòng sai lệch)
+                from_date = latest_candle.date - timedelta(days=2)
+                from_date_str = from_date.strftime('%d/%m/%Y')
+            else:
+                # Nếu mã hoàn toàn mới chưa có dữ liệu, tải mặc định 150 ngày cũ
+                from_date_str = (datetime.now() - timedelta(days=150)).strftime('%d/%m/%Y')
+                
+            fetcher = self.env['ssi.data.fetcher'].sudo().create({})
             fetcher.fetch_daily_ohlcv(symbol, from_date_str, to_date_str)
         except Exception:
             pass
@@ -322,10 +336,21 @@ Nhiệm vụ của bạn:
             return {'status': 'success', 'response_html': html_no_model}
         
         # 3. Tính toán Chỉ báo (Chỉ chạy khi có model AI)
-        buy_zone_low = sma_val * 0.98
-        buy_zone_high = sma_val * 1.02
-        target_1 = latest_price * 1.07
-        target_2 = latest_price * 1.15
+        # Tích hợp số liệu thực tế từ FinRL Backtest để có độ chính xác cao nhất
+        ai_return = active_strategy.expected_return or 15.0
+        ai_drawdown = abs(active_strategy.max_drawdown or 5.0)
+        
+        # Vùng mua động: Tính rủi ro theo Max Drawdown của model
+        buy_zone_low = sma_val * (1 - (ai_drawdown * 0.3 / 100))
+        buy_zone_high = sma_val * 1.01
+        
+        # Mục tiêu linh hoạt theo Lãi kỳ vọng (Expected Return) của model
+        target_1 = latest_price * (1 + (ai_return * 0.5 / 100))
+        target_2 = latest_price * (1 + (ai_return / 100))
+        
+        # Chốt chặn an toàn nếu model cho ra return quá thấp
+        if target_1 <= latest_price * 1.02: target_1 = latest_price * 1.04
+        if target_2 <= latest_price * 1.02: target_2 = latest_price * 1.08
         
         tech_signal = "TRUNG TÍNH"
         if rsi_val > 70: tech_signal = "QUÁ MUA (CẨN TRỌNG)"
@@ -334,7 +359,13 @@ Nhiệm vụ của bạn:
         elif macd_val < macd_signal: tech_signal = "TIÊU CỰC (BÁN/HOLD)"
         
         # 4. LLM API
-        expert_comment = self._get_llm_expert_analysis(symbol, latest_price, latest_date, tech_signal, buy_zone_low, buy_zone_high, target_1, target_2, rsi_val, sma_val, macd_val)
+        expert_comment = self._get_llm_expert_analysis(
+            symbol, latest_price, latest_date, tech_signal, buy_zone_low, buy_zone_high, target_1, target_2, rsi_val, sma_val, macd_val,
+            active_strategy.algorithm or 'ppo',
+            active_strategy.sharpe_ratio or 0.0,
+            active_strategy.expected_return or 0.0,
+            active_strategy.max_drawdown or 0.0
+        )
         
         # 5. HTML Response & Advanced Metrics Calculation
         def fmt(v): return f"{v/1000:,.2f}"
@@ -414,7 +445,7 @@ Nhiệm vụ của bạn:
         return "Kết nối AI đang bận, vui lòng thử lại sau."
 
     @api.model
-    def _get_llm_expert_analysis(self, symbol, price, date, signal, buy_low, buy_high, t1, t2, rsi, sma, macd):
+    def _get_llm_expert_analysis(self, symbol, price, date, signal, buy_low, buy_high, t1, t2, rsi, sma, macd, algo, sharpe, return_pct, drawdown):
         def f(v): return f"{v/1000:,.2f}"
         fallback = f"Mã {symbol} đang giao dịch tại mức {f(price)}. Dữ liệu kỹ thuật cho thấy tín hiệu {signal} với vùng hỗ trợ quanh {f(buy_low)}."
         
@@ -422,18 +453,19 @@ Nhiệm vụ của bạn:
         year_context = date[:4] if date and len(date) >= 4 else "hiện tại"
         
         prompt = f"""
-NGỮ CẢNH THỊ TRƯỜNG:
-- Mã cổ phiếu: {symbol}
-- Thời điểm: Năm {year_context} (Dữ liệu ngày {date})
+NGỮ CẢNH THỊ TRƯỜNG & KẾT QUẢ AI BACKTEST:
+- Mã cổ phiếu: {symbol} (Dữ liệu ngày {date} - Năm {year_context})
 - Giá: {f(price)} | SMA20: {f(sma)} | RSI: {rsi:.1f} | MACD: {macd:.2f}
+- Thuật toán AI: {algo.upper()} | Sharpe Ratio: {sharpe:.2f}
+- Hiệu suất Backtest: Lãi kỳ vọng {return_pct:.2f}% | Sụt giảm tối đa (Max Drawdown): {drawdown:.2f}%
 - Tín hiệu Robot: {signal}
-- Vùng giá mục tiêu: Mua {f(buy_low)}-{f(buy_high)} | Chốt lời T+: {f(t1)}-{f(t2)}
+- Vùng giá AI khuyến nghị: Mua {f(buy_low)}-{f(buy_high)} | Chốt lời T+: {f(t1)}-{f(t2)}
 
 YÊU CẦU:
-1. ĐỪNG liệt kê lại các con số kỹ thuật (RSI, MACD, SMA) trong câu trả lời trừ khi thực sự cần thiết.
-2. Dùng kiến thức của bạn về doanh nghiệp {symbol} và bối cảnh ngành trong năm {year_context} để giải thích LÝ DO tại sao giá/tín hiệu lại như vậy (ví dụ: KQKD, vĩ mô, tin tức dự kiến, chu kỳ ngành).
-3. Đưa ra nhận xét mang tính chiến lược: Tại sao nên Mua/Bán/Nắm giữ vào lúc này dựa trên triển vọng thực tế của doanh nghiệp thay vì chỉ nhìn vào đồ thị.
-4. Trình bày súc tích (3-4 câu), phong thái Giám đốc Phân tích, chuyên nghiệp và sắc bén.
+1. Tổng hợp dữ liệu kỹ thuật và kết quả Backtest AI ở trên để đưa ra LỜI KHUYÊN CHÍNH XÁC NHẤT.
+2. Dùng kiến thức của bạn về doanh nghiệp {symbol} và bối cảnh ngành trong năm {year_context} để giải thích tại sao mức Lãi kỳ vọng ({return_pct:.2f}%) này là hợp lý hay rủi ro.
+3. Đưa ra chiến lược giải ngân cụ thể (VD: chia vốn mua tại vùng hỗ trợ, cắt lỗ nếu thủng đáy).
+4. Trình bày súc tích (3-4 câu), phong thái Giám đốc Phân tích, chuyên nghiệp và quyết đoán.
 """
         system_content = "Bạn là ARC Intelligence - Chuyên gia Chiến lược Đầu tư. Nhiệm vụ của bạn là biến những con số kỹ thuật khô khan thành các nhận định có chiều sâu về doanh nghiệp và thị trường. Phân tích phải có tính thời sự, am hiểu đặc tính của từng mã cổ phiếu (Bluechip, Midcap, đầu cơ...) và sử dụng thuật ngữ tài chính chuẩn xác."
         

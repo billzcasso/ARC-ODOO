@@ -107,7 +107,7 @@ class SSIDataFetcher(models.TransientModel):
             raise exceptions.UserError(f"Lỗi khi tải danh sách mã: {str(e)}")
             
     def fetch_daily_ohlcv(self, ticker_symbol, from_date_str, to_date_str):
-        """Lấy dữ liệu OHLCV hàng ngày"""
+        """Lấy dữ liệu OHLCV hàng ngày (Tối ưu Bulk Insert & N+1 Query)"""
         client, config = self._get_ssi_client()
         from ssi_fc_data import model
         
@@ -115,7 +115,23 @@ class SSIDataFetcher(models.TransientModel):
         if not ticker:
             raise exceptions.UserError(f'Mã chứng khoán {ticker_symbol} chưa có trong hệ thống.')
             
-        # SSI API format is DD/MM/YYYY
+        # Tải sẵn tất cả các nến TRONG KHOẢNG THỜI GIAN của mã này lên RAM (1 Query duy nhất thay vì N Query)
+        try:
+            from_date_obj = datetime.strptime(from_date_str, '%d/%m/%Y').date()
+            to_date_obj = datetime.strptime(to_date_str, '%d/%m/%Y').date()
+        except Exception:
+            # Fallback nếu parse lỗi
+            from_date_obj = None
+            to_date_obj = None
+            
+        domain = [('ticker_id', '=', ticker.id)]
+        if from_date_obj and to_date_obj:
+            domain.extend([('date', '>=', from_date_obj), ('date', '<=', to_date_obj)])
+            
+        existing_candles = self.env['stock.candle'].search(domain)
+        # Tạo Hashtable mapping {trading_date: candle_record}
+        existing_map = {c.date: c for c in existing_candles}
+            
         req = model.daily_ohlc(ticker_symbol, from_date_str, to_date_str, 1, 1000, True)
         res = client.daily_ohlc(config, req)
         
@@ -123,17 +139,14 @@ class SSIDataFetcher(models.TransientModel):
             data = res if isinstance(res, dict) else json.loads(res)
             if str(data.get('status')) == '200' or data.get('message', '').lower() == 'success':
                 candles = data.get('data', [])
-                count = 0
+                
+                new_vals_list = []
+                update_count = 0
+                
                 for c in candles:
-                    # Parse trading date string from 'DD/MM/YYYY' to Odoo Date
                     trading_date_str = c.get('TradingDate')
                     if trading_date_str:
                         trading_date = datetime.strptime(trading_date_str, '%d/%m/%Y').date()
-                        
-                        existing = self.env['stock.candle'].search([
-                            ('ticker_id', '=', ticker.id),
-                            ('date', '=', trading_date)
-                        ], limit=1)
                         
                         vals = {
                             'ticker_id': ticker.id,
@@ -145,12 +158,18 @@ class SSIDataFetcher(models.TransientModel):
                             'volume': c.get('Volume', 0.0),
                         }
                         
+                        existing = existing_map.get(trading_date)
                         if existing:
                             existing.write(vals)
+                            update_count += 1
                         else:
-                            self.env['stock.candle'].create(vals)
-                            count += 1
-                return count
+                            new_vals_list.append(vals)
+                            
+                # Bulk Insert (1 Query duy nhất cho hàng trăm nến)
+                if new_vals_list:
+                    self.env['stock.candle'].create(new_vals_list)
+                    
+                return len(new_vals_list) + update_count
             else:
                 _logger.error(f"API Error fetching OHLCV for {ticker_symbol}: {data.get('message')}")
                 return 0

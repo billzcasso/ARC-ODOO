@@ -65,10 +65,83 @@ class AIStrategy(models.Model):
         except Exception:
             pass
         return {}
+        
+    def _sync_history_data(self, history_data):
+        """Đồng bộ dữ liệu nến (OHLCV) từ file Backtest ZIP vào Database."""
+        if not history_data or not isinstance(history_data, list):
+            return
+            
+        from datetime import datetime
+        
+        # Nhóm dữ liệu theo mã chứng khoán để xử lý Bulk Insert
+        tickers_data = {}
+        for row in history_data:
+            tic = row.get('tic')
+            if tic:
+                if tic not in tickers_data:
+                    tickers_data[tic] = []
+                tickers_data[tic].append(row)
+                
+        for tic_symbol, lines in tickers_data.items():
+            ticker_record = self.env['stock.ticker'].search([('name', '=', tic_symbol)], limit=1)
+            # Tự động tạo mã nếu chưa có
+            if not ticker_record:
+                ticker_record = self.env['stock.ticker'].create({
+                    'name': tic_symbol,
+                    'market': 'HOSE',
+                    'company_name': f'Auto-created from AI Model ({tic_symbol})'
+                })
+                
+            # Lấy các nến đã tồn tại để tránh duplicate
+            dates = [datetime.strptime(row['date'], '%Y-%m-%d').date() for row in lines if row.get('date')]
+            if not dates: continue
+            
+            existing_candles = self.env['stock.candle'].search([
+                ('ticker_id', '=', ticker_record.id),
+                ('date', 'in', dates)
+            ])
+            existing_dates = {c.date: c for c in existing_candles}
+            
+            new_vals = []
+            for row in lines:
+                row_date_str = row.get('date')
+                if not row_date_str: continue
+                
+                trading_date = datetime.strptime(row_date_str, '%Y-%m-%d').date()
+                vals = {
+                    'ticker_id': ticker_record.id,
+                    'date': trading_date,
+                    'open': row.get('open', 0.0),
+                    'high': row.get('high', 0.0),
+                    'low': row.get('low', 0.0),
+                    'close': row.get('close', 0.0),
+                    'volume': row.get('volume', 0.0),
+                }
+                
+                existing = existing_dates.get(trading_date)
+                if existing:
+                    existing.write(vals)
+                else:
+                    new_vals.append(vals)
+                    
+            if new_vals:
+                self.env['stock.candle'].create(new_vals)
 
     def action_activate(self):
-        # Tắt các chiến lược active khác (hoặc cải thiện để chỉ tắt các chiến lược trùng mã)
-        self.search([('status', '=', 'active')]).write({'status': 'trained'})
+        # Tắt các chiến lược active khác có CÙNG mã chứng khoán
+        domain = [('status', '=', 'active'), ('id', '!=', self.id)]
+        
+        if self.ticker_ids:
+            # Nếu có gán mã, chỉ tắt các strategy đang active có chứa ít nhất 1 mã trùng
+            domain += [('ticker_ids', 'in', self.ticker_ids.ids)]
+        else:
+            # Nếu áp dụng chung toàn thị trường, chỉ tắt các strategy chung khác
+            domain += [('ticker_ids', '=', False)]
+            
+        active_conflicts = self.search(domain)
+        if active_conflicts:
+            active_conflicts.write({'status': 'trained'})
+            
         self.status = 'active'
         
     def action_draft(self):
@@ -81,7 +154,7 @@ class AIStrategy(models.Model):
                 metadata = self._parse_model_metadata(vals['model_file'])
                 if metadata:
                     # Tự động điền các field từ metadata nếu có
-                    vals.update({
+                    update_vals = {
                         'algorithm': metadata.get('algorithm', vals.get('algorithm', 'ppo')),
                         'learning_rate': metadata.get('learning_rate', 0.00025),
                         'batch_size': metadata.get('batch_size', 64),
@@ -92,7 +165,25 @@ class AIStrategy(models.Model):
                         'training_time': metadata.get('training_time', ''),
                         'framework_version': metadata.get('framework_version', ''),
                         'status': 'trained'
-                    })
+                    }
+                    
+                    # Xử lý Ticker Mapping
+                    meta_tickers = metadata.get('ticker_ids', [])
+                    if meta_tickers and isinstance(meta_tickers, list):
+                        if "ALL" in [t.upper() for t in meta_tickers]:
+                            update_vals['ticker_ids'] = [(5, 0, 0)] # Xóa hết để áp dụng Toàn thị trường
+                        else:
+                            # Tìm ID của các mã tương ứng trong CSDL
+                            found_tickers = self.env['stock.ticker'].search([('name', 'in', meta_tickers)])
+                            if found_tickers:
+                                update_vals['ticker_ids'] = [(6, 0, found_tickers.ids)]
+                                
+                    vals.update(update_vals)
+                    
+                    # Đồng bộ History Data
+                    if 'history_data' in metadata:
+                        self._sync_history_data(metadata['history_data'])
+                        
                 elif vals.get('status', 'draft') == 'draft':
                     vals['status'] = 'trained'
                     
@@ -108,7 +199,7 @@ class AIStrategy(models.Model):
         if vals.get('model_file'):
             metadata = self._parse_model_metadata(vals['model_file'])
             if metadata:
-                 vals.update({
+                 update_vals = {
                     'algorithm': metadata.get('algorithm', self.algorithm),
                     'learning_rate': metadata.get('learning_rate', self.learning_rate),
                     'batch_size': metadata.get('batch_size', self.batch_size),
@@ -119,7 +210,24 @@ class AIStrategy(models.Model):
                     'training_time': metadata.get('training_time', self.training_time),
                     'framework_version': metadata.get('framework_version', self.framework_version),
                     'status': 'trained'
-                })
+                }
+                 
+                 # Xử lý Ticker Mapping
+                 meta_tickers = metadata.get('ticker_ids', [])
+                 if meta_tickers and isinstance(meta_tickers, list):
+                     if "ALL" in [t.upper() for t in meta_tickers]:
+                         update_vals['ticker_ids'] = [(5, 0, 0)]
+                     else:
+                         found_tickers = self.env['stock.ticker'].search([('name', 'in', meta_tickers)])
+                         if found_tickers:
+                             update_vals['ticker_ids'] = [(6, 0, found_tickers.ids)]
+                             
+                 vals.update(update_vals)
+                 
+                 # Đồng bộ History Data
+                 if 'history_data' in metadata:
+                     self._sync_history_data(metadata['history_data'])
+                     
             else:
                 vals['status'] = 'trained'
             

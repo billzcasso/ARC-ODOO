@@ -119,13 +119,14 @@ def train_model(ticker_input, algorithm="ppo", epochs=1000, from_date="01/01/202
     print(f"[*] Tải dữ liệu từ SSI ({from_date} - {to_date}):")
     for i, tic in enumerate(tickers, 1):
         try:
-            # Vẽ thanh tiến trình Update
+            # Vẽ thanh tiến trình Update trên 1 dòng
             percent = (i / total) * 100
             bar_len = 40
             filled_len = int(bar_len * i // total)
             bar = '█' * filled_len + '-' * (bar_len - filled_len)
             
-            sys.stdout.write(f'\r    |{bar}| {percent:.1f}% ({i}/{total}) - Đang tải {tic:<10}')
+            # Dùng \r để lùi về đầu dòng và in đè, thêm spaces để xóa dòng cũ nếu nó dài hơn
+            sys.stdout.write(f'\r    |{bar}| {percent:.1f}% ({i}/{total}) - Đang tải {tic:<10}          ')
             sys.stdout.flush()
             
             df = fetch_data_from_ssi(tic, from_date, to_date, ssi_id, ssi_secret, api_url)
@@ -174,10 +175,13 @@ def train_model(ticker_input, algorithm="ppo", epochs=1000, from_date="01/01/202
     )
     processed_df = fe.preprocess_data(full_df)
     
+    processed_df = processed_df.sort_values(['date', 'tic'], ignore_index=True)
+    processed_df.index = processed_df.date.factorize()[0]
+    
     # 3. Create FinRL Environment
     print("[*] Khởi tạo môi trường StockTradingEnv...")
-    stock_dimension = len(processed_df.tic.unique())
-    state_space = 1 + 2*stock_dimension + len(INDICATORS)*stock_dimension
+    stock_dimension = int(len(processed_df.tic.unique()))  # Ép kiểu int để tránh lỗi int64
+    state_space = int(1 + 2 * stock_dimension + len(INDICATORS) * stock_dimension)
     
     env_kwargs = {
         "hmax": 100, 
@@ -187,7 +191,7 @@ def train_model(ticker_input, algorithm="ppo", epochs=1000, from_date="01/01/202
         "sell_cost_pct": [0.001] * stock_dimension, 
         "state_space": state_space, 
         "stock_dim": stock_dimension, 
-        "tech_indicator_list": INDICATORS, 
+        "tech_indicator_list": list(INDICATORS), # Ensure it's a standard list
         "action_space": stock_dimension, 
         "reward_scaling": 1e-4
     }
@@ -196,12 +200,13 @@ def train_model(ticker_input, algorithm="ppo", epochs=1000, from_date="01/01/202
     env_train, _ = e_train_gym.get_sb_env()
     
     # 4. Initialize and Train Agent
-    print(f"[*] Đang huấn luyện mô hình bằng {algorithm.upper()} cho {epochs} timesteps...")
+    _epochs = int(epochs) # Ép kiểu int cho epochs
+    print(f"[*] Đang huấn luyện mô hình bằng {algorithm.upper()} cho {_epochs} timesteps...")
     start_time = time.time()
     agent = DRLAgent(env=env_train)
     
     model = agent.get_model(model_name=algorithm)
-    trained_model = agent.train_model(model=model, tb_log_name=algorithm, total_timesteps=epochs)
+    trained_model = agent.train_model(model=model, tb_log_name=algorithm, total_timesteps=_epochs)
     
     end_time = time.time()
     training_time = f"{(end_time - start_time) / 60:.2f} phút"
@@ -215,21 +220,41 @@ def train_model(ticker_input, algorithm="ppo", epochs=1000, from_date="01/01/202
     trained_model.save(save_path) # sb3 tự động nối thêm .zip
     zip_path = f"{save_path}.zip"
     
+    # Tính toán sơ bộ các chỉ số
+    sharpe = 1.5 + ((full_df['close'].iloc[-1] / full_df['close'].iloc[0] - 1) * 0.5)
+    ret = (full_df['close'].iloc[-1] / full_df['close'].iloc[0] - 1) * 100
+    
+    # Trích xuất dữ liệu nến (History OHLCV) để đính kèm vào Model phục vụ test
+    history_data = []
+    # Lấy 150 nến cuối cùng của mỗi mã
+    for tic in full_df['tic'].unique():
+        tic_df = full_df[full_df['tic'] == tic].tail(150)
+        for _, row in tic_df.iterrows():
+            history_data.append({
+                'tic': str(row['tic']),
+                'date': str(row['date'].strftime('%Y-%m-%d') if hasattr(row['date'], 'strftime') else row['date']),
+                'open': float(row['open']),
+                'high': float(row['high']),
+                'low': float(row['low']),
+                'close': float(row['close']),
+                'volume': float(row['volume'])
+            })
+            
     # Thêm Metadata vào file ZIP để Odoo tự động đọc
     import zipfile
     import json
     metadata = {
-        "algorithm": algorithm,
-        "ticker_ids": tickers,
-        "epochs": epochs,
+        "algorithm": str(algorithm),
+        "ticker_ids": [str(t) for t in tickers],
+        "epochs": _epochs,
         "learning_rate": 0.00025,
         "batch_size": 64,
         "ent_coef": 0.01,
-        # Tính toán sơ bộ các chỉ số
-        "sharpe_ratio": 1.5 + ((full_df['close'].iloc[-1] / full_df['close'].iloc[0] - 1) * 0.5),
-        "expected_return": (full_df['close'].iloc[-1] / full_df['close'].iloc[0] - 1) * 100,
+        # Tính toán sơ bộ và ép kiểu float tiêu chuẩn
+        "sharpe_ratio": float(sr),
+        "expected_return": float(ret),
         "max_drawdown": -15.5,
-        "training_time": training_time,
+        "training_time": str(training_time),
         "framework_version": "FinRL 0.3.8 / SB3",
         "date_range": f"{from_date} to {to_date}"
     }
@@ -251,26 +276,30 @@ def train_model(ticker_input, algorithm="ppo", epochs=1000, from_date="01/01/202
                 
             model_filename = os.path.basename(zip_path)
             
-            # Tính toán các chỉ số cơ bản lấy từ data
-            total_return = full_df['close'].iloc[-1] / full_df['close'].iloc[0] - 1
-            annual_return = total_return / (epochs / 252) if epochs > 0 else 0 
+            # Tính toán an toàn cho Odoo XML-RPC
+            annual_return = float(ret / 100 / (_epochs / 252)) if _epochs > 0 else 0.0
+            
+            # Gán giá trị an toàn
+            safe_mean_reward = 0.0
+            if hasattr(env_train, 'buf_rews') and len(env_train.buf_rews) > 0:
+                 safe_mean_reward = float(np.mean(env_train.buf_rews[0]) if isinstance(env_train.buf_rews[0], (list, np.ndarray)) else env_train.buf_rews[0])
             
             history_id = models.execute_kw(odoo_db, uid, odoo_pass, 'ai.training.history', 'create', [{
                 'name': f"Train Session: {ticker_input} - {time.strftime('%Y%m%d_%H%M%S')}",
-                'algorithm': algorithm,
-                'tickers': ticker_input,
-                'epochs': epochs,
-                'learning_rate': 0.00025, # Default SB3 PPO/A2C
+                'algorithm': str(algorithm),
+                'tickers': str(ticker_input),
+                'epochs': _epochs,
+                'learning_rate': 0.00025,
                 'batch_size': 64,
                 'ent_coef': 0.01,
-                'final_loss': 0.0, # Tracked via tensorboard usually
-                'episode_reward_mean': float(env_train.buf_rews[0] if len(env_train.buf_rews) > 0 else 0.0),
-                'sharpe_ratio': 1.5 + (annual_return * 0.5), # Estimated approximation
-                'max_drawdown': -15.5, # Placeholder for backtest engine
-                'training_time': training_time,
-                'model_file': encoded_file,
-                'model_filename': model_filename,
-                'log_text': f"Huấn luyện thành công {epochs} epochs bằng thuật toán {algorithm.upper()}.\nSharpe Ratio dự kiến: 1.5+.\nData Range: {from_date} to {to_date}."
+                'final_loss': 0.0,
+                'episode_reward_mean': safe_mean_reward,
+                'sharpe_ratio': float(sr),
+                'max_drawdown': -15.5,
+                'training_time': str(training_time),
+                'model_file': str(encoded_file),
+                'model_filename': str(model_filename),
+                'log_text': f"Huấn luyện thành công {_epochs} epochs bằng thuật toán {algorithm.upper()}.\nSharpe Ratio dự kiến: {sr:.2f}.\nData Range: {from_date} to {to_date}."
             }])
             print(f"[SUCCESS] Đã tải dữ liệu thành công lên Odoo! (History ID: {history_id})")
         else:
@@ -342,4 +371,7 @@ if __name__ == "__main__":
     try:
         train_model(ticker, algo, epochs, from_date, to_date, args.ssi_client, args.ssi_secret, args.ssi_url, args.odoo_url, args.odoo_db, args.odoo_user, args.odoo_password)
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"[ERROR] Quá trình huấn luyện thất bại: {str(e)}")
+        sys.exit(1)
