@@ -13,13 +13,13 @@ function mountBankBranchWidget() {
         const widgetContainer = document.getElementById('bankBranchWidget');
         if (widgetContainer) {
             try {
-                widgetContainer.innerHTML = '';
+                widgetContainer.textContent = '';
                 const app = new owl.App(window.BankBranchWidget);
                 app.mount(widgetContainer);
                 return;
             } catch (error) {
                 try {
-                    widgetContainer.innerHTML = '';
+                    widgetContainer.textContent = '';
                     owl.mount(window.BankBranchWidget, widgetContainer);
                     return;
                 } catch (fallbackError) {}

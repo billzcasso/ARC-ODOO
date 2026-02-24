@@ -13,13 +13,13 @@ function mountBankWidget() {
         const widgetContainer = document.getElementById('bankWidget');
         if (widgetContainer) {
             try {
-                widgetContainer.innerHTML = '';
+                widgetContainer.textContent = '';
                 const app = new owl.App(window.BankWidget);
                 app.mount(widgetContainer);
                 return;
             } catch (error) {
                 try {
-                    widgetContainer.innerHTML = '';
+                    widgetContainer.textContent = '';
                     owl.mount(window.BankWidget, widgetContainer);
                     return;
                 } catch (fallbackError) {}

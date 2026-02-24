@@ -20,12 +20,13 @@ function displayError(message) {
     }
     const widgetContainer = document.getElementById(WIDGET_CONTAINER_ID);
     if (widgetContainer) {
-        widgetContainer.innerHTML = `
+        widgetContainer.textContent = '';
+        widgetContainer.insertAdjacentHTML('beforeend', `
             <div class="alert alert-danger text-center" role="alert">
                 <i class="fas fa-exclamation-triangle me-2"></i>
                 ${message}
             </div>
-        `;
+        `);
     }
 }
 

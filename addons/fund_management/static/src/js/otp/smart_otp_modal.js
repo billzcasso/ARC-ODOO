@@ -448,7 +448,7 @@ export function openSmartOtp(options = {}) {
     const cleanup = () => {
         if (!isCleanedUp && container && container.parentNode) {
             isCleanedUp = true;
-            container.innerHTML = '';
+            container.textContent = '';
             // Xóa container khỏi DOM sau khi cleanup
             container.parentNode.removeChild(container);
         }

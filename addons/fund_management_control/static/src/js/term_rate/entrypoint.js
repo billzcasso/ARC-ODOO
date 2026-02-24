@@ -9,13 +9,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const widgetContainer = document.getElementById("termRateWidget");
     if (widgetContainer) {
-        widgetContainer.innerHTML = '';
+        widgetContainer.textContent = '';
         try {
             await mount(TermRateWidget, widgetContainer);
             console.log("TermRateWidget mounted.");
         } catch (e) {
             console.error("Failed to mount TermRateWidget", e);
-            widgetContainer.innerHTML = `<div class="alert alert-danger">Error: ${e.message}</div>`;
+            widgetContainer.textContent = '';
+            widgetContainer.insertAdjacentHTML('beforeend', `<div class="alert alert-danger">Error: ${e.message}</div>`);
         }
     }
 });

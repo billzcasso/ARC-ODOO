@@ -11,13 +11,14 @@
         const widgetContainer = document.getElementById("fundCertificateWidget");
         if (widgetContainer) {
             // Clear loading spinner
-            widgetContainer.innerHTML = ''; 
+            widgetContainer.textContent = ''; 
             try {
                 await mount(FundCertificateWidget, widgetContainer);
                 console.log("FundCertificateWidget mounted successfully.");
             } catch (e) {
                 console.error("Failed to mount FundCertificateWidget", e);
-                widgetContainer.innerHTML = `<div class="alert alert-danger">Error loading component: ${e.message}</div>`;
+                widgetContainer.textContent = '';
+                widgetContainer.insertAdjacentHTML('beforeend', `<div class="alert alert-danger">Error loading component: ${e.message}</div>`);
             }
         }
     });

@@ -35,8 +35,8 @@ export async function mountNormalOrderForm(targetId = 'normal-order-form-contain
         return;
     }
 
-    // Clear target
-    target.innerHTML = '';
+    // Clear target safely
+    target.textContent = '';
 
     // Get props from page context
     const fundSelect = document.getElementById('fund-select');
@@ -69,8 +69,11 @@ export async function mountNormalOrderForm(targetId = 'normal-order-form-contain
         isMounted = true;
         console.log('[NormalOrderForm] Mounted via mount() function');
     } catch (error) {
-        console.error('[NormalOrderForm] All mount methods failed:', error);
-        target.innerHTML = '<div class="alert alert-danger">Lỗi tải form đặt lệnh: ' + error.message + '</div>';
+        target.textContent = '';
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'alert alert-danger';
+        errorDiv.textContent = 'Lỗi tải form đặt lệnh: ' + error.message;
+        target.appendChild(errorDiv);
         throw error;
     }
 }

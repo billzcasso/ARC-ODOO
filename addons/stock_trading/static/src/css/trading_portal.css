@@ -424,7 +424,12 @@
 
 /* Gradient variants */
 #trading_portal_page .tile-cash {
-    background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
+    background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
+}
+
+#trading_portal_page .trading-btn-primary {
+    background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
+    border: none;
 }
 
 #trading_portal_page .tile-margin {
@@ -621,8 +626,18 @@
     opacity: 1;
 }
 
-/* Form Input Animations - Orange Theme */
+/* Form Input Animations - Orange Theme 
+   Ensuring <label> support for accessibility
+*/
+#trading_portal_page .form-label {
+    display: inline-block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #495057;
+}
+
 #trading_portal_page .form-control {
+    /* Providing <label> styles for inputs */
     transition: var(--transition-base);
     border-radius: 0.5rem;
 }

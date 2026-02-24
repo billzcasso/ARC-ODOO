@@ -9,10 +9,11 @@ def configure_payos_credentials():
     """
     Cấu hình PayOS credentials vào ir.config_parameter
     """
-    # PayOS credentials
-    CLIENT_ID = '5edf2d5c-a8d9-4eb3-a452-6dec60a38a10'
-    API_KEY = '3aaed460-eaa8-4944-a975-0d2071140a85'
-    CHECKSUM_KEY = 'c19d6cd87aaff29ee63507cc242c760ad9aeeda48cc97cb32be5943ff90f279a'
+    # PayOS credentials (sử dụng biến môi trường hoặc nhập tay, KHÔNG hardcode)
+    import os
+    CLIENT_ID = os.getenv('PAYOS_CLIENT_ID', 'placeholder_client_id')
+    API_KEY = os.getenv('PAYOS_API_KEY', 'placeholder_api_key')
+    CHECKSUM_KEY = os.getenv('PAYOS_CHECKSUM_KEY', 'placeholder_checksum_key')
     
     # Khởi tạo Odoo registry
     env = odoo.api.Environment(odoo.registry(odoo.tools.config['db_name']), SUPERUSER_ID, {})

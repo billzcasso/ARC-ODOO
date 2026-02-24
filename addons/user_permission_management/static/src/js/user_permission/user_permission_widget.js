@@ -256,9 +256,9 @@ export class UserPermissionWidget extends Component {
                 }
             }
             if (!this.state.formData.password || !this.state.formData.password.trim()) {
-                errors.password = 'Mật khẩu không được để trống';
+                errors['password'] = 'Mật khẩu không được để trống';
             } else if (this.state.formData.password.length < 6) {
-                errors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
+                errors['password'] = 'Mật khẩu phải có ít nhất 6 ký tự';
             }
         }
 
@@ -478,7 +478,7 @@ export class UserPermissionWidget extends Component {
 
         const closeButton = document.createElement('button');
         closeButton.className = 'notification-close';
-        closeButton.innerHTML = '&times;';
+        closeButton.textContent = '×';
         closeButton.onclick = () => {
             notification.style.animation = 'slideOut 0.3s ease-out';
             setTimeout(() => notification.remove(), 300);

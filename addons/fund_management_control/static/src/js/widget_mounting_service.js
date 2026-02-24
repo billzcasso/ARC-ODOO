@@ -113,7 +113,7 @@
 
                     try {
                         // Clear the container (e.g., remove loading spinner).
-                        container.innerHTML = '';
+                        container.textContent = '';
 
                         // Use owl.App for modern OWL applications.
                         const app = new window.owl.App(WidgetClass);

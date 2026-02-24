@@ -414,9 +414,9 @@ export class NegotiatedOrdersComponent extends Component {
             </div>
         </div>
     </div>`;
-    
+
     static props = {};
-    
+
     setup() {
         const todayIso = new Date().toISOString().split('T')[0];
         this.state = useState({
@@ -443,10 +443,10 @@ export class NegotiatedOrdersComponent extends Component {
             sortField: '',
             sortOrder: 'asc' // 'asc' or 'desc'
         });
-        
+
         this.refreshInterval = null;
         this._loadInitialData();
-        
+
         onMounted(() => {
             // Auto refresh mỗi 30 giây để cập nhật danh sách lệnh khớp thỏa thuận
             this.refreshInterval = setInterval(() => {
@@ -456,14 +456,14 @@ export class NegotiatedOrdersComponent extends Component {
             }, 30000);
             this.checkUserPermission();
         });
-        
+
         onWillUnmount(() => {
             if (this.refreshInterval) {
                 clearInterval(this.refreshInterval);
             }
         });
     }
-    
+
     /**
      * Tải dữ liệu ban đầu: danh sách quỹ và lệnh khớp thỏa thuận
      */
@@ -485,7 +485,7 @@ export class NegotiatedOrdersComponent extends Component {
             this.state.loading = false;
         }
     }
-    
+
     /**
      * Tải danh sách quỹ từ API
      */
@@ -498,7 +498,7 @@ export class NegotiatedOrdersComponent extends Component {
             });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const response = await res.json();
-            
+
             // Xử lý nhiều format response khác nhau
             if (Array.isArray(response)) {
                 this.state.funds = response;
@@ -517,7 +517,7 @@ export class NegotiatedOrdersComponent extends Component {
             this.state.funds = [];
         }
     }
-    
+
     /**
      * Tải danh sách lệnh khớp thỏa thuận từ API
      * 
@@ -535,23 +535,23 @@ export class NegotiatedOrdersComponent extends Component {
             let date_from, date_to;
             if (this.state.filters.transaction_date) {
                 const { date_from: df, date_to: dt } = this.computeDateRangeForDate(this.state.filters.transaction_date);
-                date_from = df; 
+                date_from = df;
                 date_to = dt;
             } else {
                 const r = this.computeDateRange(this.state.filters.quick_date);
-                date_from = r.date_from; 
+                date_from = r.date_from;
                 date_to = r.date_to;
             }
             this.state.filters.date_from = date_from;
             this.state.filters.date_to = date_to;
-            
+
             // Normalize fund và ticker
             const fundId = this.state.filters.fund_id ? Number(this.state.filters.fund_id) : null;
             let ticker = null;
             if (fundId && Array.isArray(this.state.funds)) {
                 const fund = this.state.funds.find(f => String(f.id) === String(fundId));
-                ticker = fund && (fund.ticker || fund.symbol || fund.code) 
-                    ? String(fund.ticker || fund.symbol || fund.code) 
+                ticker = fund && (fund.ticker || fund.symbol || fund.code)
+                    ? String(fund.ticker || fund.symbol || fund.code)
                     : null;
             }
 
@@ -567,7 +567,7 @@ export class NegotiatedOrdersComponent extends Component {
             });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const response = await res.json();
-            
+
             // Xử lý nhiều format response khác nhau
             let data = [];
             if (response && response.success && Array.isArray(response.data)) {
@@ -581,7 +581,7 @@ export class NegotiatedOrdersComponent extends Component {
             } else {
                 throw new Error(response && response.message ? response.message : "Không thể tải dữ liệu lệnh khớp");
             }
-            
+
             // Client-side filter by fund nếu backend bỏ qua
             if (fundId) {
                 const wantId = Number(fundId);
@@ -596,7 +596,7 @@ export class NegotiatedOrdersComponent extends Component {
                     return idMatch || tickerMatch;
                 });
             }
-            
+
             // Client-side filter by date range
             const fromTime = new Date(date_from.replace(' ', 'T')).getTime();
             const toTime = new Date(date_to.replace(' ', 'T')).getTime();
@@ -605,10 +605,10 @@ export class NegotiatedOrdersComponent extends Component {
                 const t = dtStr ? new Date(dtStr).getTime() : NaN;
                 return !isNaN(t) ? (t >= fromTime && t <= toTime) : true;
             });
-            
+
             // Sync localStorage với backend data (để track lệnh đã gửi lên sàn)
             try {
-                const sentFromBackend = (data || []).filter(order => 
+                const sentFromBackend = (data || []).filter(order =>
                     order.sent_to_exchange === true || order.sent_to_exchange === 1
                 ).map(order => String(order.id));
                 if (sentFromBackend.length > 0) {
@@ -617,7 +617,7 @@ export class NegotiatedOrdersComponent extends Component {
             } catch (_) {
                 // Ignore localStorage errors
             }
-            
+
             // Chuẩn hóa record để hiển thị đúng vai trò mua/bán
             this.state.matchedOrders = (data || []).map((o) => this._normalizeOrder(o));
             this.state.pagination.totalItems = data.length;
@@ -726,7 +726,7 @@ export class NegotiatedOrdersComponent extends Component {
         this.state.pagination.currentPage = 1;
         this._loadMatchedOrders();
     }
-    
+
     /**
      * Làm mới dữ liệu lệnh khớp thỏa thuận
      */
@@ -739,7 +739,7 @@ export class NegotiatedOrdersComponent extends Component {
             this.state.loading = false;
         }
     }
-    
+
     isSelected(order) {
         return this.state.selectedIds.has(order.id);
     }
@@ -790,7 +790,7 @@ export class NegotiatedOrdersComponent extends Component {
         const totalPages = this.getTotalPages();
         const currentPage = this.state.pagination.currentPage;
         const pages = [];
-        
+
         if (totalPages <= 7) {
             // Nếu tổng số trang <= 7, hiển thị tất cả
             for (let i = 1; i <= totalPages; i++) {
@@ -799,7 +799,7 @@ export class NegotiatedOrdersComponent extends Component {
         } else {
             // Hiển thị dạng rút gọn: 1 2 3 4 5 ... 30 31 32
             pages.push(1);
-            
+
             if (currentPage <= 4) {
                 // Gần đầu: 1 2 3 4 5 ... last
                 for (let i = 2; i <= 5; i++) {
@@ -823,7 +823,7 @@ export class NegotiatedOrdersComponent extends Component {
                 pages.push(totalPages);
             }
         }
-        
+
         return pages;
     }
 
@@ -835,14 +835,14 @@ export class NegotiatedOrdersComponent extends Component {
     getTypeFilteredOrders() {
         const type = this.state.typeFilter;
         if (type === 'all') return this.state.matchedOrders;
-        
+
         return (this.state.matchedOrders || []).filter(order => {
             const buyType = (order.buy_user_type || order._buyUserType || '').toString();
             const sellType = (order.sell_user_type || order._sellUserType || '').toString();
             const hasMM = buyType === 'market_maker' || sellType === 'market_maker';
-            
+
             if (type === 'market_maker') return hasMM;
-            if (type === 'investor') return !hasMM; 
+            if (type === 'investor') return !hasMM;
             return true;
         });
     }
@@ -895,7 +895,7 @@ export class NegotiatedOrdersComponent extends Component {
             if (sent.includes(String(order.id))) {
                 return false; // Cho phép gửi lại nếu backend chưa cập nhật
             }
-        } catch (_) {}
+        } catch (_) { }
         return false;
     }
 
@@ -915,28 +915,28 @@ export class NegotiatedOrdersComponent extends Component {
      */
     async sendToExchange() {
         if (this.state.selectedIds.size === 0) return;
-        
+
         try {
             const ids = Array.from(this.state.selectedIds);
             let successIds = [];
             let errors = [];
-            
+
             // --- 1. Thử gửi Bulk API ---
             try {
                 const resBulk = await fetch('/api/transaction-list/bulk-send-to-exchange', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                    body: JSON.stringify({ 
-                        jsonrpc: '2.0', 
-                        method: 'call', 
-                        params: { matched_order_ids: ids, auto_submit: true } 
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'call',
+                        params: { matched_order_ids: ids, auto_submit: true }
                     })
                 });
-                
+
                 if (resBulk.ok) {
                     const json = await resBulk.json();
                     const result = json.result || json; // Handle Odoo wrapper
-                    
+
                     if (result && result.success) {
                         // Case: Bulk success all
                         successIds = [...ids];
@@ -970,7 +970,7 @@ export class NegotiatedOrdersComponent extends Component {
             if (successIds.length > 0) {
                 // Update Local State -> Dim ngay lập tức
                 const sentSet = new Set(JSON.parse(localStorage.getItem('sentMatchedIds') || '[]'));
-                
+
                 this.state.matchedOrders = this.state.matchedOrders.map(order => {
                     if (successIds.includes(String(order.id))) {
                         sentSet.add(String(order.id));
@@ -978,13 +978,13 @@ export class NegotiatedOrdersComponent extends Component {
                     }
                     return order;
                 });
-                
+
                 localStorage.setItem('sentMatchedIds', JSON.stringify(Array.from(sentSet)));
-                
+
                 // Clear selection cho các item đã gửi thành công
                 successIds.forEach(id => this.state.selectedIds.delete(parseInt(id)));
                 this.state.selectedIds = new Set(this.state.selectedIds); // Trigger reactivity
-                
+
                 // Thông báo thành công
                 const msg = `Đã gửi thành công ${successIds.length} lệnh lên sàn.`;
                 this.showToast(msg, 'success');
@@ -993,27 +993,27 @@ export class NegotiatedOrdersComponent extends Component {
             if (errors.length > 0) {
                 // Hiển thị lỗi đầu tiên hoặc tổng hợp
                 const uniqueErrors = [...new Set(errors)];
-                const errMsg = uniqueErrors.length === 1 
-                    ? uniqueErrors[0] 
+                const errMsg = uniqueErrors.length === 1
+                    ? uniqueErrors[0]
                     : `${uniqueErrors.length} lệnh gửi thất bại. ${uniqueErrors[0]}...`;
-                
+
                 // Hiển thị toast lỗi (quan trọng: hiển thị Error thay vì Success giả)
                 this.showToast(errMsg, 'danger');
             } else if (successIds.length === 0 && errors.length === 0) {
-                 this.showToast("Không thể kết nối tới server hoặc phản hồi không hợp lệ.", 'danger');
+                this.showToast("Không thể kết nối tới server hoặc phản hồi không hợp lệ.", 'danger');
             }
 
             // Reload data ngầm để sync status chính xác nhất
             if (successIds.length > 0) {
                 setTimeout(() => this._loadMatchedOrders(), 1000);
             }
-            
+
         } catch (error) {
-           console.error('[SEND TO EXCHANGE] Fatal Error:', error);
-           this.showToast('Lỗi hệ thống: ' + error.message, 'danger');
+            console.error('[SEND TO EXCHANGE] Fatal Error:', error);
+            this.showToast('Lỗi hệ thống: ' + error.message, 'danger');
         }
     }
-    
+
     onFilterChanged(event) {
         const cls = Array.from(event.target.classList).find(c => c.startsWith('filter-')) || '';
         const field = cls.replace('filter-', '');
@@ -1028,7 +1028,7 @@ export class NegotiatedOrdersComponent extends Component {
         this.state.pagination.currentPage = 1;
         this._loadMatchedOrders();
     }
-    
+
     /**
      * Định dạng giá theo chuẩn Việt Nam
      * 
@@ -1041,7 +1041,7 @@ export class NegotiatedOrdersComponent extends Component {
             maximumFractionDigits: 0
         }).format(price || 0);
     }
-    
+
     /**
      * Định dạng số lượng (units) theo chuẩn Việt Nam
      * 
@@ -1054,7 +1054,7 @@ export class NegotiatedOrdersComponent extends Component {
             maximumFractionDigits: 2
         }).format(units || 0);
     }
-    
+
     /**
      * Định dạng thành tiền theo chuẩn Việt Nam
      * 
@@ -1067,7 +1067,7 @@ export class NegotiatedOrdersComponent extends Component {
             maximumFractionDigits: 0
         }).format(amount || 0);
     }
-    
+
     /**
      * Định dạng ngày giờ theo chuẩn Việt Nam
      * 
@@ -1110,8 +1110,8 @@ export class NegotiatedOrdersComponent extends Component {
         if (buyUserType === 'market_maker') {
             return '-';
         }
-        const rate = order.interest_rate !== undefined && order.interest_rate !== null 
-            ? order.interest_rate 
+        const rate = order.interest_rate !== undefined && order.interest_rate !== null
+            ? order.interest_rate
             : (order.buy_interest_rate !== undefined && order.buy_interest_rate !== null ? order.buy_interest_rate : null);
         if (rate === null || rate === undefined || rate === 0) return '-';
         return this.formatInterestRate(rate);
@@ -1123,12 +1123,12 @@ export class NegotiatedOrdersComponent extends Component {
         if (buyUserType === 'market_maker') {
             return '-';
         }
-        const term = order.term !== undefined && order.term !== null 
-            ? order.term 
-            : (order.term_months !== undefined && order.term_months !== null 
-                ? order.term_months 
-                : (order.buy_term_months !== undefined && order.buy_term_months !== null 
-                    ? order.buy_term_months 
+        const term = order.term !== undefined && order.term !== null
+            ? order.term
+            : (order.term_months !== undefined && order.term_months !== null
+                ? order.term_months
+                : (order.buy_term_months !== undefined && order.buy_term_months !== null
+                    ? order.buy_term_months
                     : (order.tenor !== undefined && order.tenor !== null ? order.tenor : null)));
         if (term === null || term === undefined || term === 0) return '-';
         return `${term} tháng`;
@@ -1202,7 +1202,7 @@ export class NegotiatedOrdersComponent extends Component {
         const endOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
         const fmt = (d) => {
             const pad = (n) => String(n).padStart(2, '0');
-            return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
         };
         let from = startOfDay(now), to = endOfDay(now);
         if (mode === 'yesterday') {
@@ -1238,7 +1238,7 @@ export class NegotiatedOrdersComponent extends Component {
         const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0);
         const end = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 23, 59, 59);
         const pad = (n) => String(n).padStart(2, '0');
-        const fmt = (dt) => `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`;
+        const fmt = (dt) => `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`;
         return { date_from: fmt(start), date_to: fmt(end) };
     }
 
@@ -1249,7 +1249,12 @@ export class NegotiatedOrdersComponent extends Component {
             const el = document.createElement('div');
             el.className = `alert alert-${cls} alert-dismissible fade show position-fixed`;
             el.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 280px;';
-            el.innerHTML = `${message} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+            el.textContent = message + ' ';
+            const closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.className = 'btn-close';
+            closeBtn.setAttribute('data-bs-dismiss', 'alert');
+            el.appendChild(closeBtn);
             document.body.appendChild(el);
             setTimeout(() => { if (el && el.parentElement) el.parentElement.removeChild(el); }, 3500);
         } catch (_) {
@@ -1304,25 +1309,25 @@ export class NegotiatedOrdersComponent extends Component {
         if (this.state.sortField !== field) {
             return 'fa fa-sort text-muted';
         }
-        return this.state.sortOrder === 'asc' 
-            ? 'fa fa-sort-up text-primary' 
+        return this.state.sortOrder === 'asc'
+            ? 'fa fa-sort-up text-primary'
             : 'fa fa-sort-down text-primary';
     }
 
     // Apply sorting to matched orders
     applySorting() {
         if (!this.state.sortField) return;
-        
+
         const field = this.state.sortField;
         const order = this.state.sortOrder;
-        
+
         this.state.matchedOrders.sort((a, b) => {
             let valA = a[field];
             let valB = b[field];
-            
+
             if (valA == null) valA = '';
             if (valB == null) valB = '';
-            
+
             // Handle numeric fields
             if (['matched_price', 'matched_quantity', 'total_value'].includes(field)) {
                 valA = parseFloat(valA) || 0;
@@ -1334,14 +1339,14 @@ export class NegotiatedOrdersComponent extends Component {
                 valA = valA.toLowerCase();
                 valB = (valB || '').toLowerCase();
             }
-            
+
             let comparison = 0;
             if (valA < valB) comparison = -1;
             else if (valA > valB) comparison = 1;
-            
+
             return order === 'asc' ? comparison : -comparison;
         });
-        
+
         this.state.pagination.currentPage = 1;
     }
 }

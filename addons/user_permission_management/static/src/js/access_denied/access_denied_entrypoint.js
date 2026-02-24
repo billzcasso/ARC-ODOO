@@ -47,12 +47,13 @@ async function mountAccessDeniedWidget() {
         console.log('AccessDeniedWidget mounted successfully');
     } catch (error) {
         console.error('Error mounting AccessDeniedWidget:', error);
-        widgetContainer.innerHTML = `
+        widgetContainer.textContent = '';
+        widgetContainer.insertAdjacentHTML('beforeend', `
             <div class="alert alert-danger text-center" role="alert">
                 <i class="fas fa-exclamation-triangle me-2"></i>
                 Có lỗi xảy ra khi tải trang: ${error.message}
             </div>
-        `;
+        `);
     }
 }
 

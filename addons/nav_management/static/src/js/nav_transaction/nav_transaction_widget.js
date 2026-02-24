@@ -1893,8 +1893,10 @@ export class NavTransactionWidget extends Component {
       }
 
       // Hiển thị loading trên button
-      const originalHTML = btnElement.innerHTML;
-      btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      btnElement.textContent = '';
+      const iconLoad = document.createElement('i');
+      iconLoad.className = 'fas fa-spinner fa-spin';
+      btnElement.appendChild(iconLoad);
       btnElement.disabled = true;
 
       // Gọi API gửi lên sàn từ transaction_list
@@ -1920,7 +1922,10 @@ export class NavTransactionWidget extends Component {
 
       if (result.result && result.result.success) {
         // Thành công
-        btnElement.innerHTML = '<i class="fas fa-check"></i>';
+        btnElement.textContent = '';
+        const iconCheck = document.createElement('i');
+        iconCheck.className = 'fas fa-check';
+        btnElement.appendChild(iconCheck);
         btnElement.classList.add('sent');
         btnElement.style.backgroundColor = '#28a745';
         btnElement.title = 'Đã gửi lên sàn';
@@ -1941,7 +1946,10 @@ export class NavTransactionWidget extends Component {
         });
       } else {
         // Thất bại
-        btnElement.innerHTML = originalHTML;
+        btnElement.textContent = '';
+        const iconFail = document.createElement('i');
+        iconFail.className = 'fas fa-paper-plane';
+        btnElement.appendChild(iconFail);
         btnElement.disabled = false;
 
         this.showPopup({
@@ -1954,7 +1962,10 @@ export class NavTransactionWidget extends Component {
       console.error('Error sending to exchange:', error);
 
       // Reset button
-      btnElement.innerHTML = '<i class="fas fa-paper-plane"></i>';
+      btnElement.textContent = '';
+      const iconReset = document.createElement('i');
+      iconReset.className = 'fas fa-paper-plane';
+      btnElement.appendChild(iconReset);
       btnElement.disabled = false;
 
       this.showPopup({
@@ -1985,7 +1996,10 @@ export class NavTransactionWidget extends Component {
         sentPairs.forEach(pairId => {
           const btn = document.querySelector(`[data-pair-id="${pairId}"]`);
           if (btn && !btn.classList.contains('sent')) {
-            btn.innerHTML = '<i class="fas fa-check"></i>';
+            btn.textContent = '';
+            const sentIcon = document.createElement('i');
+            sentIcon.className = 'fas fa-check';
+            btn.appendChild(sentIcon);
             btn.classList.add('sent');
             btn.style.backgroundColor = '#28a745';
             btn.title = 'Đã gửi lên sàn';
@@ -2207,20 +2221,20 @@ export class NavTransactionWidget extends Component {
       if (type === 'success') {
         const iconContainer = document.createElement('div');
         iconContainer.className = 'nav-management-success-icon-container';
-        iconContainer.innerHTML = `
+        iconContainer.insertAdjacentHTML('beforeend', `
           <div class="nav-management-success-icon">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle cx="12" cy="12" r="10" fill="#10b981" stroke="#10b981" stroke-width="2"/>
               <path d="M9 12l2 2 4-4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
-        `;
+        `);
         body.appendChild(iconContainer);
       }
 
       const messageDiv = document.createElement('div');
       messageDiv.className = 'nav-management-modal-message';
-      messageDiv.innerHTML = message || '';
+      messageDiv.textContent = message || '';
       body.appendChild(messageDiv);
 
       const footer = document.createElement('div');

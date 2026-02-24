@@ -35,14 +35,14 @@ function autoMount() {
         return;
     }
 
-    target.innerHTML = '';
-//    console.log("Target info:", {
-//        id: target.id,
-//        tagName: target.tagName,
-//        className: target.className,
-//        isConnected: target.isConnected,
-//        innerHTML: target.innerHTML
-//    });
+    target.textContent = '';
+    //    console.log("Target info:", {
+    //        id: target.id,
+    //        tagName: target.tagName,
+    //        className: target.className,
+    //        isConnected: target.isConnected,
+    //        innerHTML: target.innerHTML
+    //    });
 
     try {
         const app = new owl.App(FundWidget);

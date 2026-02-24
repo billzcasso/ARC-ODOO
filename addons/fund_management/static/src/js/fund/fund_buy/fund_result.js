@@ -21,10 +21,10 @@ function formatVND(value) {
 function mround25(value, step = 50) {
   const num = Number(value || 0);
   if (!Number.isFinite(num) || step <= 0) return num;
-  
+
   const remainder = num % step;
   const threshold = step / 2; // 25đ khi step = 50
-  
+
   if (remainder < threshold) {
     // Dưới 25đ -> làm tròn xuống
     return Math.floor(num / step) * step;
@@ -43,18 +43,18 @@ function mround25(value, step = 50) {
  */
 function calculateMaturityValue(navData) {
   if (!navData) return 0;
-  
+
   const purchaseValue = Number(navData.nav_purchase_value) || 0; // L: Giá trị mua
   const interestRate = Number(navData.interest_rate) || 0; // N: Lãi suất (%)
   const days = Number(navData.nav_days) || 0; // G: Số ngày
-  
+
   if (purchaseValue <= 0 || days <= 0) {
     return 0;
   }
-  
+
   // U: Giá trị bán 1 = L × N / 365 × G + L (đây là Giá trị sau đáo hạn)
   const sellValue1 = purchaseValue * (interestRate / 100) / 365 * days + purchaseValue;
-  
+
   return mround25(sellValue1, 50);
 }
 
@@ -104,129 +104,130 @@ async function renderResultPageData() {
   };
 
   try {
-      // 1. Get Transaction ID
-      const txId = sessionStorage.getItem('transaction_id');
-      if (!txId) {
-          throw new Error("Không tìm thấy mã giao dịch trong phiên.");
+    // 1. Get Transaction ID
+    const txId = sessionStorage.getItem('transaction_id');
+    if (!txId) {
+      throw new Error("Không tìm thấy mã giao dịch trong phiên.");
+    }
+
+    // 2. Fetch Data
+    const res = await fetch(`/api/transaction/detail?transaction_id=${txId}`);
+    if (!res.ok) throw new Error("Lỗi kết nối server");
+
+    const json = await res.json();
+    if (!json.success || !json.data) {
+      throw new Error(json.message || "Không tải được dữ liệu lệnh");
+    }
+
+    const data = json.data;
+
+    // Store transaction type globally
+    currentTransactionType = data.transaction_type || 'buy';
+
+    // Update page title and button text based on transaction type
+    updateUIForTransactionType(currentTransactionType);
+
+    // 3. Render Common Data
+    setEl('result-fund-name', data.fund_ticker || data.fund_name);
+    setEl('result-amount', formatVND(data.amount));
+    setEl('result-fee', formatVND(data.fee));
+    setEl('result-order-date', data.created_at);
+
+    // Map Status
+    const statusMap = {
+      'pending': 'Chờ xử lý',
+      'completed': 'Hoàn thành',
+      'cancelled': 'Đã huỷ'
+    };
+    setEl('result-status', statusMap[data.status] || data.status);
+
+    // 4. Render Layout based on Order Mode
+    const isNormal = data.order_mode === 'normal';
+
+    // Use body class for CSS-based visibility control
+    document.body.classList.remove('normal-order-mode', 'negotiated-order-mode');
+
+    if (isNormal) {
+      // --- NORMAL: Type, Price, Units ---
+      document.body.classList.add('normal-order-mode');
+
+      setEl('result-order-type', data.order_type_detail);
+
+      let priceDisplay = formatVND(data.price);
+      if (['ATO', 'ATC', 'MP', 'MTL'].includes(data.order_type_detail)) {
+        priceDisplay = data.order_type_detail;
       }
-      
-      // 2. Fetch Data
-      const res = await fetch(`/api/transaction/detail?transaction_id=${txId}`);
-      if (!res.ok) throw new Error("Lỗi kết nối server");
-      
-      const json = await res.json();
-      if (!json.success || !json.data) {
-          throw new Error(json.message || "Không tải được dữ liệu lệnh");
-      }
-      
-      const data = json.data;
-      
-      // Store transaction type globally
-      currentTransactionType = data.transaction_type || 'buy';
-      
-      // Update page title and button text based on transaction type
-      updateUIForTransactionType(currentTransactionType);
-      
-      // 3. Render Common Data
-      setEl('result-fund-name', data.fund_ticker || data.fund_name);
-      setEl('result-amount', formatVND(data.amount));
-      setEl('result-fee', formatVND(data.fee));
-      setEl('result-order-date', data.created_at);
-      
-      // Map Status
-      const statusMap = {
-          'pending': 'Chờ xử lý',
-          'completed': 'Hoàn thành',
-          'cancelled': 'Đã huỷ'
-      };
-      setEl('result-status', statusMap[data.status] || data.status);
-      
-      // 4. Render Layout based on Order Mode
-      const isNormal = data.order_mode === 'normal';
-      
-      // Use body class for CSS-based visibility control
-      document.body.classList.remove('normal-order-mode', 'negotiated-order-mode');
-      
-      if (isNormal) {
-          // --- NORMAL: Type, Price, Units ---
-          document.body.classList.add('normal-order-mode');
-          
-          setEl('result-order-type', data.order_type_detail);
-          
-          let priceDisplay = formatVND(data.price);
-          if (['ATO', 'ATC', 'MP', 'MTL'].includes(data.order_type_detail)) {
-              priceDisplay = data.order_type_detail;
-          }
-          setEl('result-order-price', priceDisplay);
-          setEl('result-units', data.units ? data.units.toLocaleString('vi-VN') : '--');
-          
-      } else {
-          // --- NEGOTIATED: Term, Rate, Maturity ---
-          document.body.classList.add('negotiated-order-mode');
-          
-          setEl('result-term-months', data.term_months ? `${data.term_months} tháng` : '--');
-          setEl('result-interest-rate', data.interest_rate ? `${data.interest_rate}%` : '--');
-          setEl('result-maturity-date', data.nav_maturity_date || '--');
-          setEl('result-sell-date', data.nav_sell_date || '--');
-          // Fix: Recalculate maturity value to ensure mround compliance
-          const derivedMaturityValue = calculateMaturityValue(data);
-          setEl('result-maturity-value', derivedMaturityValue ? formatVND(derivedMaturityValue) : (data.nav_sell_value1 ? formatVND(data.nav_sell_value1) : '--'));
-      }
-      
+      setEl('result-order-price', priceDisplay);
+      setEl('result-units', data.units ? data.units.toLocaleString('vi-VN') : '--');
+
+    } else {
+      // --- NEGOTIATED: Term, Rate, Maturity ---
+      document.body.classList.add('negotiated-order-mode');
+
+      setEl('result-term-months', data.term_months ? `${data.term_months} tháng` : '--');
+      setEl('result-interest-rate', data.interest_rate ? `${data.interest_rate}%` : '--');
+      setEl('result-maturity-date', data.nav_maturity_date || '--');
+      setEl('result-sell-date', data.nav_sell_date || '--');
+      // Fix: Recalculate maturity value to ensure mround compliance
+      const derivedMaturityValue = calculateMaturityValue(data);
+      setEl('result-maturity-value', derivedMaturityValue ? formatVND(derivedMaturityValue) : (data.nav_sell_value1 ? formatVND(data.nav_sell_value1) : '--'));
+    }
+
   } catch (error) {
-      console.warn("Result Page: No transaction data found or loaded.", error.message);
-      
-      // Show user-visible feedback
-      const statusEl = document.getElementById('result-status');
-      if (statusEl) {
-          statusEl.textContent = 'Không có dữ liệu';
-          statusEl.classList.add('text-warning');
-      }
-      
-      // Also log what's in sessionStorage for debugging
-      // Also log what's in sessionStorage for debugging
-      console.log('[Debug] sessionStorage contents:', {
-          transaction_id: sessionStorage.getItem('transaction_id'),
-          order_token: sessionStorage.getItem('order_token'),
-          selectedFundId: sessionStorage.getItem('selectedFundId')
-      });
+    console.warn("Result Page: No transaction data found or loaded.", error.message);
+
+    // Show user-visible feedback
+    const statusEl = document.getElementById('result-status');
+    if (statusEl) {
+      statusEl.textContent = 'Không có dữ liệu';
+      statusEl.classList.add('text-warning');
+    }
+
+    // Also log what's in sessionStorage for debugging
+    // Also log what's in sessionStorage for debugging
+    console.log('[Debug] sessionStorage contents:', {
+      transaction_id: sessionStorage.getItem('transaction_id'),
+      order_token: sessionStorage.getItem('order_token'),
+      selectedFundId: sessionStorage.getItem('selectedFundId')
+    });
   }
 }
 
 // ===== Update UI based on transaction type (buy/sell) =====
 function updateUIForTransactionType(transactionType) {
   const isSell = transactionType === 'sell';
-  
+
   // Update page title
   document.title = isSell ? 'Kết quả lệnh bán' : 'Kết quả lệnh mua';
-  
+
   // Update success title
   const successTitle = document.querySelector('.fm-success-title');
   if (successTitle) {
     successTitle.textContent = isSell ? 'Đặt lệnh bán thành công!' : 'Đặt lệnh thành công!';
   }
-  
+
   // Update "Add More" button text
   const addMoreBtn = document.getElementById('add-more-btn');
   if (addMoreBtn) {
-    addMoreBtn.innerHTML = isSell 
-      ? '<i class="fas fa-minus me-2"></i>Bán thêm' 
-      : '<i class="fas fa-plus me-2"></i>Mua thêm';
+    addMoreBtn.textContent = '';
+    addMoreBtn.insertAdjacentHTML('beforeend', isSell
+      ? '<i class="fas fa-minus me-2"></i>Bán thêm'
+      : '<i class="fas fa-plus me-2"></i>Mua thêm');
   }
-  
+
   // Update amount label
   const amountLabel = document.querySelector('.fm-detail-row.highlight .fm-detail-label');
   if (amountLabel) {
     amountLabel.textContent = isSell ? 'Số tiền nhận về' : 'Số tiền đầu tư';
   }
-  
+
   // Update amount value color for sell
   const amountValue = document.getElementById('result-amount');
   if (amountValue && isSell) {
     amountValue.classList.remove('text-success');
     amountValue.classList.add('text-danger');
   }
-  
+
   console.log('[Result] UI updated for transaction type:', transactionType);
 }
 
@@ -250,7 +251,7 @@ function setupFinishButton() {
     sessionStorage.removeItem('result_total_amount');
     sessionStorage.removeItem('result_units');
     sessionStorage.removeItem('nav_data');
-    
+
     // Chuyển đến màn hình sổ lệnh để NĐT xem lệnh hoặc tạo lệnh mới
     window.location.href = '/transaction_management/pending';
   });
@@ -280,7 +281,7 @@ function setupAddMoreButton() {
     sessionStorage.removeItem('result_units');
     sessionStorage.removeItem('nav_data');
     sessionStorage.removeItem('fund_sell_data');
-    
+
     // Chuyển về trang đặt lệnh dựa theo loại giao dịch
     const redirectUrl = currentTransactionType === 'sell' ? '/fund_sell' : '/fund_buy';
     window.location.href = redirectUrl;
@@ -297,20 +298,20 @@ function setupCancelOrderButton() {
   cancelBtn.addEventListener('click', async () => {
     // Lấy transaction_id từ session
     const transactionId = sessionStorage.getItem('transaction_id');
-    
+
     // Xác nhận huỷ lệnh
     const orderTypeName = currentTransactionType === 'sell' ? 'bán' : 'mua';
-    const confirmResult = await (typeof Swal !== 'undefined' 
+    const confirmResult = await (typeof Swal !== 'undefined'
       ? Swal.fire({
-          title: 'Xác nhận huỷ lệnh?',
-          text: `Bạn có chắc chắn muốn huỷ lệnh ${orderTypeName} này không?`,
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonText: 'Huỷ lệnh',
-          cancelButtonText: 'Quay lại',
-          confirmButtonColor: '#dc3545',
-          cancelButtonColor: '#6c757d'
-        })
+        title: 'Xác nhận huỷ lệnh?',
+        text: `Bạn có chắc chắn muốn huỷ lệnh ${orderTypeName} này không?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Huỷ lệnh',
+        cancelButtonText: 'Quay lại',
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d'
+      })
       : { isConfirmed: confirm(`Bạn có chắc chắn muốn huỷ lệnh ${orderTypeName} này không?`) }
     );
 
@@ -335,11 +336,11 @@ function setupCancelOrderButton() {
 
       // Gọi API huỷ lệnh
       console.log('Cancel order - transaction_id from session:', transactionId);
-      
+
       if (!transactionId) {
         throw new Error('Không tìm thấy mã lệnh để huỷ. Vui lòng thử lại.');
       }
-      
+
       const formData = new FormData();
       formData.append('transaction_id', transactionId);
 
@@ -356,7 +357,7 @@ function setupCancelOrderButton() {
 
       const result = await res.json();
       console.log('Cancel order - API result:', result);
-      
+
       if (!result.success) {
         throw new Error(result.message || 'Không thể huỷ lệnh');
       }
@@ -418,36 +419,37 @@ function setupCancelOrderButton() {
 function setupContractButtons() {
   const viewContractBtn = document.getElementById('view-contract-btn');
   const downloadContractBtn = document.getElementById('download-contract-btn');
-  
+
   // Hàm lấy contract info từ API
   async function getContractInfo() {
     const transactionId = sessionStorage.getItem('transaction_id');
     if (!transactionId) {
       throw new Error('Không tìm thấy mã giao dịch');
     }
-    
+
     const res = await fetch(`/api/contract/get?transaction_id=${transactionId}`);
     const result = await res.json();
-    
+
     if (!result.success) {
       throw new Error(result.message || 'Không thể lấy hợp đồng');
     }
-    
+
     return result.contract;
   }
-  
+
   // Xem hợp đồng
   if (viewContractBtn) {
     viewContractBtn.addEventListener('click', async () => {
       try {
         viewContractBtn.disabled = true;
-        viewContractBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>Đang tải...';
-        
+        viewContractBtn.textContent = '';
+        viewContractBtn.insertAdjacentHTML('beforeend', '<i class="fas fa-spinner fa-spin"></i>Đang tải...');
+
         const contract = await getContractInfo();
-        
+
         // Mở PDF trong tab mới
         window.open(contract.view_url, '_blank');
-        
+
       } catch (error) {
         console.error('Lỗi xem hợp đồng:', error);
         if (typeof Swal !== 'undefined') {
@@ -462,20 +464,22 @@ function setupContractButtons() {
         }
       } finally {
         viewContractBtn.disabled = false;
-        viewContractBtn.innerHTML = '<i class="fas fa-eye"></i>Xem';
+        viewContractBtn.textContent = '';
+        viewContractBtn.insertAdjacentHTML('beforeend', '<i class="fas fa-eye"></i>Xem');
       }
     });
   }
-  
+
   // Tải hợp đồng
   if (downloadContractBtn) {
     downloadContractBtn.addEventListener('click', async () => {
       try {
         downloadContractBtn.disabled = true;
-        downloadContractBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>Đang tải...';
-        
+        downloadContractBtn.textContent = '';
+        downloadContractBtn.insertAdjacentHTML('beforeend', '<i class="fas fa-spinner fa-spin"></i>Đang tải...');
+
         const contract = await getContractInfo();
-        
+
         // Download PDF
         const link = document.createElement('a');
         link.href = contract.download_url;
@@ -483,7 +487,7 @@ function setupContractButtons() {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
+
       } catch (error) {
         console.error('Lỗi tải hợp đồng:', error);
         if (typeof Swal !== 'undefined') {
@@ -498,7 +502,8 @@ function setupContractButtons() {
         }
       } finally {
         downloadContractBtn.disabled = false;
-        downloadContractBtn.innerHTML = '<i class="fas fa-download"></i>Tải xuống';
+        downloadContractBtn.textContent = '';
+        downloadContractBtn.insertAdjacentHTML('beforeend', '<i class="fas fa-download"></i>Tải xuống');
       }
     });
   }
@@ -525,7 +530,7 @@ function setupConfirmRedirectButton() {
     sessionStorage.removeItem('result_units');
     sessionStorage.removeItem('nav_data');
     sessionStorage.removeItem('transaction_id');
-    
+
     // Redirect
     window.location.href = '/transaction_management/pending';
   });
@@ -534,17 +539,17 @@ function setupConfirmRedirectButton() {
 // ======= Gộp lại DOMContentLoaded =======
 document.addEventListener('DOMContentLoaded', () => {
   try {
-      renderResultPageData();
+    renderResultPageData();
   } catch (e) {
-      console.error('Error rendering result data:', e);
+    console.error('Error rendering result data:', e);
   }
-  
+
   try {
-      renderTransferInfo();
+    renderTransferInfo();
   } catch (e) {
-      console.error('Error rendering transfer info:', e);
+    console.error('Error rendering transfer info:', e);
   }
-  
+
   console.log('Initializing Result Page Buttons...');
   setupConfirmRedirectButton();
   setupFinishButton();

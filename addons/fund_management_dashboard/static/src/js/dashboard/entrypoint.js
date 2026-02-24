@@ -58,12 +58,13 @@ function displayDashboardError(message) {
     const errorContainer = document.getElementById('error-container');
     const errorMessage = document.getElementById('error-message');
     if (widgetContainer) {
-        widgetContainer.innerHTML = `
+        widgetContainer.textContent = '';
+        widgetContainer.insertAdjacentHTML('beforeend', `
             <div class="alert alert-danger text-center" role="alert">
                 <i class="fas fa-exclamation-triangle me-2"></i>
                 ${message}
             </div>
-        `;
+        `);
         widgetContainer.style.display = 'block';
     }
     if (errorContainer) {

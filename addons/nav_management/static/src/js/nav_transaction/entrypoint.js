@@ -31,12 +31,13 @@ function hideSpinner() {
 function showError(message) {
     const widgetContainer = document.getElementById('navTransactionWidget');
     if (widgetContainer) {
-        widgetContainer.innerHTML = `
+        widgetContainer.textContent = '';
+        widgetContainer.insertAdjacentHTML('beforeend', `
             <div class="alert alert-danger text-center" role="alert">
                 <i class="bi bi-exclamation-triangle me-2"></i>
                 ${message}
             </div>
-        `;
+        `);
         widgetContainer.style.display = 'block';
     }
     hideSpinner();

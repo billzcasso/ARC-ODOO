@@ -24,7 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } catch (error) {
             console.error('Lỗi khi mount pending widget:', error);
-            pendingContainer.innerHTML = '<div class="text-center text-red-500 py-4">Có lỗi xảy ra khi tải widget: ' + error.message + '</div>';
+                        pendingContainer.textContent = '';
+                        pendingContainer.insertAdjacentHTML('beforeend', '<div class="text-center text-red-500 py-4">Có lỗi xảy ra khi tải widget: ' + error.message + '</div>');
         }
     }
 
@@ -47,7 +48,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } catch (error) {
             console.error('Lỗi khi mount order widget:', error);
-            orderContainer.innerHTML = '<div class="text-center text-red-500 py-4">Có lỗi xảy ra khi tải widget: ' + error.message + '</div>';
+                        orderContainer.textContent = '';
+                        orderContainer.insertAdjacentHTML('beforeend', '<div class="text-center text-red-500 py-4">Có lỗi xảy ra khi tải widget: ' + error.message + '</div>');
         }
     }
 
@@ -70,7 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } catch (error) {
             console.error('Lỗi khi mount periodic widget:', error);
-            periodicContainer.innerHTML = '<div class="text-center text-red-500 py-4">Có lỗi xảy ra khi tải widget: ' + error.message + '</div>';
+                        periodicContainer.textContent = '';
+                        periodicContainer.insertAdjacentHTML('beforeend', '<div class="text-center text-red-500 py-4">Có lỗi xảy ra khi tải widget: ' + error.message + '</div>');
         }
     }
 });

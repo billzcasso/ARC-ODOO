@@ -148,13 +148,17 @@ class EKYCApiConfig(models.Model):
         }
 
     def action_update_from_default(self):
-        """Update tokens from default values"""
+        """Update tokens from system parameters"""
         self.ensure_one()
         
-        TOKEN_ID = '4454b0b5-cb14-62fa-e063-62199f0ab40b'
-        TOKEN_KEY = 'MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBALlzLZ/MkL89AA1a34lamXMce/GLbfCdltABRhpPjve+v5wy9amxCY0nyuGnLdMfOiVqCmTwUaRp5jKnlChV9NECAwEAAQ=='
-        ACCESS_TOKEN = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0cmFuc2FjdGlvbl9pZCI6IjE4ZDExYWQzLWI0MzUtNGJiZS1iY2Q1LTVkMDg5ZDYxMzlhNCIsInN1YiI6ImZhNzhmNWQ5LWM5MTYtMTFmMC1hNzY5LTg1NjY4N2U5ODMwYSIsImF1ZCI6WyJyZXN0c2VydmljZSJdLCJ1c2VyX25hbWUiOiJuaGFudnYyazRAZ21haWwuY29tIiwic2NvcGUiOlsicmVhZCJdLCJpc3MiOiJodHRwczovL2xvY2FsaG9zdCIsIm5hbWUiOiJuaGFudnYyazRAZ21haWwuY29tIiwiZXhwIjoxNzY0MzE0OTExLCJ1dWlkX2FjY291bnQiOiJmYTc4ZjVkOS1jOTE2LTExZjAtYTc2OS04NTY2ODdlOTgzMGEiLCJhdXRob3JpdGllcyI6WyJVU0VSIl0sImp0aSI6IjBkNDkxZmZmLWY3ZTUtNGU4ZS05NTQxLTZiOWZmNzFhZGExYiIsImNsaWVudF9pZCI6ImNsaWVudGFwcCJ9.RpKpFlNky_KVOsWPx4EEWFdvWHUrJdnqsT6Ja9jeE8hrKRzwqfBEomKsu9ekwepIBZVeabtawQ7P0K-5oDHaOf1C-PSvnaYRXjgJWgnOlOUfTA2OLBsaHwuuYRH9XK228LdgV82DzvxY3_PbmGkXJxLbwgCQMXTVE5A98Y7jE01pktZbKjBYUjVEQIK2rL-51klhLKZ0WKt2RkX8BLTGu0G4C5YqbAPZUHt3bOByyqYzFg4qJqIOq-wo2XD47OnJbYdF5DTgdmE6YRoYhU6Id1-XPUl3H48Ds2U6OYjLDZJKBATi_k01Cs56X-SQfTX3aChme2HLsJYxwdrs4XeUHQ'
-        PUBLIC_KEY_CA = 'MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAIMTEFLtDPRRl9oJw8li/MnajhlrTyQN6b8N34g9zwYPvfEutL0ClPFxaZJp89KhxEBLdBoJb/5Wo+ZhMdDZI58CAwEAAQ=='
+        params = self.env['ir.config_parameter'].sudo()
+        TOKEN_ID = params.get_param('investor_profile_management.ekyc_token_id', '')
+        TOKEN_KEY = params.get_param('investor_profile_management.ekyc_token_key', '')
+        ACCESS_TOKEN = params.get_param('investor_profile_management.ekyc_access_token', '')
+        PUBLIC_KEY_CA = params.get_param('investor_profile_management.ekyc_public_key_ca', '')
+        
+        if not TOKEN_ID or not TOKEN_KEY:
+            raise UserError(_('Cấu hình mặc định chưa được thiết lập trong System Parameters (ir.config_parameter).'))
         
         expiration_dt = fields.Datetime.now() + timedelta(hours=8)
         
@@ -166,15 +170,7 @@ class EKYCApiConfig(models.Model):
             'token_expiration': expiration_dt,
         })
         
-        # Also update ir.config_parameter
-        params = self.env['ir.config_parameter'].sudo()
-        params.set_param('investor_profile_management.ekyc_token_id', TOKEN_ID)
-        params.set_param('investor_profile_management.ekyc_token_key', TOKEN_KEY)
-        params.set_param('investor_profile_management.ekyc_access_token', ACCESS_TOKEN)
-        params.set_param('investor_profile_management.ekyc_public_key_ca', PUBLIC_KEY_CA)
-        params.set_param('investor_profile_management.ekyc_token_expiration', fields.Datetime.to_string(expiration_dt))
-        
-        message = _('Đã cập nhật tokens từ cấu hình mặc định. Access token hết hạn vào: %s') % expiration_dt
+        message = _('Đã cập nhật tokens từ cấu hình System Parameters. Access token hết hạn vào: %s') % expiration_dt
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',

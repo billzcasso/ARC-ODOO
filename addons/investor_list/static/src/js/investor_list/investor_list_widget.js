@@ -450,10 +450,11 @@ export class InvestorListWidget extends Component {
     // Create toast notification
     const toast = document.createElement('div');
     toast.className = 'bo-toast bo-toast--info';
-    toast.innerHTML = `
+    toast.textContent = '';
+    toast.insertAdjacentHTML('beforeend', `
       <i class="fas fa-check-circle"></i>
       <span>${message}</span>
-    `;
+    `);
     toast.style.cssText = `
       position: fixed;
       bottom: 20px;

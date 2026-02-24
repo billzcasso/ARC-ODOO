@@ -16,7 +16,7 @@ function mountHolidayWidget() {
         const widgetContainer = document.getElementById('holidayWidget');
         if (widgetContainer) {
             try {
-                widgetContainer.innerHTML = '';
+                widgetContainer.textContent = '';
                 const app = new owl.App(window.HolidayWidget);
                 app.mount(widgetContainer);
                 return;

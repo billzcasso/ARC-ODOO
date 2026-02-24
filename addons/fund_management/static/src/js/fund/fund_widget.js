@@ -424,7 +424,7 @@ export class FundWidget extends Component {
                     // Subscribe to stock_data_live channel (Odoo 18 bus)
                     this.bus.addChannel('stock_data_live');
                     this.bus.start();
-                    
+
                     this.bus.addEventListener('notification', ({ detail }) => {
                         const notifs = detail || [];
                         // Check for stock_data/price_update notification
@@ -674,7 +674,7 @@ export class FundWidget extends Component {
                 const updated = data.find(f => f.id === this.state.selectedFund.id);
                 if (updated) {
                     const prev = this.state.selectedFund;
-                    
+
                     // --- DETECT CHANGES FOR OHLC FLASH ---
                     const pCurrent = Number(prev.current_nav || 0);
                     const cCurrent = Number(updated.current_nav || 0);
@@ -1309,13 +1309,13 @@ export class FundWidget extends Component {
                         if (!ohlcToolbar) return;
 
                         if (!param.time || !param.seriesData) {
-                            ohlcToolbar.innerHTML = '';
+                            ohlcToolbar.textContent = '';
                             return;
                         }
 
                         const candleData = param.seriesData.get(this.lwCandle);
                         if (!candleData) {
-                            ohlcToolbar.innerHTML = '';
+                            ohlcToolbar.textContent = '';
                             return;
                         }
 
@@ -1348,18 +1348,40 @@ export class FundWidget extends Component {
                                 timeStr = '';
                             }
 
-                            ohlcToolbar.innerHTML = `
-                                <div class="d-flex align-items-center gap-3">
-                                    <span class="text-muted" style="min-width: 100px;">${dateStr} ${timeStr}</span>
-                                    <span>O: <span class="fw-bold" style="color: #60a5fa;">${(ohlcData.o || 0).toLocaleString('vi-VN')}</span></span>
-                                    <span>H: <span class="fw-bold" style="color: #22c55e;">${(ohlcData.h || 0).toLocaleString('vi-VN')}</span></span>
-                                    <span>L: <span class="fw-bold" style="color: #ef4444;">${(ohlcData.l || 0).toLocaleString('vi-VN')}</span></span>
-                                    <span>C: <span class="fw-bold" style="color: ${ohlcData.c >= ohlcData.o ? '#22c55e' : '#ef4444'};">${(ohlcData.c || 0).toLocaleString('vi-VN')}</span></span>
-                                    ${ohlcData.v ? `<span>V: <span class="fw-bold text-muted">${ohlcData.v.toLocaleString('vi-VN')}</span></span>` : ''}
-                                </div>
-                            `;
-                        } else {
-                            ohlcToolbar.innerHTML = '';
+                            ohlcToolbar.textContent = '';
+
+                            const containerDiv = document.createElement('div');
+                            containerDiv.className = 'd-flex align-items-center gap-3';
+
+                            const dateSpan = document.createElement('span');
+                            dateSpan.className = 'text-muted';
+                            dateSpan.style.minWidth = '100px';
+                            dateSpan.textContent = `${dateStr} ${timeStr}`;
+                            containerDiv.appendChild(dateSpan);
+
+                            const createSpan = (label, val, color) => {
+                                const span = document.createElement('span');
+                                span.textContent = `${label}: `;
+                                const valSpan = document.createElement('span');
+                                valSpan.className = 'fw-bold';
+                                valSpan.style.color = color;
+                                valSpan.textContent = val.toLocaleString('vi-VN');
+                                span.appendChild(valSpan);
+                                return span;
+                            };
+
+                            containerDiv.appendChild(createSpan('O', ohlcData.o || 0, '#60a5fa'));
+                            containerDiv.appendChild(createSpan('H', ohlcData.h || 0, '#22c55e'));
+                            containerDiv.appendChild(createSpan('L', ohlcData.l || 0, '#ef4444'));
+                            containerDiv.appendChild(createSpan('C', ohlcData.c || 0, ohlcData.c >= ohlcData.o ? '#22c55e' : '#ef4444'));
+
+                            if (ohlcData.v) {
+                                containerDiv.appendChild(createSpan('V', ohlcData.v, 'inherit')); // text-muted applies to parent 
+                                containerDiv.lastChild.lastChild.className = 'fw-bold text-muted';
+                                containerDiv.lastChild.lastChild.style.color = '';
+                            }
+
+                            ohlcToolbar.appendChild(containerDiv);
                         }
                     });
                 }

@@ -201,14 +201,25 @@ class SSIApiConfig(models.Model):
         col1 = self._fields['priority_securities_ids'].column1
         col2 = self._fields['priority_securities_ids'].column2
         
+        from psycopg2 import sql
+        
+        query = sql.SQL("""
+            INSERT INTO {} ({}, {})
+            SELECT %s, %s
+            WHERE NOT EXISTS (
+                SELECT 1 FROM {} WHERE {} = %s AND {} = %s
+            )
+        """).format(
+            sql.Identifier(table),
+            sql.Identifier(col1),
+            sql.Identifier(col2),
+            sql.Identifier(table),
+            sql.Identifier(col1),
+            sql.Identifier(col2)
+        )
+        
         for sid in security_ids:
-            self.env.cr.execute(f"""
-                INSERT INTO {table} ({col1}, {col2})
-                SELECT %s, %s
-                WHERE NOT EXISTS (
-                    SELECT 1 FROM {table} WHERE {col1} = %s AND {col2} = %s
-                )
-            """, (self.id, sid, self.id, sid))
+            self.env.cr.execute(query, (self.id, sid, self.id, sid))
         
         # Robust Cache Invalidation
         # We need to ensure that when we access 'priority_securities_ids' next, it hits the DB.

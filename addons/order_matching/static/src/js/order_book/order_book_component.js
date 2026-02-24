@@ -1279,7 +1279,7 @@ export class OrderBookComponent extends Component {
         // Tạo tooltip element
         const tooltip = document.createElement('div');
         tooltip.className = 'parent-order-tooltip';
-        tooltip.innerHTML = `
+        tooltip.insertAdjacentHTML('beforeend', `
             <div class="tooltip-header">Lệnh gốc (ID: ${parentInfo.id})</div>
             <div class="tooltip-content">
                 <div><strong>Giá:</strong> ${this.formatPrice(parentInfo.price)}</div>
@@ -1289,7 +1289,7 @@ export class OrderBookComponent extends Component {
                 <div><strong>Thành tiền:</strong> ${this.formatAmount(parentInfo.amount)}</div>
                 <div><strong>Thời gian:</strong> ${this.formatDateTime(parentInfo.created_at)}</div>
             </div>
-        `;
+        `);
 
         document.body.appendChild(tooltip);
 
@@ -1359,7 +1359,8 @@ export class OrderBookComponent extends Component {
             document.body.appendChild(tooltip);
         }
 
-        tooltip.innerHTML = tooltipContent;
+        tooltip.textContent = '';
+        tooltip.insertAdjacentHTML('beforeend', tooltipContent);
 
         // Tính vị trí tooltip
         const rect = icon.getBoundingClientRect();

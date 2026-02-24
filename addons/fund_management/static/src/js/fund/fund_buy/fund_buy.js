@@ -351,7 +351,7 @@ function generateOrderToken() {
   const token = crypto.randomUUID ? crypto.randomUUID() :
     `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   sessionStorage.setItem('order_token', token);
-  console.log('[Session] Generated order_token:', token);
+  console.log(`[Session] Generated order_token: ${token}`);
   return token;
 }
 
@@ -465,7 +465,11 @@ function initNormalOrderContent() {
         })
         .catch(error => {
           console.error('[NormalOrder] Failed to mount OWL component:', error);
-          container.innerHTML = '<div class="alert alert-danger">Lỗi tải form đặt lệnh: ' + error.message + '</div>';
+          container.textContent = '';
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'alert alert-danger';
+          errorDiv.textContent = 'Lỗi tải form đặt lệnh: ' + error.message;
+          container.appendChild(errorDiv);
           delete container.dataset.mounting;
         });
     } else {
@@ -491,82 +495,84 @@ function _unused_initNormalOrderContentLegacy() {
   const fundId = fundSelect?.options[fundSelect.selectedIndex]?.dataset?.id;
   const navPrice = window.currentNavPrice || parseFloat(document.getElementById('current-nav')?.textContent?.replace(/[^0-9]/g, '')) || 10000;
 
-  // Render with proper wrapper classes matching SCSS
-  container.innerHTML = `
-    <div class="normal-order-form-container">
-      <div class="normal-order-form">
-        <div class="purchasing-power-card">
-          <div class="pp-header">
-            <i class="fas fa-wallet"></i>
-            <span class="pp-label">Sức mua</span>
+  container.textContent = '';
+  const wrapperDiv = document.createElement('div');
+  wrapperDiv.className = 'normal-order-form-container';
+  wrapperDiv.textContent = '';
+  wrapperDiv.insertAdjacentHTML('beforeend', `
+    <div class="normal-order-form">
+      <div class="purchasing-power-card">
+        <div class="pp-header">
+          <i class="fas fa-wallet"></i>
+          <span class="pp-label">Sức mua</span>
+        </div>
+        <div class="pp-body">
+          <div class="pp-amount" id="normal-pp-amount">0 VNĐ</div>
+          <div class="pp-units">
+            <span class="pp-buy" title="Số lượng có thể mua">
+              <i class="fas fa-arrow-up text-success"></i>
+              <span id="normal-max-buy">0</span> CCQ
+            </span>
           </div>
-          <div class="pp-body">
-            <div class="pp-amount" id="normal-pp-amount">0 VNĐ</div>
-            <div class="pp-units">
-              <span class="pp-buy" title="Số lượng có thể mua">
-                <i class="fas fa-arrow-up text-success"></i>
-                <span id="normal-max-buy">0</span> CCQ
-              </span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="form-group order-type-group">
-          <label>Loại lệnh</label>
-          <div class="order-type-options-grid">
-            <button type="button" class="order-type-option active" data-value="MTL">
-              <span class="ot-code">MTL</span>
-              <span class="ot-desc">Lệnh thị trường</span>
-            </button>
-            <button type="button" class="order-type-option" data-value="LO">
-              <span class="ot-code">LO</span>
-              <span class="ot-desc">Lệnh giới hạn</span>
-            </button>
-            <button type="button" class="order-type-option" data-value="ATO">
-              <span class="ot-code">ATO</span>
-              <span class="ot-desc">Lệnh mở cửa</span>
-            </button>
-            <button type="button" class="order-type-option" data-value="ATC">
-              <span class="ot-code">ATC</span>
-              <span class="ot-desc">Lệnh đóng cửa</span>
-            </button>
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label>Số tiền đầu tư</label>
-          <div class="input-group">
-            <input type="text" class="form-control investment-amount" id="normal-investment-amount" placeholder="Nhập số tiền..."/>
-            <span class="input-group-text">VNĐ</span>
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label>Số lượng CCQ (Lô 100)</label>
-          <input type="text" class="form-control ccq-quantity" id="normal-share-quantity" readonly placeholder="0"/>
-          <div class="form-text">Số lượng theo lô 100 CCQ</div>
-        </div>
-        
-        <div class="estimated-total-row">
-          <span class="label">Giá trị ước tính:</span>
-          <span class="value" id="normal-estimated-total">0 VNĐ</span>
-        </div>
-        
-        <button type="button" class="btn btn-primary btn-submit-normal" id="normal-submit-btn" disabled>
-          Tiếp tục <i class="fas fa-arrow-right ms-2"></i>
-        </button>
-        
-        <div class="normal-order-info-box">
-          <h5><i class="fas fa-info-circle"></i> Lưu ý</h5>
-          <ul>
-            <li>Lệnh thường sẽ được gửi trực tiếp lên sàn</li>
-            <li>Không cần ký hợp đồng cam kết mua lại</li>
-            <li>Khớp lệnh theo giá thị trường</li>
-          </ul>
         </div>
       </div>
+      
+      <div class="form-group order-type-group">
+        <label>Loại lệnh</label>
+        <div class="order-type-options-grid">
+          <button type="button" class="order-type-option active" data-value="MTL">
+            <span class="ot-code">MTL</span>
+            <span class="ot-desc">Lệnh thị trường</span>
+          </button>
+          <button type="button" class="order-type-option" data-value="LO">
+            <span class="ot-code">LO</span>
+            <span class="ot-desc">Lệnh giới hạn</span>
+          </button>
+          <button type="button" class="order-type-option" data-value="ATO">
+            <span class="ot-code">ATO</span>
+            <span class="ot-desc">Lệnh mở cửa</span>
+          </button>
+          <button type="button" class="order-type-option" data-value="ATC">
+            <span class="ot-code">ATC</span>
+            <span class="ot-desc">Lệnh đóng cửa</span>
+          </button>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Số tiền đầu tư</label>
+        <div class="input-group">
+          <input type="text" class="form-control investment-amount" id="normal-investment-amount" placeholder="Nhập số tiền..."/>
+          <span class="input-group-text">VNĐ</span>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Số lượng CCQ (Lô 100)</label>
+        <input type="text" class="form-control ccq-quantity" id="normal-share-quantity" readonly placeholder="0"/>
+        <div class="form-text">Số lượng theo lô 100 CCQ</div>
+      </div>
+      
+      <div class="estimated-total-row">
+        <span class="label">Giá trị ước tính:</span>
+        <span class="value" id="normal-estimated-total">0 VNĐ</span>
+      </div>
+      
+      <button type="button" class="btn btn-primary btn-submit-normal" id="normal-submit-btn" disabled>
+        Tiếp tục <i class="fas fa-arrow-right ms-2"></i>
+      </button>
+      
+      <div class="normal-order-info-box">
+        <h5><i class="fas fa-info-circle"></i> Lưu ý</h5>
+        <ul>
+          <li>Lệnh thường sẽ được gửi trực tiếp lên sàn</li>
+          <li>Không cần ký hợp đồng cam kết mua lại</li>
+          <li>Khớp lệnh theo giá thị trường</li>
+        </ul>
+      </div>
     </div>
-  `;
+  `);
+  container.appendChild(wrapperDiv);
 
   container.dataset.initialized = 'true';
 
@@ -647,7 +653,11 @@ function updateOrderTypeHint() {
   };
 
   if (hintEl) {
-    hintEl.innerHTML = `<i class="fas fa-info-circle"></i> ${hints[orderType] || ''}`;
+    hintEl.textContent = '';
+    const icon = document.createElement('i');
+    icon.className = 'fas fa-info-circle';
+    hintEl.appendChild(icon);
+    hintEl.appendChild(document.createTextNode(' ' + (hints[orderType] || '')));
   }
 }
 
@@ -687,7 +697,11 @@ async function submitNormalOrder() {
   const submitBtn = document.getElementById('normal-submit-btn');
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+    submitBtn.textContent = '';
+    const icon = document.createElement('i');
+    icon.className = 'fas fa-spinner fa-spin';
+    submitBtn.appendChild(icon);
+    submitBtn.appendChild(document.createTextNode(' Đang xử lý...'));
   }
 
   try {
@@ -743,7 +757,11 @@ async function submitNormalOrder() {
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Đặt lệnh';
+      submitBtn.textContent = '';
+      const icon = document.createElement('i');
+      icon.className = 'fas fa-paper-plane';
+      submitBtn.appendChild(icon);
+      submitBtn.appendChild(document.createTextNode(' Đặt lệnh'));
     }
   }
 }
@@ -793,7 +811,13 @@ function populateTermSelect(rates) {
   if (!termSelect) {
     return;
   }
-  termSelect.innerHTML = '<option value="" selected="selected" disabled="disabled">-- Chọn kỳ hạn --</option>';
+  termSelect.textContent = '';
+  const initOption = document.createElement('option');
+  initOption.value = '';
+  initOption.selected = true;
+  initOption.disabled = true;
+  initOption.textContent = '-- Chọn kỳ hạn --';
+  termSelect.appendChild(initOption);
 
   rates.forEach(rate => {
     const option = document.createElement('option');
@@ -816,21 +840,31 @@ function showFallbackTermSelect() {
   if (!termSelect) {
     return;
   }
-  termSelect.innerHTML = `
-    <option value="" selected="selected" disabled="disabled">-- Chọn kỳ hạn --</option>
-    <option value="1" data-rate="4.80">1 tháng (4.80%)</option>
-    <option value="2" data-rate="5.80">2 tháng (5.80%)</option>
-    <option value="3" data-rate="6.20">3 tháng (6.20%)</option>
-    <option value="4" data-rate="6.50">4 tháng (6.50%)</option>
-    <option value="5" data-rate="7.00">5 tháng (7.00%)</option>
-    <option value="6" data-rate="7.70">6 tháng (7.70%)</option>
-    <option value="7" data-rate="8.00">7 tháng (8.00%)</option>
-    <option value="8" data-rate="8.50">8 tháng (8.50%)</option>
-    <option value="9" data-rate="8.60">9 tháng (8.60%)</option>
-    <option value="10" data-rate="8.70">10 tháng (8.70%)</option>
-    <option value="11" data-rate="8.90">11 tháng (8.90%)</option>
-    <option value="12" data-rate="9.10">12 tháng (9.10%)</option>
-  `;
+  termSelect.textContent = '';
+  const options = [
+    { value: '', text: '-- Chọn kỳ hạn --', disabled: true, selected: true },
+    { value: '1', rate: '4.80', text: '1 tháng (4.80%)' },
+    { value: '2', rate: '5.80', text: '2 tháng (5.80%)' },
+    { value: '3', rate: '6.20', text: '3 tháng (6.20%)' },
+    { value: '4', rate: '6.50', text: '4 tháng (6.50%)' },
+    { value: '5', rate: '7.00', text: '5 tháng (7.00%)' },
+    { value: '6', rate: '7.70', text: '6 tháng (7.70%)' },
+    { value: '7', rate: '8.00', text: '7 tháng (8.00%)' },
+    { value: '8', rate: '8.50', text: '8 tháng (8.50%)' },
+    { value: '9', rate: '8.60', text: '9 tháng (8.60%)' },
+    { value: '10', rate: '8.70', text: '10 tháng (8.70%)' },
+    { value: '11', rate: '8.90', text: '11 tháng (8.90%)' },
+    { value: '12', rate: '9.10', text: '12 tháng (9.10%)' }
+  ];
+  options.forEach(opt => {
+    const option = document.createElement('option');
+    option.value = opt.value;
+    option.textContent = opt.text;
+    if (opt.rate) option.dataset.rate = opt.rate;
+    if (opt.disabled) option.disabled = true;
+    if (opt.selected) option.selected = true;
+    termSelect.appendChild(option);
+  });
 
   // Trigger tính toán lại sau khi load fallback
   const amountInput = document.getElementById('amount-input');
@@ -879,7 +913,12 @@ function initFundSelect() {
   fetch('/data_fund')
     .then(res => res.json())
     .then(fundData => {
-      fundSelect.innerHTML = '<option disabled selected>-- Chọn quỹ đầu tư --</option>';
+      fundSelect.textContent = '';
+      const initOption = document.createElement('option');
+      initOption.disabled = true;
+      initOption.selected = true;
+      initOption.textContent = '-- Chọn quỹ đầu tư --';
+      fundSelect.appendChild(initOption);
 
       fundData.forEach(fund => {
         const option = document.createElement('option');
@@ -918,7 +957,7 @@ function initFundSelect() {
         let activeIdx = -1; // index đang chọn bằng phím
 
         const renderPanel = (items) => {
-          panel.innerHTML = '';
+          panel.textContent = '';
           activeIdx = -1;
           items.forEach((f, idx) => {
             const row = document.createElement('div');

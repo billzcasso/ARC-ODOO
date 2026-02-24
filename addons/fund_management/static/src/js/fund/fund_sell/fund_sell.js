@@ -158,7 +158,8 @@ async function initNormalSellForm() {
 }
 
 function populateFundSelect(selectEl, funds) {
-  selectEl.innerHTML = '<option value="" disabled selected>-- Chọn quỹ để bán --</option>';
+  selectEl.textContent = '';
+  selectEl.insertAdjacentHTML('beforeend', '<option value="" disabled selected>-- Chọn quỹ để bán --</option>');
 
   funds.forEach(fund => {
     const option = document.createElement('option');
@@ -199,15 +200,17 @@ function setupFundSearch(searchInput, selectEl, funds) {
     );
 
     if (matches.length === 0) {
-      dropdown.innerHTML = '<div class="p-2 text-muted">Không tìm thấy quỹ</div>';
+      dropdown.textContent = '';
+      dropdown.insertAdjacentHTML('beforeend', '<div class="p-2 text-muted">Không tìm thấy quỹ</div>');
     } else {
-      dropdown.innerHTML = matches.map(f => `
+      dropdown.textContent = '';
+      dropdown.insertAdjacentHTML('beforeend', matches.map(f => `
         <div class="p-2 border-bottom hover-bg-light" style="cursor: pointer;" data-id="${f.id}">
           <strong>${f.name || f.fund_name}</strong>
           <span class="text-muted">(${f.ticker || f.code})</span>
           <span class="float-end text-success">${(f.holdings || f.units || 0).toLocaleString('vi-VN')} CCQ</span>
         </div>
-      `).join('');
+      `).join(''));
 
       dropdown.querySelectorAll('[data-id]').forEach(item => {
         item.addEventListener('click', () => {
@@ -315,7 +318,8 @@ function calculateNormalSellValue() {
   }
   const hintEl = document.getElementById('available-balance-hint');
   if (hintEl) {
-    hintEl.innerHTML = `Khả dụng: <strong>${maxUnits.toLocaleString('vi-VN')}</strong> CCQ`;
+    hintEl.textContent = '';
+    hintEl.insertAdjacentHTML('beforeend', `Khả dụng: <strong>${maxUnits.toLocaleString('vi-VN')}</strong> CCQ`);
     if (quantity > maxUnits) {
       hintEl.classList.add('text-danger');
       hintEl.classList.remove('text-muted');
@@ -434,7 +438,8 @@ function applyOrderTypeAvailability(buttons) {
       if (!reasonEl && availability.reason) {
         reasonEl = document.createElement('span');
         reasonEl.className = 'ot-reason';
-        reasonEl.innerHTML = `<i class="fas fa-lock"></i> ${availability.reason}`;
+        reasonEl.textContent = '';
+        reasonEl.insertAdjacentHTML('beforeend', `<i class="fas fa-lock"></i> ${availability.reason}`);
         btn.appendChild(reasonEl);
       }
     } else {
@@ -589,7 +594,8 @@ async function initContractSellForm() {
     }
 
     // Populate contract select
-    contractSelect.innerHTML = '<option value="" disabled selected>-- Chọn hợp đồng --</option>';
+    contractSelect.textContent = '';
+    contractSelect.insertAdjacentHTML('beforeend', '<option value="" disabled selected>-- Chọn hợp đồng --</option>');
 
     if (contractSellData.length === 0) {
       // Optional: Show "No contracts found" or similar
@@ -992,7 +998,8 @@ async function initSellConfirmPage() {
   if (finalBtn) {
     finalBtn.addEventListener('click', async () => {
       finalBtn.disabled = true;
-      finalBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+      finalBtn.textContent = '';
+      finalBtn.insertAdjacentHTML('beforeend', '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...');
 
       // PREPARE PARAMS
       const params = {
@@ -1011,7 +1018,8 @@ async function initSellConfirmPage() {
         () => {
           // Cleanup / Error
           finalBtn.disabled = false;
-          finalBtn.innerHTML = 'Xác nhận bán <i class="fas fa-check ms-2"></i>';
+          finalBtn.textContent = '';
+          finalBtn.insertAdjacentHTML('beforeend', 'Xác nhận bán <i class="fas fa-check ms-2"></i>');
         }
       );
     });
