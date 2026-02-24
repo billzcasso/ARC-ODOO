@@ -5,10 +5,14 @@ on:
     branches: [main, develop]
     paths:
       - "addons/**"
+      - "tests/**"
+      - "pyproject.toml"
   pull_request:
     branches: [main, develop]
     paths:
       - "addons/**"
+      - "tests/**"
+      - "pyproject.toml"
 
 jobs:
   tier1-tests:
@@ -31,31 +35,19 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest pytest-cov pytz
 
-      - name: Run Tier 1 tests with coverage
+      - name: Run Tier 1 tests
         run: |
           python -m pytest tests/ \
             --ignore=tests/odoo_tests \
             -v --tb=short \
-            --cov=addons \
-            --cov-report=term-missing \
-            --cov-report=xml:coverage.xml \
             --junitxml=test-results.xml
-
-      - name: Upload coverage to Codecov
-        if: matrix.python-version == '3.11'
-        uses: codecov/codecov-action@v4
-        with:
-          file: coverage.xml
-          fail_ci_if_error: false
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results-py${{ matrix.python-version }}
-          path: |
-            test-results.xml
-            coverage.xml
+          path: test-results.xml
 
   manifest-audit:
     name: Manifest & Structure Audit
