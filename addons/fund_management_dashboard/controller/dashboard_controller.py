@@ -133,27 +133,28 @@ class FundManagementDashboardController(http.Controller):
             }
 
     def _get_dashboard_data(self):
-        """Lấy tất cả dữ liệu cho dashboard - CHỈ LẤY DỮ LIỆU HÔM NAY"""
+        """Lấy tất cả dữ liệu cho dashboard - LẤY DỮ LIỆU TÍCH LŨY VÀ GẦN ĐÂY"""
         today = fields.Date.today()
-        today_start = fields.Datetime.to_datetime(today)
-        today_end = today_start + timedelta(days=1) - timedelta(seconds=1)
+        # Mở rộng khoảng thời gian mặc định để dashboard không bị trống vào đầu ngày mới
+        # Sử dụng 30 ngày gần đây cho các thống kê biến động
+        date_start = fields.Datetime.to_datetime(today - timedelta(days=30))
+        date_end = fields.Datetime.to_datetime(today) + timedelta(days=1) - timedelta(seconds=1)
         
-        # Log để debug - đảm bảo chỉ lấy data hôm nay
-        _logger.info(f"Dashboard data filter: today={today}, start={today_start}, end={today_end}")
+        _logger.info(f"Dashboard data filter broadened: start={date_start}, end={date_end}")
         
         return {
-            'summary': self._get_summary_stats(today_start, today_end),
-            'transactions': self._get_today_transactions(today_start, today_end),
+            'summary': self._get_summary_stats(date_start, date_end),
+            'transactions': self._get_recent_transactions(limit=100),
             'accounts': self._get_accounts_stats(),
-            'fund_movements': self._get_fund_movements_today(today_start, today_end),
-            'top_transactions': self._get_top_transactions_today(today_start, today_end),
-            'nav_opening_data': self._get_nav_opening_data(today),
-            'transaction_trend': self._get_transaction_trend_by_hour(today_start, today_end),
+            'fund_movements': self._get_fund_movements_recent(date_start, date_end),
+            'top_transactions': self._get_top_transactions_recent(date_start, date_end),
+            'nav_opening_data': self._get_nav_latest_data(),
+            'transaction_trend': self._get_transaction_trend_recent(days=7),
             'product_stats': self._get_product_status_stats(),
         }
 
     def _get_summary_stats(self, date_start, date_end):
-        """Lấy thống kê tổng quan - CHỈ LẤY DỮ LIỆU HÔM NAY"""
+        """Lấy thống kê tổng quan - LẤY TRONG KHOẢNG THỜI GIAN GẦN ĐÂY"""
         # Tổng số tài khoản (bao gồm cả chưa xác thực) - Tổng số không phụ thuộc ngày
         total_accounts = request.env['investor.list'].search_count([])
         
@@ -206,13 +207,11 @@ class FundManagementDashboardController(http.Controller):
             'today_sell_amount': sum(today_sell.mapped('amount')),
         }
 
-    def _get_today_transactions(self, date_start, date_end):
-        """Lấy danh sách giao dịch hôm nay"""
+    def _get_recent_transactions(self, limit=50):
+        """Lấy danh sách giao dịch gần đây nhất"""
         transactions = request.env['portfolio.transaction'].search([
-            ('create_date', '>=', date_start),
-            ('create_date', '<=', date_end),
             ('parent_order_id', '=', False)  # Chỉ lấy lệnh gốc
-        ], order='create_date desc', limit=50)
+        ], order='create_date desc', limit=limit)
         
         result = []
         for tx in transactions:
@@ -257,9 +256,9 @@ class FundManagementDashboardController(http.Controller):
             'by_status': status_counts,
         }
 
-    def _get_fund_movements_today(self, date_start, date_end):
-        """Lấy biến động mua/bán của từng CCQ trong ngày - CHỈ LẤY GIAO DỊCH HÔM NAY"""
-        # Lấy tất cả giao dịch hôm nay - Đảm bảo chỉ lấy giao dịch tạo trong ngày
+    def _get_fund_movements_recent(self, date_start, date_end):
+        """Lấy biến động mua/bán của từng CCQ trong khoảng thời gian gần đây"""
+        # Lấy tất cả giao dịch trong khoảng thời gian
         transactions = request.env['portfolio.transaction'].search([
             ('create_date', '>=', date_start),
             ('create_date', '<=', date_end),
@@ -332,8 +331,8 @@ class FundManagementDashboardController(http.Controller):
                 'total': 0,
             }
 
-    def _get_top_transactions_today(self, date_start, date_end, limit=10):
-        """Lấy top giao dịch lớn nhất hôm nay - CHỈ LẤY GIAO DỊCH TẠO HÔM NAY"""
+    def _get_top_transactions_recent(self, date_start, date_end, limit=10):
+        """Lấy top giao dịch lớn nhất trong khoảng thời gian gần đây"""
         transactions = request.env['portfolio.transaction'].search([
             ('create_date', '>=', date_start),
             ('create_date', '<=', date_end),
@@ -357,12 +356,19 @@ class FundManagementDashboardController(http.Controller):
         
         return result
 
-    def _get_nav_opening_data(self, date):
-        """Lấy dữ liệu NAV đầu ngày: tổng CCQ và giá CCQ từng quỹ - CHỈ LẤY DỮ LIỆU HÔM NAY"""
+    def _get_nav_latest_data(self):
+        """Lấy dữ liệu NAV mới nhất (tổng CCQ và giá CCQ từng quỹ)"""
         try:
-            # Lấy tất cả inventory đầu ngày - CHỈ LẤY NGÀY HÔM NAY
+            # Lấy ngày có dữ liệu gần nhất
+            latest_inv = request.env['nav.daily.inventory'].search([], order='inventory_date desc', limit=1)
+            if not latest_inv:
+                return {'total_opening_ccq': 0.0, 'funds': []}
+            
+            target_date = latest_inv.inventory_date
+            
+            # Lấy tất cả inventory của ngày đó
             inventories = request.env['nav.daily.inventory'].search([
-                ('inventory_date', '=', date)
+                ('inventory_date', '=', target_date)
             ])
             
             total_opening_ccq = 0.0
@@ -402,49 +408,43 @@ class FundManagementDashboardController(http.Controller):
                 'funds': [],
             }
 
-    def _get_transaction_trend_by_hour(self, date_start, date_end):
-        """Lấy thống kê số lệnh mua/bán theo giờ - LẤY TẤT CẢ KHÔNG LIMIT"""
+    def _get_transaction_trend_recent(self, days=7):
+        """Lấy thống kê số lệnh mua/bán theo ngày trong khoảng thời gian gần đây"""
         try:
-            # Lấy TẤT CẢ transactions trong ngày (không limit)
+            today = fields.Date.today()
+            date_start = fields.Datetime.to_datetime(today - timedelta(days=days))
+            
             transactions = request.env['portfolio.transaction'].search([
                 ('create_date', '>=', date_start),
-                ('create_date', '<=', date_end),
                 ('parent_order_id', '=', False)  # Chỉ lấy lệnh gốc
             ], order='create_date asc')
             
-            # Khởi tạo dữ liệu theo giờ - chỉ lưu các giờ có dữ liệu
-            hour_stats = {}
+            # Khởi tạo dữ liệu theo ngày
+            day_stats = {}
+            for i in range(days + 1):
+                d = today - timedelta(days=days-i)
+                day_stats[d] = {
+                    'buy_count': 0,
+                    'sell_count': 0,
+                    'buy_amount': 0.0,
+                    'sell_amount': 0.0
+                }
             
-            # Đếm theo giờ - không giới hạn giờ cố định
             for tx in transactions:
                 if not tx.create_date:
                     continue
                 
-                # Lấy giờ từ create_date
-                tx_hour = tx.create_date.hour
-                
-                # Khởi tạo giờ nếu chưa có
-                if tx_hour not in hour_stats:
-                    hour_stats[tx_hour] = {
-                        'buy_count': 0,
-                        'sell_count': 0,
-                        'buy_amount': 0.0,
-                        'sell_amount': 0.0
-                    }
-                
-                # Đếm theo loại giao dịch
-                tx_type = tx.transaction_type or ''
-                if tx_type == 'buy':
-                    hour_stats[tx_hour]['buy_count'] += 1
-                    hour_stats[tx_hour]['buy_amount'] += (tx.amount or 0.0)
-                elif tx_type == 'sell':
-                    hour_stats[tx_hour]['sell_count'] += 1
-                    hour_stats[tx_hour]['sell_amount'] += (tx.amount or 0.0)
+                tx_date = tx.create_date.date()
+                if tx_date in day_stats:
+                    tx_type = tx.transaction_type or ''
+                    if tx_type == 'buy':
+                        day_stats[tx_date]['buy_count'] += 1
+                        day_stats[tx_date]['buy_amount'] += (tx.amount or 0.0)
+                    elif tx_type == 'sell':
+                        day_stats[tx_date]['sell_count'] += 1
+                        day_stats[tx_date]['sell_amount'] += (tx.amount or 0.0)
             
-            # Sắp xếp các giờ theo thứ tự tăng dần
-            sorted_hours = sorted(hour_stats.keys())
-            
-            # Tạo mảng dữ liệu chỉ cho các giờ có dữ liệu
+            # Tạo mảng dữ liệu
             result = {
                 'labels': [],
                 'buy_data': [],
@@ -453,14 +453,12 @@ class FundManagementDashboardController(http.Controller):
                 'sell_amounts': []
             }
             
-            for h in sorted_hours:
-                result['labels'].append(f'{h}h')
-                result['buy_data'].append(hour_stats[h]['buy_count'])
-                result['sell_data'].append(hour_stats[h]['sell_count'])
-                result['buy_amounts'].append(hour_stats[h]['buy_amount'])
-                result['sell_amounts'].append(hour_stats[h]['sell_amount'])
-            
-            _logger.info(f"Transaction trend: Total transactions={len(transactions)}, Buy={sum(result['buy_data'])}, Sell={sum(result['sell_data'])}")
+            for d in sorted(day_stats.keys()):
+                result['labels'].append(d.strftime('%d/%m'))
+                result['buy_data'].append(day_stats[d]['buy_count'])
+                result['sell_data'].append(day_stats[d]['sell_count'])
+                result['buy_amounts'].append(day_stats[d]['buy_amount'])
+                result['sell_amounts'].append(day_stats[d]['sell_amount'])
             
             return result
         except Exception as e:

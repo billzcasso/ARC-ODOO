@@ -27,7 +27,6 @@ Key Features:
         'bus',
         'mail',
         'portal',
-        'portal',
         'web',
         'stock_data',
     ],

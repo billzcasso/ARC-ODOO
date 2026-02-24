@@ -1,0 +1,43 @@
+[project]
+name = "arc-odoo"
+version = "18.0.1.0.0"
+description = "ARC Fund Management System on Odoo 18"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--ignore=tests/odoo_tests",
+    "--tb=short",
+    "-q",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks integration tests requiring HTTP",
+    "odoo: marks tests requiring Odoo environment",
+]
+
+[tool.coverage.run]
+source = ["addons"]
+omit = [
+    "addons/tests/*",
+    "addons/*/static/*",
+    "addons/*/wizard*/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 10
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.",
+    "raise NotImplementedError",
+    "pass",
+    "except ImportError",
+]

@@ -47,14 +47,12 @@
                     </div>
                     
                     <!-- Dashboard Widget Container -->
-                    <div id="dashboard-widget" class="w-100" style="display: none;"></div>
+                    <div id="dashboard-widget" class="w-100" style="display: none;" t-att-data-dashboard-data="dashboard_data"></div>
                 </div>
             </div>
 
-            <!-- Pass data and helper methods (align with nav_transaction_page pattern) -->
+            <!-- Pass helper methods and handle UI state -->
             <script type="text/javascript">
-                window.dashboardData = <t t-out="dashboard_data"/>;
-                
                 window.showError = function(message) {
                     const errorContainer = document.getElementById('error-container');
                     const errorMessage = document.getElementById('error-message');

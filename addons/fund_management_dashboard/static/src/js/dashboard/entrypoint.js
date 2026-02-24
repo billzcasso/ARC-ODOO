@@ -106,6 +106,17 @@ function readDashboardData() {
             console.error('Unable to parse dashboard data', error);
         }
     }
+
+    // Đọc từ data attribute
+    const widgetNode = document.getElementById(DASHBOARD_ROOT_ID);
+    if (widgetNode && widgetNode.dataset.dashboardData) {
+        try {
+            return JSON.parse(widgetNode.dataset.dashboardData);
+        } catch (error) {
+            console.error('Unable to parse dashboard data from attribute', error);
+        }
+    }
+
     if (window.dashboardData) {
         return window.dashboardData;
     }

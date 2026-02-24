@@ -9,7 +9,7 @@ def configure_payos_credentials():
     """
     Cấu hình PayOS credentials vào ir.config_parameter
     """
-    # PayOS credentials (sử dụng biến môi trường hoặc nhập tay, KHÔNG hardcode)
+    # PayOS credentials
     import os
     CLIENT_ID = os.getenv('PAYOS_CLIENT_ID', 'placeholder_client_id')
     API_KEY = os.getenv('PAYOS_API_KEY', 'placeholder_api_key')
