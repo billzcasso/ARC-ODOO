@@ -13,7 +13,10 @@ import os
 import ast
 import pytest
 
-ADDONS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'addons')
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_local = os.path.join(_PROJECT_ROOT, 'addons')
+_docker = '/mnt/extra-addons'
+ADDONS_DIR = os.environ.get('ADDONS_DIR') or (_local if os.path.isdir(_local) else (_docker if os.path.isdir(_docker) else _local))
 
 EXPECTED_MODULES = [
     'ai_trading_assistant',

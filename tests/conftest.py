@@ -12,10 +12,22 @@ import types
 import importlib.util
 
 # ===========================================================================
-# 1. Add addons/ to sys.path
+# 1. Add addons/ to sys.path (supports local + Docker)
 # ===========================================================================
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ADDONS_DIR = os.path.join(PROJECT_ROOT, 'addons')
+ADDONS_DIR = os.environ.get('ADDONS_DIR')  # Allow override via env var
+
+if not ADDONS_DIR:
+    # Auto-detect: local → project_root/addons, Docker → /mnt/extra-addons
+    local_addons = os.path.join(PROJECT_ROOT, 'addons')
+    docker_addons = '/mnt/extra-addons'
+    if os.path.isdir(local_addons):
+        ADDONS_DIR = local_addons
+    elif os.path.isdir(docker_addons):
+        ADDONS_DIR = docker_addons
+    else:
+        ADDONS_DIR = local_addons  # fallback
+
 if ADDONS_DIR not in sys.path:
     sys.path.insert(0, ADDONS_DIR)
 
