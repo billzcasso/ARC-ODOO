@@ -397,7 +397,7 @@ function initOrderModeTabs() {
   const normalFormContainer = document.getElementById('normal-order-form-container');
 
   if (!tabNegotiated || !tabNormal) {
-    console.log('[OrderMode] Tabs not found, skipping...');
+    console.debug('[OrderMode] Tabs not found, skipping initialization');
     return;
   }
 
@@ -411,7 +411,7 @@ function initOrderModeTabs() {
     setOrderMode(savedMode);
   }
 
-  console.log('[OrderMode] Initialized, current mode:', currentOrderMode);
+  // console.log('[OrderMode] Initialized, current mode:', currentOrderMode);
 }
 
 function setOrderMode(mode) {

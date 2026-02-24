@@ -359,19 +359,23 @@
                     }
 
                     // REFACTOR: Step navigation event handlers
-                    prevBtn.addEventListener('click', function() {
-                        if (currentStep > 1) {
-                            currentStep--;
-                            updateStepDisplay();
-                        }
-                    });
+                    if (prevBtn) {
+                        prevBtn.addEventListener('click', function() {
+                            if (currentStep > 1) {
+                                currentStep--;
+                                updateStepDisplay();
+                            }
+                        });
+                    }
 
-                    nextBtn.addEventListener('click', function() {
-                        if (validateCurrentStep() && currentStep < totalSteps) {
-                            currentStep++;
-                            updateStepDisplay();
-                        }
-                    });
+                    if (nextBtn) {
+                        nextBtn.addEventListener('click', function() {
+                            if (validateCurrentStep() && currentStep < totalSteps) {
+                                currentStep++;
+                                updateStepDisplay();
+                            }
+                        });
+                    }
 
                     // Allow clicking on step nav items to jump to steps
                     stepNavItems.forEach((item, index) => {

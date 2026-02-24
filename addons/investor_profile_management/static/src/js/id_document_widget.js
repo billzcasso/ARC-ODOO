@@ -21,8 +21,12 @@ export class IDDocumentWidget extends Component {
         const frontInput = document.getElementById('front_image_input');
         const backInput = document.getElementById('back_image_input');
 
-        frontInput.addEventListener('change', (e) => this.handleImageSelect(e, 'front'));
-        backInput.addEventListener('change', (e) => this.handleImageSelect(e, 'back'));
+        if (frontInput) {
+            frontInput.addEventListener('change', (e) => this.handleImageSelect(e, 'front'));
+        }
+        if (backInput) {
+            backInput.addEventListener('change', (e) => this.handleImageSelect(e, 'back'));
+        }
     }
 
     handleImageSelect(event, type) {
@@ -64,20 +68,20 @@ export class IDDocumentWidget extends Component {
             });
 
             const result = await response.json();
-            
+
             if (result.error) {
                 throw new Error(result.error);
             }
 
             // Refresh the view to show updated images
             await this.env.model.load();
-            
+
             // Clear the form
             this.state.frontImage = null;
             this.state.backImage = null;
             this.state.frontPreview = null;
             this.state.backPreview = null;
-            
+
             // Show success message
             this.env.services.notification.add('Tải lên thành công', {
                 type: 'success',
@@ -149,4 +153,7 @@ style.textContent = `
 document.head.appendChild(style);
 
 // Register the component globally
-owl.mount(IDDocumentWidget, document.getElementById('id_document_widget_container'));
+const container = document.getElementById('id_document_widget_container');
+if (container) {
+    owl.mount(IDDocumentWidget, container);
+}

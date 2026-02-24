@@ -6,7 +6,7 @@ import { useService } from "@web/core/utils/hooks";
 
 export class AIChatbot extends Component {
     setup() {
-        console.error("ODOO AI DEBUG: AIChatbot Component is MOUNTING now.");
+        // console.error("ODOO AI DEBUG: AIChatbot Component is MOUNTING now.");
         this.orm = useService("orm");
         this.chatBodyRef = useRef("chatBody");
 

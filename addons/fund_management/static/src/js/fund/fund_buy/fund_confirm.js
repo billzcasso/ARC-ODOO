@@ -280,14 +280,14 @@ async function createBuyOrderFromConfirm() {
 // ===== Hàm: Hiển thị thông tin xác nhận từ sessionStorage =====
 function renderConfirmInfo() {
   // DEBUG: Log all session data available
-  console.log('[renderConfirmInfo] Session data:', {
+  /* console.log('[renderConfirmInfo] Session data:', {
     selectedFundName: sessionStorage.getItem('selectedFundName'),
     selectedAmount: sessionStorage.getItem('selectedAmount'),
     selectedUnits: sessionStorage.getItem('selectedUnits'),
     order_token: sessionStorage.getItem('order_token'),
     selected_order_type: sessionStorage.getItem('selected_order_type'),
     selected_term_months: sessionStorage.getItem('selected_term_months')
-  });
+  }); */
 
   const fundName = sessionStorage.getItem('selectedFundName') || 'Không rõ';
   const amount = sessionStorage.getItem('selectedAmount') || '0';

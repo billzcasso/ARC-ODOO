@@ -17,7 +17,7 @@ function showDashboardSpinner() {
     const loadingSpinner = document.getElementById('loading-spinner');
     const widgetContainer = document.getElementById(DASHBOARD_ROOT_ID);
     const errorContainer = document.getElementById('error-container');
-    
+
     if (loadingSpinner) {
         loadingSpinner.style.display = 'flex';
     }
@@ -37,7 +37,7 @@ function hideDashboardSpinner() {
     const loadingSpinner = document.getElementById('loading-spinner');
     const widgetContainer = document.getElementById(DASHBOARD_ROOT_ID);
     const errorContainer = document.getElementById('error-container');
-    
+
     if (loadingSpinner) {
         loadingSpinner.style.display = 'none';
     }
@@ -117,8 +117,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!hasDashboardContainer()) {
         return;
     }
-    console.log("DOM Content Loaded - Initializing Fund Management Dashboard Widget...");
-    
+    // console.log("DOM Content Loaded - Initializing Fund Management Dashboard Widget...");
+
     // Hiển thị spinner ban đầu
     showDashboardSpinner();
 
@@ -155,7 +155,7 @@ function init() {
     if (!hasDashboardContainer()) {
         return;
     }
-    console.log("Initializing Fund Management Dashboard Widget...");
+    // console.log("Initializing Fund Management Dashboard Widget...");
 
     // Hiển thị spinner
     showDashboardSpinner();
@@ -170,14 +170,14 @@ function init() {
     const dashboardData = readDashboardData();
     ensureChartJs()
         .then(() => {
-            console.log("Mounting widget...");
+            // console.log("Mounting widget...");
             mount(DashboardWidget, widgetContainer, {
                 dev: true,
                 props: {
                     initialData: dashboardData,
                 },
             });
-            console.log("Widget mounted successfully");
+            // console.log("Widget mounted successfully");
             hideDashboardSpinner();
         })
         .catch((error) => {

@@ -1,5 +1,5 @@
 // Personal Profile Widget Component
-console.log('Loading PersonalProfileWidget component...');
+// console.log('Loading PersonalProfileWidget component...');
 
 const { Component, xml, useState, onMounted } = owl;
 
@@ -679,7 +679,7 @@ class PersonalProfileWidget extends Component {
     `;
 
     setup() {
-        console.log("🎯 PersonalProfileWidget - setup called!");
+        // console.log("🎯 PersonalProfileWidget - setup called!");
 
         this.state = useState({
             loading: true,
@@ -800,7 +800,7 @@ class PersonalProfileWidget extends Component {
             const isEkycData = parsedData.name && parsedData.id_number && (parsedData.frontPreviewBase64 || parsedData.backPreviewBase64);
 
             if (isEkycData) {
-                console.log("🔄 Fresh eKYC data detected, applying OCR data to form");
+                // console.log("🔄 Fresh eKYC data detected, applying OCR data to form");
 
                 // Apply OCR data to form
                 this.state.formData.name = parsedData.name || '';
@@ -838,7 +838,7 @@ class PersonalProfileWidget extends Component {
 
                 // Show success message
 
-                console.log("✅ eKYC OCR data and CCCD images applied to form:", this.state.formData);
+                // console.log("✅ eKYC OCR data and CCCD images applied to form:", this.state.formData);
             } else {
                 // Regular session storage data (with preview images)
                 if (parsedData.nationality && typeof parsedData.nationality === 'number') {
@@ -853,7 +853,7 @@ class PersonalProfileWidget extends Component {
                 if (parsedData.backPreviewBase64) {
                     this.state.ekycFiles.backPreview = parsedData.backPreviewBase64;
                 }
-                console.log("✅ Form data loaded from sessionStorage:", this.state.formData);
+                // console.log("✅ Form data loaded from sessionStorage:", this.state.formData);
             }
         } else if (this.state.profile && Object.keys(this.state.profile).length > 0) {
             this.state.formData.name = this.state.profile.name || '';
@@ -868,7 +868,7 @@ class PersonalProfileWidget extends Component {
             this.state.formData.nationality = this.state.profile.nationality ? Number(this.state.profile.nationality) : '';
 
             // Load CCCD images từ database nếu có
-            console.log("🔍 Checking for CCCD images in profile:", this.state.profile);
+            // console.log("🔍 Checking for CCCD images in profile:", this.state.profile);
 
             if (this.state.profile.id_front && this.state.profile.id_front !== '') {
                 this.state.ekycFiles.frontPreview = this.state.profile.id_front;
@@ -890,9 +890,9 @@ class PersonalProfileWidget extends Component {
                 console.log("ℹ️ No back CCCD image found in database");
             }
 
-            console.log("✅ Form data initialized with existing profile data:", this.state.formData);
+            // console.log("✅ Form data initialized with existing profile data:", this.state.formData);
         } else {
-            console.log("ℹ️ No existing profile data found, using default values");
+            // console.log("ℹ️ No existing profile data found, using default values");
         }
     }
 
@@ -1476,8 +1476,8 @@ class PersonalProfileWidget extends Component {
             }
         }
 
-        console.log(`✅ Form updated with ${side} OCR data:`, this.state.formData);
-        console.log(`📝 Updated fields: ${updatedFields.join(', ')}`);
+        // console.log(`✅ Form updated with ${side} OCR data:`, this.state.formData);
+        // console.log(`📝 Updated fields: ${updatedFields.join(', ')}`);
 
         // Show detailed success message
         if (updatedFields.length > 0) {

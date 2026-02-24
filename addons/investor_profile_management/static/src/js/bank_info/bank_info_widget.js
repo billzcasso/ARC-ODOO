@@ -1,11 +1,11 @@
 // Bank Information Widget Component
-console.log('Loading BankInfoWidget component...');
+// console.log('Loading BankInfoWidget component...');
 
 const { Component, xml, useState, onMounted } = owl;
 
 class BankInfoWidget extends Component {
     static components = { InvestorSidebar: window.InvestorSidebar };
-    
+
     static template = xml`
         <div class="investor-page">
             <div class="investor-layout">
@@ -158,7 +158,7 @@ class BankInfoWidget extends Component {
     `;
 
     setup() {
-        console.log("🎯 BankInfoWidget - setup called!");
+        // console.log("🎯 BankInfoWidget - setup called!");
 
         this.state = useState({
             loading: true,
@@ -235,7 +235,7 @@ class BankInfoWidget extends Component {
             if (this.state.formData.monthly_income) {
                 this.state.formData.monthly_income = this.formatCurrencyValue(this.state.formData.monthly_income);
             }
-            console.log("✅ Form data loaded from sessionStorage:", this.state.formData);
+            // console.log("✅ Form data loaded from sessionStorage:", this.state.formData);
         } else if (this.state.profile && Object.keys(this.state.profile).length > 0) {
             this.state.formData.account_holder = this.state.profile.account_holder || '';
             this.state.formData.account_number = this.state.profile.account_number || '';
@@ -246,9 +246,7 @@ class BankInfoWidget extends Component {
             this.state.formData.monthly_income = this.formatCurrencyValue(this.state.profile.monthly_income) || '';
             this.state.formData.occupation = this.state.profile.occupation || '';
             this.state.formData.position = this.state.profile.position || '';
-            console.log("✅ Form data initialized with existing profile data:", this.state.formData);
-        } else {
-            console.log("ℹ️ No existing bank data found, using default values");
+            // console.log("ℹ️ No existing bank data found, using default values");
         }
     }
 
@@ -265,15 +263,15 @@ class BankInfoWidget extends Component {
             // Luôn lấy tên user từ profile
             const profileRes = await fetch('/data_personal_profile');
             if (profileRes.ok) {
-                 const profileData = await profileRes.json();
-                 if (profileData && profileData.length > 0 && profileData[0].name) {
-                     this.state.profile.name = profileData[0].name;
-                 } else {
-                     this.state.profile.name = (window.odoo && window.odoo.session_info && window.odoo.session_info.name) || 'Chưa có thông tin';
-                 }
+                const profileData = await profileRes.json();
+                if (profileData && profileData.length > 0 && profileData[0].name) {
+                    this.state.profile.name = profileData[0].name;
+                } else {
+                    this.state.profile.name = (window.odoo && window.odoo.session_info && window.odoo.session_info.name) || 'Chưa có thông tin';
+                }
             } else {
-                 console.warn('⚠️ /data_personal_profile failed:', profileRes.status);
-                 this.state.profile.name = (window.odoo && window.odoo.session_info && window.odoo.session_info.name) || 'Chưa có thông tin';
+                console.warn('⚠️ /data_personal_profile failed:', profileRes.status);
+                this.state.profile.name = (window.odoo && window.odoo.session_info && window.odoo.session_info.name) || 'Chưa có thông tin';
             }
         } catch (error) {
             this.state.statusInfo = {};
@@ -296,7 +294,7 @@ class BankInfoWidget extends Component {
                 body: JSON.stringify(bankData)
             });
             if (!response.ok) {
-                 throw new Error(`Server returned ${response.status}`);
+                throw new Error(`Server returned ${response.status}`);
             }
             const result = await response.json();
             if (response.ok && result.success) {
@@ -324,19 +322,19 @@ class BankInfoWidget extends Component {
 
     async loadProfileData() {
         try {
-            console.log("🔄 Loading bank profile data from server...");
+            // console.log("🔄 Loading bank profile data from server...");
             const response = await fetch('/data_bank_info');
             if (!response.ok) throw new Error(`Status ${response.status}`);
             const data = await response.json();
-            console.log("📥 Bank profile data received:", data);
+            // console.log("📥 Bank profile data received:", data);
 
             if (data && data.length > 0) {
                 // For bank info, data might be an array of accounts, we'll take the first one or handle multiple later.
                 // For now, assuming user only fills out one primary bank account for simplicity.
                 this.state.profile = data[0];
-                console.log("✅ Bank profile data loaded successfully:", this.state.profile);
+                // console.log("✅ Bank profile data loaded successfully:", this.state.profile);
             } else {
-                console.log("ℹ️ No existing bank profile data found on server");
+                // console.log("ℹ️ No existing bank profile data found on server");
                 this.state.profile = {};
             }
         } catch (error) {
@@ -423,7 +421,7 @@ class BankInfoWidget extends Component {
         try {
             const response = await fetch(`/get_bank_branch_data?limit=1000`);
             if (!response.ok) {
-                 throw new Error(`Server returned ${response.status} ${response.statusText}`);
+                throw new Error(`Server returned ${response.status} ${response.statusText}`);
             }
             const data = await response.json();
             if (data && data.records) {
@@ -451,13 +449,13 @@ class BankInfoWidget extends Component {
 
 // Make component globally available
 window.BankInfoWidget = BankInfoWidget;
-console.log('BankInfoWidget component loaded and available globally');
+// console.log('BankInfoWidget component loaded and available globally');
 
 // Auto-mount when script is loaded
 if (typeof owl !== 'undefined') {
     const widgetContainer = document.getElementById('bankInfoWidget');
     if (widgetContainer) {
-        console.log('Mounting BankInfoWidget');
+        // console.log('Mounting BankInfoWidget');
         owl.mount(BankInfoWidget, widgetContainer);
     }
-} 
+}

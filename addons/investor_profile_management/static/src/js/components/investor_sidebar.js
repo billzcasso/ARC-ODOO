@@ -1,7 +1,7 @@
 // Shared Investor Sidebar Component
 // Used across personal_profile, bank_info, address_info, verification widgets
 
-console.log('Loading InvestorSidebar component...');
+// console.log('Loading InvestorSidebar component...');
 
 const { Component, xml, useState, onMounted } = owl;
 
@@ -83,4 +83,4 @@ class InvestorSidebar extends Component {
 
 // Make component globally available
 window.InvestorSidebar = InvestorSidebar;
-console.log('InvestorSidebar component loaded and available globally');
+// console.log('InvestorSidebar component loaded and available globally');

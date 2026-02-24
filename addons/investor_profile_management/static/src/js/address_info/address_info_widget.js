@@ -1,11 +1,11 @@
 // Address Information Widget Component
-console.log('Loading AddressInfoWidget component...');
+// console.log('Loading AddressInfoWidget component...');
 
 const { Component, xml, useState, onMounted } = owl;
 
 class AddressInfoWidget extends Component {
     static components = { InvestorSidebar: window.InvestorSidebar };
-    
+
     static template = xml`
         <div class="investor-page">
             <div class="investor-layout">
@@ -187,7 +187,7 @@ class AddressInfoWidget extends Component {
     }
 
     setup() {
-        console.log("🎯 AddressInfoWidget - setup called!");
+        // console.log("🎯 AddressInfoWidget - setup called!");
 
         this.state = useState({
             loading: true,
@@ -214,7 +214,7 @@ class AddressInfoWidget extends Component {
             // Hide loading spinner
             const loadingSpinner = document.getElementById('loadingSpinner');
             const widgetContainer = document.getElementById('addressInfoWidget');
-            
+
             if (loadingSpinner && widgetContainer) {
                 loadingSpinner.style.display = 'none';
                 widgetContainer.style.display = 'block';
@@ -237,7 +237,7 @@ class AddressInfoWidget extends Component {
             if (this.state.formData.country_id) {
                 await this.loadStates(this.state.formData.country_id);
             }
-            
+
             this.state.loading = false;
         });
         // Theo dõi thay đổi country_id để load lại states
@@ -247,20 +247,20 @@ class AddressInfoWidget extends Component {
     async loadInitialFormData() {
         // First, try to load from sessionStorage
         const storedData = sessionStorage.getItem('addressInfoData');
-        
+
         // Check for individual city/state in session storage as fallback
         const cityFromSession = sessionStorage.getItem('addressInfo_city');
         const stateFromSession = sessionStorage.getItem('addressInfo_state');
-        
+
         if (storedData) {
             try {
                 const parsedData = JSON.parse(storedData);
-                
+
                 // Check if this is fresh eKYC address data
                 const isEkycData = parsedData.permanent_address || parsedData.birth_place || parsedData.hometown;
-                
+
                 if (isEkycData) {
-                    console.log("🔄 Fresh eKYC address data detected, applying to form");
+                    // console.log("🔄 Fresh eKYC address data detected, applying to form");
                     // Ensure Vietnam states are loaded first to resolve province immediately
                     try {
                         if (!this.state.formData.country_id) {
@@ -289,8 +289,8 @@ class AddressInfoWidget extends Component {
                     if (parsedData.hometown && !this.state.formData.street) {
                         this.parseAddressString(parsedData.hometown);
                     }
-                    
-                    console.log("✅ eKYC address data applied to form:", this.state.formData);
+
+                    // console.log("✅ eKYC address data applied to form:", this.state.formData);
                 } else {
                     // Regular session storage data
                     // Ensure country_id is string if present, do NOT wipe valid numeric IDs
@@ -300,7 +300,7 @@ class AddressInfoWidget extends Component {
                         parsedData.country_id = '';
                     }
                     parsedData.state = String(parsedData.state || '');
-                    
+
                     // Ensure city is set from the state if not already present
                     if (!parsedData.city && parsedData.state) {
                         const selectedState = this.state.states.find(s => String(s.id) === parsedData.state);
@@ -308,22 +308,22 @@ class AddressInfoWidget extends Component {
                             parsedData.city = selectedState.name;
                         }
                     }
-                    
+
                     Object.assign(this.state.formData, parsedData);
-                    console.log("✅ Form data loaded from sessionStorage:", this.state.formData);
+                    // console.log("✅ Form data loaded from sessionStorage:", this.state.formData);
                 }
             } catch (error) {
                 console.error("❌ Error parsing stored address data:", error);
             }
-        } 
+        }
         // Check for individual city/state in session storage as fallback
         else if (cityFromSession || stateFromSession) {
             if (cityFromSession) this.state.formData.city = cityFromSession;
             if (stateFromSession) this.state.formData.state = stateFromSession;
-            console.log("✅ Loaded city/state from individual session storage:", { 
+            /* console.log("✅ Loaded city/state from individual session storage:", { 
                 city: cityFromSession, 
                 state: stateFromSession 
-            });
+            }); */
         }
         // Load from profile if available
         else if (this.state.profile && Object.keys(this.state.profile).length > 0) {
@@ -333,17 +333,16 @@ class AddressInfoWidget extends Component {
             this.state.formData.ward = this.state.profile.ward || '';
             this.state.formData.state = this.state.profile.state_id ? String(this.state.profile.state_id) : '';
             this.state.formData.zip = this.state.profile.zip || '';
-            this.state.formData.country_id = this.state.profile.country_id ? String(this.state.profile.country_id) : '';
-            console.log("✅ Form data initialized with existing profile data:", this.state.formData);
+            // console.log("✅ Form data initialized with existing profile data:", this.state.formData);
         } else {
-            console.log("ℹ️ No existing address data found, using default values");
+            // console.log("ℹ️ No existing address data found, using default values");
         }
     }
 
     parseAddressString(addressString) {
         // Basic address parsing for Vietnamese addresses
         if (!addressString) return;
-        
+
         // Set country by name (default to Vietnam/Việt Nam if present in list)
         const vn = this.state.countries.find(c => {
             const name = (c.name || '').toLowerCase();
@@ -352,11 +351,11 @@ class AddressInfoWidget extends Component {
         if (vn && vn.id !== undefined && vn.id !== null) {
             this.state.formData.country_id = String(vn.id);
         }
-        
+
         // Try to extract components from address string
         // Format: "Số nhà, Phường/Xã, Quận/Huyện, Tỉnh/Thành phố"
         const parts = addressString.split(',').map(part => part.trim());
-        
+
         if (parts.length >= 1) {
             this.state.formData.street = parts[0];
         }
@@ -388,13 +387,13 @@ class AddressInfoWidget extends Component {
                 this.state.formData.country_id = String(matched.id);
             }
         }
-        
-        console.log("📍 Parsed address components:", {
+
+        /* console.log("📍 Parsed address components:", {
             street: this.state.formData.street,
             ward: this.state.formData.ward,
             district: this.state.formData.district,
             state: this.state.formData.state
-        });
+        }); */
     }
 
     showEkycSuccessMessage() {
@@ -402,7 +401,7 @@ class AddressInfoWidget extends Component {
         this.state.modalTitle = 'Thành công';
         this.state.modalMessage = 'Thông tin địa chỉ từ CCCD đã được tự động điền vào form. Vui lòng kiểm tra và lưu thông tin.';
         this.state.showModal = true;
-        
+
         // Auto-hide after 5 seconds
         setTimeout(() => {
             this.state.showModal = false;
@@ -414,7 +413,7 @@ class AddressInfoWidget extends Component {
             const response = await fetch('/get_countries');
             const data = await response.json();
             this.state.countries = data;
-            console.log("📥 Countries loaded:", data);
+            // console.log("📥 Countries loaded:", data);
         } catch (error) {
             console.error("❌ Error fetching countries:", error);
             // Fallback countries, ensure these are loaded for testing if API fails
@@ -451,26 +450,26 @@ class AddressInfoWidget extends Component {
 
     async saveProfile() {
         try {
-            console.log("💾 Lưu Thông Tin địa chỉ lên Odoo...");
+            // console.log("💾 Lưu Thông Tin địa chỉ lên Odoo...");
             const addressData = { ...this.state.formData };
-            
+
             // Ensure country_id is a valid string
             if (addressData.country_id === null || addressData.country_id === undefined) {
                 addressData.country_id = '';
             } else {
                 addressData.country_id = String(addressData.country_id);
             }
-            
+
             // Ensure state is a valid string
             addressData.state = String(addressData.state || '');
-            
+
             // Get the selected state name for the city field
             const selectedState = this.state.states.find(s => String(s.id) === addressData.state);
             if (selectedState) {
                 // Add city name to the address data
                 addressData.city = selectedState.name;
             }
-            
+
             // Validate required fields
             if (!addressData.country_id || isNaN(Number(addressData.country_id))) {
                 alert('Bạn chưa chọn quốc gia hoặc quốc gia không hợp lệ!');
@@ -482,32 +481,32 @@ class AddressInfoWidget extends Component {
                 console.error('State invalid:', addressData.state);
                 return;
             }
-            
+
             // Log the data being sent
-            console.log('📤 Sending address data to server:', addressData);
-            
+            // console.log('📤 Sending address data to server:', addressData);
+
             // Call API to save to Odoo
             const response = await fetch('/save_address_info', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(addressData)
             });
-            
+
             const result = await response.json();
             if (result.success) {
                 // Save to session storage for verification step
                 sessionStorage.setItem('addressInfoSaved', 'true');
                 sessionStorage.setItem('addressInfoData', JSON.stringify(addressData));
                 sessionStorage.setItem('addressInfoUserId', String(window.currentUserId || ''));
-                
+
                 // Also save to a more accessible location for verification
                 sessionStorage.setItem('addressInfo_city', addressData.city || '');
                 sessionStorage.setItem('addressInfo_state', addressData.state || '');
-                
+
                 this.state.modalTitle = 'Thành công';
                 this.state.modalMessage = 'Lưu Thông Tin địa chỉ thành công!';
                 this.state.showModal = true;
-                
+
                 // Redirect to verification after a short delay
                 setTimeout(() => { window.location.href = '/verification'; }, 1500);
             } else {
@@ -529,14 +528,11 @@ class AddressInfoWidget extends Component {
             const response = await fetch('/data_address_info');
             const data = await response.json();
             console.log("📥 Address profile data received:", data);
-            
+
             if (data && data.length > 0) {
-                // For address info, data might be an array of addresses, we'll take the first one or handle multiple later.
-                // For now, assuming user only fills out one primary address for simplicity.
-                this.state.profile = data[0];
-                console.log("✅ Address profile data loaded successfully:", this.state.profile);
+                // console.log("✅ Address profile data loaded successfully:", this.state.profile);
             } else {
-                console.log("ℹ️ No existing address profile data found on server");
+                // console.log("ℹ️ No existing address profile data found on server");
                 this.state.profile = {};
             }
         } catch (error) {
@@ -566,7 +562,7 @@ class AddressInfoWidget extends Component {
                                 this.state.formData.city = match.name;
                             }
                             this.state.pendingStateName = '';
-                            console.log('✅ Applied deferred state selection after country change:', match);
+                            // console.log('✅ Applied deferred state selection after country change:', match);
                         } else {
                             this.state.formData.state = '';
                         }
@@ -581,7 +577,7 @@ class AddressInfoWidget extends Component {
                                 this.state.formData.city = match.name;
                             }
                             this.state.pendingStateName = '';
-                            console.log('✅ Applied deferred state selection after country change:', match);
+                            // console.log('✅ Applied deferred state selection after country change:', match);
                         }
                     }
                 }
@@ -618,13 +614,13 @@ class AddressInfoWidget extends Component {
 
 // Make component globally available
 window.AddressInfoWidget = AddressInfoWidget;
-console.log('AddressInfoWidget component loaded and available globally');
+// console.log('AddressInfoWidget component loaded and available globally');
 
 // Auto-mount when script is loaded
 if (typeof owl !== 'undefined') {
     const widgetContainer = document.getElementById('addressInfoWidget');
     if (widgetContainer) {
-        console.log('Mounting AddressInfoWidget');
+        // console.log('Mounting AddressInfoWidget');
         owl.mount(AddressInfoWidget, widgetContainer);
     }
-} 
+}

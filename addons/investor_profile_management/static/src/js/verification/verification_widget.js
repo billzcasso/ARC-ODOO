@@ -1,11 +1,11 @@
 // Verification Completion Widget Component
-console.log('Loading VerificationWidget component...');
+// console.log('Loading VerificationWidget component...');
 
 const { Component, xml, useState, onMounted } = owl;
 
 class VerificationWidget extends Component {
     static components = { InvestorSidebar: window.InvestorSidebar };
-    
+
     static template = xml`
         <div class="investor-page">
             <div class="investor-layout">
@@ -114,7 +114,7 @@ class VerificationWidget extends Component {
 
 
     setup() {
-        console.log("🎯 VerificationWidget - setup called!");
+        // console.log("🎯 VerificationWidget - setup called!");
 
         this.state = useState({
             loading: true,
@@ -132,7 +132,7 @@ class VerificationWidget extends Component {
             // Hide loading spinner
             const loadingSpinner = document.getElementById('loadingSpinner');
             const widgetContainer = document.getElementById('verificationWidget');
-            
+
             if (loadingSpinner && widgetContainer) {
                 loadingSpinner.style.display = 'none';
                 widgetContainer.style.display = 'block';
@@ -153,7 +153,7 @@ class VerificationWidget extends Component {
             this.loadInitialFormData(); // Load form data from sessionStorage
             await this.loadStatusInfo();
             await this.checkAllInfoCompleted();
-            
+
             this.state.loading = false;
         });
     }
@@ -165,19 +165,19 @@ class VerificationWidget extends Component {
         const storedAddressData = sessionStorage.getItem('addressInfoData');
 
         if (storedPersonalData) {
-            console.log("✅ Loaded personalProfileData from sessionStorage:", JSON.parse(storedPersonalData));
+            // console.log("✅ Loaded personalProfileData from sessionStorage:", JSON.parse(storedPersonalData));
         } else {
-            console.log("ℹ️ No personal profile data in sessionStorage");
+            // console.log("ℹ️ No personal profile data in sessionStorage");
         }
         if (storedBankData) {
-            console.log("✅ Loaded bankInfoData from sessionStorage:", JSON.parse(storedBankData));
+            // console.log("✅ Loaded bankInfoData from sessionStorage:", JSON.parse(storedBankData));
         } else {
-            console.log("ℹ️ No bank info data in sessionStorage");
+            // console.log("ℹ️ No bank info data in sessionStorage");
         }
         if (storedAddressData) {
-            console.log("✅ Loaded addressInfoData from sessionStorage:", JSON.parse(storedAddressData));
+            // console.log("✅ Loaded addressInfoData from sessionStorage:", JSON.parse(storedAddressData));
         } else {
-            console.log("ℹ️ No address info data in sessionStorage");
+            // console.log("ℹ️ No address info data in sessionStorage");
         }
     }
 
@@ -258,26 +258,26 @@ class VerificationWidget extends Component {
             // Kiểm tra thông tin cá nhân
             const requiredPersonalFields = ['name', 'birth_date', 'gender', 'nationality', 'id_type', 'id_number', 'id_issue_date', 'id_issue_place'];
             const missingPersonalFields = requiredPersonalFields.filter(field => !personalData[field]);
-            
+
             // Kiểm tra thông tin ngân hàng
             const requiredBankFields = ['bank_name', 'account_number', 'account_holder', 'branch'];
             const missingBankFields = requiredBankFields.filter(field => !bankData[field]);
-            
+
             // Kiểm tra thông tin địa chỉ (chỉ yêu cầu các trường bắt buộc)
             const requiredAddressFields = ['city', 'district', 'ward'];
             const missingAddressFields = requiredAddressFields.filter(field => !addressData[field]);
 
             // Tạo thông báo lỗi nếu có trường bắt buộc bị thiếu
             let errorMessage = '';
-            
+
             if (missingPersonalFields.length > 0) {
                 errorMessage += 'Thiếu thông tin cá nhân: ' + missingPersonalFields.join(', ') + '\n';
             }
-            
+
             if (missingBankFields.length > 0) {
                 errorMessage += 'Thiếu thông tin ngân hàng: ' + missingBankFields.join(', ') + '\n';
             }
-            
+
             if (missingAddressFields.length > 0) {
                 errorMessage += 'Thiếu thông tin địa chỉ: ' + missingAddressFields.join(', ');
             }
@@ -294,32 +294,32 @@ class VerificationWidget extends Component {
             this.state.modalTitle = 'Xác nhận hoàn tất';
             this.state.modalMessage = 'Bạn đã hoàn tất việc xác thực thông tin. Vui lòng đợi hệ thống xử lý.';
             this.state.showModal = true;
-            
+
             // Chuyển hướng về trang chủ sau 3 giây
-           if (this.state.agreedToTerms) {
-            // Call API to complete verification
-            fetch('/api/verification/complete', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    window.location.reload();
-                } else {
-                    alert('Có lỗi xảy ra: ' + (data.error || data.message));
-                }
-            })
-            .catch(error => {
-                console.error('Error completing verification:', error);
-                alert('Có lỗi xảy ra khi hoàn tất xác thực.');
-            });
-        } else {
-            alert("Vui lòng đồng ý với điều khoản sử dụng.");
-        }
-            
+            if (this.state.agreedToTerms) {
+                // Call API to complete verification
+                fetch('/api/verification/complete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            window.location.reload();
+                        } else {
+                            alert('Có lỗi xảy ra: ' + (data.error || data.message));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error completing verification:', error);
+                        alert('Có lỗi xảy ra khi hoàn tất xác thực.');
+                    });
+            } else {
+                alert("Vui lòng đồng ý với điều khoản sử dụng.");
+            }
+
         } catch (error) {
             console.error('Lỗi khi xác thực:', error);
             this.state.modalTitle = 'Lỗi';
@@ -343,7 +343,7 @@ class VerificationWidget extends Component {
             const response = await fetch('/data_verification');
             const data = await response.json();
             console.log("📥 Verification profile data received:", data);
-            
+
             if (data && data.length > 0) {
                 this.state.profile = data[0];
                 console.log("✅ Verification profile data loaded successfully:", this.state.profile);
@@ -364,13 +364,13 @@ class VerificationWidget extends Component {
 
 // Make component globally available
 window.VerificationWidget = VerificationWidget;
-console.log('VerificationWidget component loaded and available globally');
+// console.log('VerificationWidget component loaded and available globally');
 
 // Auto-mount when script is loaded
 if (typeof owl !== 'undefined') {
     const widgetContainer = document.getElementById('verificationWidget');
     if (widgetContainer) {
-        console.log('Mounting VerificationWidget');
+        // console.log('Mounting VerificationWidget');
         owl.mount(VerificationWidget, widgetContainer);
     }
-} 
+}

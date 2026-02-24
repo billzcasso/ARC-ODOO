@@ -107,7 +107,9 @@ async function renderResultPageData() {
     // 1. Get Transaction ID
     const txId = sessionStorage.getItem('transaction_id');
     if (!txId) {
-      throw new Error("Không tìm thấy mã giao dịch trong phiên.");
+      // console.warn("Result Page: No transaction_id found in sessionStorage.");
+      renderNoDataState();
+      return;
     }
 
     // 2. Fetch Data
@@ -170,27 +172,31 @@ async function renderResultPageData() {
       setEl('result-sell-date', data.nav_sell_date || '--');
       // Fix: Recalculate maturity value to ensure mround compliance
       const derivedMaturityValue = calculateMaturityValue(data);
-      setEl('result-maturity-value', derivedMaturityValue ? formatVND(derivedMaturityValue) : (data.nav_sell_value1 ? formatVND(data.nav_sell_value1) : '--'));
     }
 
   } catch (error) {
-    console.warn("Result Page: No transaction data found or loaded.", error.message);
-
-    // Show user-visible feedback
-    const statusEl = document.getElementById('result-status');
-    if (statusEl) {
-      statusEl.textContent = 'Không có dữ liệu';
-      statusEl.classList.add('text-warning');
-    }
-
-    // Also log what's in sessionStorage for debugging
-    // Also log what's in sessionStorage for debugging
-    console.log('[Debug] sessionStorage contents:', {
-      transaction_id: sessionStorage.getItem('transaction_id'),
-      order_token: sessionStorage.getItem('order_token'),
-      selectedFundId: sessionStorage.getItem('selectedFundId')
-    });
+    // console.warn("Result Page: Error loading transaction data:", error.message);
+    renderNoDataState();
   }
+}
+
+/**
+ * Hiển thị trạng thái không có dữ liệu cho UI
+ */
+function renderNoDataState() {
+  // Show user-visible feedback
+  const statusEl = document.getElementById('result-status');
+  if (statusEl) {
+    statusEl.textContent = 'Không có dữ liệu';
+    statusEl.classList.add('text-warning');
+  }
+
+  // Also log what's in sessionStorage for debugging
+  /* console.log('[Debug] sessionStorage contents:', {
+    transaction_id: sessionStorage.getItem('transaction_id'),
+    order_token: sessionStorage.getItem('order_token'),
+    selectedFundId: sessionStorage.getItem('selectedFundId')
+  }); */
 }
 
 // ===== Update UI based on transaction type (buy/sell) =====
@@ -228,7 +234,7 @@ function updateUIForTransactionType(transactionType) {
     amountValue.classList.add('text-danger');
   }
 
-  console.log('[Result] UI updated for transaction type:', transactionType);
+  // console.log('[Result] UI updated for transaction type:', transactionType);
 }
 
 // ===== Xử lý nút "Hoàn tất" - KHÔNG tạo lệnh mới, chỉ chuyển đến sổ lệnh =====

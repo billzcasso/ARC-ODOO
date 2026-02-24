@@ -33,12 +33,12 @@ function initOrderModeTabs() {
   const tabContract = document.getElementById('tab-contract-sell');
 
   if (!tabNormal || !tabContract) {
-    console.log('[SellMode] Tabs not found, skipping...');
+    console.debug('[SellMode] Tabs not found, skipping...');
     return;
   }
 
-  tabNormal.addEventListener('click', () => setOrderMode('normal'));
-  tabContract.addEventListener('click', () => setOrderMode('contract'));
+  if (tabNormal) tabNormal.addEventListener('click', () => setOrderMode('normal'));
+  if (tabContract) tabContract.addEventListener('click', () => setOrderMode('contract'));
 
   console.log('[SellMode] Tabs initialized');
 }
@@ -86,7 +86,7 @@ async function initNormalSellForm() {
   const confirmBtn = document.getElementById('confirm-sell-btn');
 
   if (!fundSelect || !quantityInput) {
-    console.log('[NormalSell] Required elements not found');
+    console.debug('[NormalSell] Required elements not found');
     return;
   }
 
