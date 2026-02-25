@@ -4,11 +4,11 @@ import { Component, xml, useState, onMounted } from "@odoo/owl";
 import { loadJS } from "@web/core/assets";
 
 export class AssetManagementWidget extends Component {
-  static template = xml`
+    static template = xml`
     <div class="asset-management-container">
         <div class="am-scope container-fluid py-4">
             <div class="row g-4">
-                <!-- Left Column: Summary & Assets -->
+                <!-- Left Column: Summary and Assets -->
                 <div class="col-lg-4">
                     <div class="am-card d-flex flex-column">
                         <div class="card-title">
@@ -209,217 +209,217 @@ export class AssetManagementWidget extends Component {
     </div>
   `;
 
-  setup() {
-    this.validateProps();
-    
-    this.state = useState({
-      totalAssets: this.safeGetProp('totalAssets', 0),
-      fundCertificates: this.safeGetProp('fundCertificates', []),
-      chartData: this.safeGetProp('chartData', '{}'),
-      
-      // Portfolio items with T+2 breakdown
-      portfolioItems: this.transformToPortfolioItems(),
-      summary: {
-        totalQuantity: 0,
-        tradableQuantity: 0,
-        costValue: 0,
-        marketValue: 0,
-        profitLoss: 0,
-        profitLossPercent: 0
-      }
-    });
+    setup() {
+        this.validateProps();
 
-    onMounted(() => {
-      try {
-        this.calculateSummary();
-        this.initChart();
-      } catch (error) {
-        console.error('Error in onMounted:', error);
-      }
-    });
-  }
+        this.state = useState({
+            totalAssets: this.safeGetProp('totalAssets', 0),
+            fundCertificates: this.safeGetProp('fundCertificates', []),
+            chartData: this.safeGetProp('chartData', '{}'),
 
-  validateProps() {
-    if (!this.props) {
-      throw new Error('Props not defined');
-    }
-  }
-
-  safeGetProp(propName, defaultValue) {
-    try {
-      const value = this.props[propName];
-      if (value === null || value === undefined) {
-        return defaultValue;
-      }
-      return value;
-    } catch (error) {
-      console.warn(`Error getting prop ${propName}:`, error);
-      return defaultValue;
-    }
-  }
-
-  transformToPortfolioItems() {
-    // Transform holdings data to portfolio format with T+2 breakdown
-    const holdings = this.safeGetProp('holdings', []);
-    const fundCerts = this.safeGetProp('fundCertificates', []);
-    
-    // Group by fund code
-    const grouped = {};
-    
-    for (const cert of fundCerts) {
-      if (!cert.code) continue;
-      
-      grouped[cert.code] = {
-        code: cert.code,
-        name: cert.name,
-        totalQuantity: cert.quantity || 0,
-        tradableQuantity: cert.availableQuantity || cert.quantity || 0,
-        // Order type breakdown
-        normalUnits: cert.normalUnits || 0,
-        negotiatedUnits: cert.negotiatedUnits || 0,
-        // Use T0/T1/T2 data from controller
-        pendingBuyT0: cert.pendingBuyT0 || 0,
-        pendingBuyT1: cert.pendingBuyT1 || 0,
-        pendingBuyT2: cert.pendingBuyT2 || 0,
-        pendingSellT0: cert.pendingSellT0 || 0,
-        pendingSellT1: cert.pendingSellT1 || 0,
-        pendingSellT2: cert.pendingSellT2 || 0,
-        costPrice: cert.avgPrice || 0,
-        marketPrice: cert.currentPrice || cert.navPrice || 0,
-        costValue: cert.totalValue || 0,
-        marketValue: 0,
-        profitLoss: 0,
-        profitLossPercent: 0,
-        // Can sell when T+2 complete
-        canSell: cert.canSell || false
-      };
-      
-      // Calculate market value and profit/loss
-      grouped[cert.code].marketValue = grouped[cert.code].totalQuantity * grouped[cert.code].marketPrice;
-      grouped[cert.code].profitLoss = grouped[cert.code].marketValue - grouped[cert.code].costValue;
-      grouped[cert.code].profitLossPercent = grouped[cert.code].costValue > 0 
-        ? (grouped[cert.code].profitLoss / grouped[cert.code].costValue) * 100 
-        : 0;
-    }
-    
-    return Object.values(grouped);
-  }
-
-  calculateSummary() {
-    const items = this.state.portfolioItems || [];
-    
-    let totalQty = 0;
-    let tradableQty = 0;
-    let costVal = 0;
-    let marketVal = 0;
-    
-    for (const item of items) {
-      totalQty += item.totalQuantity || 0;
-      tradableQty += item.tradableQuantity || 0;
-      costVal += item.costValue || 0;
-      marketVal += item.marketValue || 0;
-    }
-    
-    this.state.summary = {
-      totalQuantity: totalQty,
-      tradableQuantity: tradableQty,
-      costValue: costVal,
-      marketValue: marketVal,
-      profitLoss: marketVal - costVal,
-      profitLossPercent: costVal > 0 ? ((marketVal - costVal) / costVal) * 100 : 0
-    };
-  }
-
-  openSellModal(item) {
-    // Navigate to sell page or open modal
-    window.location.href = `/fund_sell?ticker=${item.code}`;
-  }
-
-  async initChart() {
-    try {
-        await loadJS('https://cdn.jsdelivr.net/npm/chart.js');
-      
-        const ctx = document.getElementById('assetOverviewChart');
-        if (!ctx) {
-            console.warn('Chart canvas element not found');
-            return;
-        }
-
-        if (typeof Chart === 'undefined') {
-            console.warn('Chart.js not loaded');
-            return;
-        }
-
-        let chartData;
-        try {
-            chartData = JSON.parse(this.state.chartData || '{}');
-        } catch (parseError) {
-            console.warn('Error parsing chart data:', parseError);
-            chartData = { labels: [], datasets: [{ data: [], backgroundColor: [] }] };
-        }
-
-        if (!chartData.labels || !Array.isArray(chartData.labels)) {
-            chartData.labels = [];
-        }
-        if (!chartData.datasets || !Array.isArray(chartData.datasets) || !chartData.datasets[0]) {
-            chartData.datasets = [{ data: [], backgroundColor: [] }];
-        }
-
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: chartData.labels,
-                datasets: [{
-                    data: chartData.datasets[0].data || [],
-                    backgroundColor: chartData.datasets[0].backgroundColor || ['#2B4BFF'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { 
-                        enabled: true,
-                        callbacks: {
-                            label: function(context) {
-                                const label = context.label || '';
-                                const value = context.raw || 0;
-                                return `${label}: ${value.toLocaleString('vi-VN')}d`;
-                            }
-                        }
-                    }
-                },
-                cutout: '70%'
+            // Portfolio items with T+2 breakdown
+            portfolioItems: this.transformToPortfolioItems(),
+            summary: {
+                totalQuantity: 0,
+                tradableQuantity: 0,
+                costValue: 0,
+                marketValue: 0,
+                profitLoss: 0,
+                profitLossPercent: 0
             }
         });
-    } catch (error) {
-        console.error("Error initializing chart:", error);
-    }
-  }
 
-  formatCurrency(value) {
-    try {
-      if (value === null || value === undefined) return '0';
-      const numValue = typeof value === 'number' ? value : parseFloat(value);
-      if (isNaN(numValue)) return '0';
-      return numValue.toLocaleString('vi-VN', { maximumFractionDigits: 0 });
-    } catch (error) {
-      return '0';
+        onMounted(() => {
+            try {
+                this.calculateSummary();
+                this.initChart();
+            } catch (error) {
+                console.error('Error in onMounted:', error);
+            }
+        });
     }
-  }
 
-  formatNumber(value) {
-    try {
-      if (value === null || value === undefined) return '0';
-      const numValue = typeof value === 'number' ? value : parseFloat(value);
-      if (isNaN(numValue)) return '0';
-      return numValue.toLocaleString('vi-VN');
-    } catch (error) {
-      return '0';
+    validateProps() {
+        if (!this.props) {
+            throw new Error('Props not defined');
+        }
     }
-  }
+
+    safeGetProp(propName, defaultValue) {
+        try {
+            const value = this.props[propName];
+            if (value === null || value === undefined) {
+                return defaultValue;
+            }
+            return value;
+        } catch (error) {
+            console.warn(`Error getting prop ${propName}:`, error);
+            return defaultValue;
+        }
+    }
+
+    transformToPortfolioItems() {
+        // Transform holdings data to portfolio format with T+2 breakdown
+        const holdings = this.safeGetProp('holdings', []);
+        const fundCerts = this.safeGetProp('fundCertificates', []);
+
+        // Group by fund code
+        const grouped = {};
+
+        for (const cert of fundCerts) {
+            if (!cert.code) continue;
+
+            grouped[cert.code] = {
+                code: cert.code,
+                name: cert.name,
+                totalQuantity: cert.quantity || 0,
+                tradableQuantity: cert.availableQuantity || cert.quantity || 0,
+                // Order type breakdown
+                normalUnits: cert.normalUnits || 0,
+                negotiatedUnits: cert.negotiatedUnits || 0,
+                // Use T0/T1/T2 data from controller
+                pendingBuyT0: cert.pendingBuyT0 || 0,
+                pendingBuyT1: cert.pendingBuyT1 || 0,
+                pendingBuyT2: cert.pendingBuyT2 || 0,
+                pendingSellT0: cert.pendingSellT0 || 0,
+                pendingSellT1: cert.pendingSellT1 || 0,
+                pendingSellT2: cert.pendingSellT2 || 0,
+                costPrice: cert.avgPrice || 0,
+                marketPrice: cert.currentPrice || cert.navPrice || 0,
+                costValue: cert.totalValue || 0,
+                marketValue: 0,
+                profitLoss: 0,
+                profitLossPercent: 0,
+                // Can sell when T+2 complete
+                canSell: cert.canSell || false
+            };
+
+            // Calculate market value and profit/loss
+            grouped[cert.code].marketValue = grouped[cert.code].totalQuantity * grouped[cert.code].marketPrice;
+            grouped[cert.code].profitLoss = grouped[cert.code].marketValue - grouped[cert.code].costValue;
+            grouped[cert.code].profitLossPercent = grouped[cert.code].costValue > 0
+                ? (grouped[cert.code].profitLoss / grouped[cert.code].costValue) * 100
+                : 0;
+        }
+
+        return Object.values(grouped);
+    }
+
+    calculateSummary() {
+        const items = this.state.portfolioItems || [];
+
+        let totalQty = 0;
+        let tradableQty = 0;
+        let costVal = 0;
+        let marketVal = 0;
+
+        for (const item of items) {
+            totalQty += item.totalQuantity || 0;
+            tradableQty += item.tradableQuantity || 0;
+            costVal += item.costValue || 0;
+            marketVal += item.marketValue || 0;
+        }
+
+        this.state.summary = {
+            totalQuantity: totalQty,
+            tradableQuantity: tradableQty,
+            costValue: costVal,
+            marketValue: marketVal,
+            profitLoss: marketVal - costVal,
+            profitLossPercent: costVal > 0 ? ((marketVal - costVal) / costVal) * 100 : 0
+        };
+    }
+
+    openSellModal(item) {
+        // Navigate to sell page or open modal
+        window.location.href = `/fund_sell?ticker=${item.code}`;
+    }
+
+    async initChart() {
+        try {
+            await loadJS('https://cdn.jsdelivr.net/npm/chart.js');
+
+            const ctx = document.getElementById('assetOverviewChart');
+            if (!ctx) {
+                console.warn('Chart canvas element not found');
+                return;
+            }
+
+            if (typeof Chart === 'undefined') {
+                console.warn('Chart.js not loaded');
+                return;
+            }
+
+            let chartData;
+            try {
+                chartData = JSON.parse(this.state.chartData || '{}');
+            } catch (parseError) {
+                console.warn('Error parsing chart data:', parseError);
+                chartData = { labels: [], datasets: [{ data: [], backgroundColor: [] }] };
+            }
+
+            if (!chartData.labels || !Array.isArray(chartData.labels)) {
+                chartData.labels = [];
+            }
+            if (!chartData.datasets || !Array.isArray(chartData.datasets) || !chartData.datasets[0]) {
+                chartData.datasets = [{ data: [], backgroundColor: [] }];
+            }
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [{
+                        data: chartData.datasets[0].data || [],
+                        backgroundColor: chartData.datasets[0].backgroundColor || ['#2B4BFF'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            enabled: true,
+                            callbacks: {
+                                label: function (context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    return `${label}: ${value.toLocaleString('vi-VN')}d`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
+        } catch (error) {
+            console.error("Error initializing chart:", error);
+        }
+    }
+
+    formatCurrency(value) {
+        try {
+            if (value === null || value === undefined) return '0';
+            const numValue = typeof value === 'number' ? value : parseFloat(value);
+            if (isNaN(numValue)) return '0';
+            return numValue.toLocaleString('vi-VN', { maximumFractionDigits: 0 });
+        } catch (error) {
+            return '0';
+        }
+    }
+
+    formatNumber(value) {
+        try {
+            if (value === null || value === undefined) return '0';
+            const numValue = typeof value === 'number' ? value : parseFloat(value);
+            if (isNaN(numValue)) return '0';
+            return numValue.toLocaleString('vi-VN');
+        } catch (error) {
+            return '0';
+        }
+    }
 }
 
 // Make component available globally

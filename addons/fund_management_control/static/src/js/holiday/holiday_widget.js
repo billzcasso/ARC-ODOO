@@ -26,12 +26,7 @@ class HolidayWidget extends Component {
                              <span t-if="state.syncingApi">Đang đồng bộ...</span>
                              <span t-else="">API</span>
                         </button>
-                        <button t-on-click="syncInternal" t-att-disabled="state.syncingInternal" class="btn btn-fmc-light d-flex align-items-center gap-2">
-                             <i t-if="state.syncingInternal" class="fas fa-spinner fa-spin text-primary"></i>
-                             <i t-else="" class="fas fa-sync text-primary"></i>
-                             <span t-if="state.syncingInternal">Đang đồng bộ...</span>
-                             <span t-else="">Nội bộ</span>
-                        </button>
+
                     </div>
                 </div>
                 <div class="row g-2 align-items-center">
@@ -126,7 +121,7 @@ class HolidayWidget extends Component {
                 </li>
                 <t t-foreach="visiblePages" t-as="page" t-key="page_index">
                     <li t-attf-class="page-item #{page === state.currentPage ? 'active' : ''} #{page === '...' ? 'disabled' : ''}">
-                         <a class="page-link shadow-none" href="#" t-on-click.prevent="() => page !== '...' &amp;&amp; this.changePage(page)" t-esc="page"/>
+                         <a class="page-link shadow-none" href="#" t-on-click.prevent="() => this.onPageClick(page)" t-esc="page"/>
                     </li>
                 </t>
                 <li t-attf-class="page-item #{state.currentPage === totalPages ? 'disabled' : ''}">
@@ -149,7 +144,6 @@ class HolidayWidget extends Component {
             limit: 10,
             syncYear: String(new Date().getFullYear()),
             syncingApi: false,
-            syncingInternal: false,
         });
 
         onMounted(() => {
@@ -227,6 +221,8 @@ class HolidayWidget extends Component {
         }
     }
 
+    onPageClick(page) { if (page !== '...') this.changePage(page); }
+
     changePage(newPage) {
         if (newPage > 0 && newPage <= this.totalPages && newPage !== this.state.currentPage) {
             this.state.currentPage = newPage;
@@ -303,10 +299,6 @@ class HolidayWidget extends Component {
 
     async syncFromApi() {
         await this._sync('/holiday/sync', 'syncingApi', 'Đã đồng bộ ngày lễ từ API');
-    }
-
-    async syncInternal() {
-        await this._sync('/holiday/sync/internal', 'syncingInternal', 'Đã đồng bộ ngày lễ nội bộ');
     }
 }
 

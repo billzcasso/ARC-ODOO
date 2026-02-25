@@ -122,7 +122,7 @@ class BankWidget extends Component {
                 </li>
                 <t t-foreach="visiblePages" t-as="page" t-key="page_index">
                     <li t-attf-class="page-item #{page === state.currentPage ? 'active' : ''} #{page === '...' ? 'disabled' : ''}">
-                        <a class="page-link shadow-none" href="#" t-on-click.prevent="() => page !== '...' &amp;&amp; this.changePage(page)" t-esc="page"/>
+                        <a class="page-link shadow-none" href="#" t-on-click.prevent="() => this.onPageClick(page)" t-esc="page"/>
                     </li>
                 </t>
                 <li t-attf-class="page-item #{state.currentPage === totalPages ? 'disabled' : ''}">
@@ -179,6 +179,7 @@ class BankWidget extends Component {
             this.state.totalRecords = data.total_records;
         } catch (e) { console.error(e); } finally { this.state.loading = false; }
     }
+    onPageClick(page) { if (page !== '...') this.changePage(page); }
     changePage(page) { if (page > 0 && page <= this.totalPages) { this.state.currentPage = page; this.loadData(); } }
     onSearchKeyup(ev) { if (ev.key === 'Enter') this.performSearch(); }
     performSearch() { this.state.currentPage = 1; this.loadData(); }

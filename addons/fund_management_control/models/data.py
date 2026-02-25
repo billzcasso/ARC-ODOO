@@ -1,6 +1,6 @@
 import logging
 import re
-from datetime import datetime, date
+from datetime import datetime
 
 import requests
 from requests import RequestException, HTTPError
@@ -16,71 +16,7 @@ class Holiday(models.Model):
     _name = "data.holiday"
     _description = "Holiday"
 
-    _FIXED_HOLIDAYS = (
-        {"code": "NEW_YEAR", "name": "Tết Dương lịch", "month": 1, "day": 1},
-        {"code": "LIBERATION_DAY", "name": "Ngày Giải phóng miền Nam", "month": 4, "day": 30},
-        {"code": "LABOUR_DAY", "name": "Ngày Quốc tế Lao động", "month": 5, "day": 1},
-        {"code": "NATIONAL_DAY", "name": "Quốc khánh", "month": 9, "day": 2},
-    )
 
-    _LUNAR_CONVERSIONS = {
-        2024: (
-            ("Tết Nguyên đán (Mùng 1)", date(2024, 2, 10)),
-            ("Tết Nguyên đán (Mùng 2)", date(2024, 2, 11)),
-            ("Tết Nguyên đán (Mùng 3)", date(2024, 2, 12)),
-            ("Tết Nguyên đán (Mùng 4)", date(2024, 2, 13)),
-            ("Tết Nguyên đán (Mùng 5)", date(2024, 2, 14)),
-            ("Giỗ Tổ Hùng Vương", date(2024, 4, 18)),
-        ),
-        2025: (
-            ("Tết Nguyên đán (Mùng 1)", date(2025, 1, 29)),
-            ("Tết Nguyên đán (Mùng 2)", date(2025, 1, 30)),
-            ("Tết Nguyên đán (Mùng 3)", date(2025, 1, 31)),
-            ("Tết Nguyên đán (Mùng 4)", date(2025, 2, 1)),
-            ("Tết Nguyên đán (Mùng 5)", date(2025, 2, 2)),
-            ("Giỗ Tổ Hùng Vương", date(2025, 4, 8)),
-        ),
-        2026: (
-            ("Tết Nguyên đán (Mùng 1)", date(2026, 2, 17)),
-            ("Tết Nguyên đán (Mùng 2)", date(2026, 2, 18)),
-            ("Tết Nguyên đán (Mùng 3)", date(2026, 2, 19)),
-            ("Tết Nguyên đán (Mùng 4)", date(2026, 2, 20)),
-            ("Tết Nguyên đán (Mùng 5)", date(2026, 2, 21)),
-            ("Giỗ Tổ Hùng Vương", date(2026, 4, 27)),
-        ),
-        2027: (
-            ("Tết Nguyên đán (Mùng 1)", date(2027, 2, 6)),
-            ("Tết Nguyên đán (Mùng 2)", date(2027, 2, 7)),
-            ("Tết Nguyên đán (Mùng 3)", date(2027, 2, 8)),
-            ("Tết Nguyên đán (Mùng 4)", date(2027, 2, 9)),
-            ("Tết Nguyên đán (Mùng 5)", date(2027, 2, 10)),
-            ("Giỗ Tổ Hùng Vương", date(2027, 4, 16)),
-        ),
-        2028: (
-            ("Tết Nguyên đán (Mùng 1)", date(2028, 1, 26)),
-            ("Tết Nguyên đán (Mùng 2)", date(2028, 1, 27)),
-            ("Tết Nguyên đán (Mùng 3)", date(2028, 1, 28)),
-            ("Tết Nguyên đán (Mùng 4)", date(2028, 1, 29)),
-            ("Tết Nguyên đán (Mùng 5)", date(2028, 1, 30)),
-            ("Giỗ Tổ Hùng Vương", date(2028, 4, 4)),
-        ),
-        2029: (
-            ("Tết Nguyên đán (Mùng 1)", date(2029, 2, 13)),
-            ("Tết Nguyên đán (Mùng 2)", date(2029, 2, 14)),
-            ("Tết Nguyên đán (Mùng 3)", date(2029, 2, 15)),
-            ("Tết Nguyên đán (Mùng 4)", date(2029, 2, 16)),
-            ("Tết Nguyên đán (Mùng 5)", date(2029, 2, 17)),
-            ("Giỗ Tổ Hùng Vương", date(2029, 4, 24)),
-        ),
-        2030: (
-            ("Tết Nguyên đán (Mùng 1)", date(2030, 2, 3)),
-            ("Tết Nguyên đán (Mùng 2)", date(2030, 2, 4)),
-            ("Tết Nguyên đán (Mùng 3)", date(2030, 2, 5)),
-            ("Tết Nguyên đán (Mùng 4)", date(2030, 2, 6)),
-            ("Tết Nguyên đán (Mùng 5)", date(2030, 2, 7)),
-            ("Giỗ Tổ Hùng Vương", date(2030, 4, 13)),
-        ),
-    }
 
     name = fields.Char(string="Tên ngày lễ", required=True)
     code = fields.Char(string="Mã ngày lễ", required=True)
@@ -208,85 +144,7 @@ class Holiday(models.Model):
             "country_code": country,
         }
 
-    def sync_local_holidays(self, year=None):
-        year_int = self._sanitize_year(year)
 
-        created = updated = 0
-        processed_codes = set()
-
-        for item in self._FIXED_HOLIDAYS:
-            try:
-                date_value = date(year_int, item["month"], item["day"])
-            except ValueError as exc:  # noqa: BLE001
-                _logger.warning("Bỏ qua ngày lễ cố định không hợp lệ: %s", exc)
-                continue
-
-            code = self._build_code(f"{item['code']}_{year_int}", year_int)
-            vals = {
-                "code": code,
-                "name": item["name"],
-                "date": date_value,
-                "value": str(self._day_of_year(date_value)),
-                "active": True,
-            }
-            processed_codes.add(code)
-            created, updated = self._upsert_holiday(vals, created, updated)
-
-        lunar_entries = self._LUNAR_CONVERSIONS.get(year_int)
-        if not lunar_entries:
-            raise UserError(
-                _(
-                    "Chưa khai báo bảng quy đổi Tết/Giỗ Tổ cho năm %(year)s. Vui lòng cập nhật thêm dữ liệu nội bộ.",
-                    year=year_int,
-                )
-            )
-
-        for name, date_value in lunar_entries:
-            if not isinstance(date_value, date):
-                _logger.warning("Bỏ qua ngày lễ âm lịch vì định dạng sai: %s", name)
-                continue
-
-            code = self._build_code(f"{name}_{year_int}", year_int)
-            vals = {
-                "code": code,
-                "name": name,
-                "date": date_value,
-                "value": str(self._day_of_year(date_value)),
-                "active": True,
-            }
-            if code in processed_codes:
-                continue
-            processed_codes.add(code)
-            created, updated = self._upsert_holiday(vals, created, updated)
-
-        _logger.info(
-            "Đồng bộ ngày lễ nội bộ hoàn tất: year=%s created=%s updated=%s",
-            year_int,
-            created,
-            updated,
-        )
-
-        return {
-            "success": True,
-            "created": created,
-            "updated": updated,
-            "year": year_int,
-        }
-
-    def _upsert_holiday(self, vals, created, updated):
-        domain = [("code", "=", vals["code"]), ("date", "=", vals["date"])]
-        existing = self.search(domain, limit=1)
-        if existing:
-            update_vals = {
-                key: value for key, value in vals.items() if existing[key] != value
-            }
-            if update_vals:
-                existing.write(update_vals)
-                updated += 1
-        else:
-            self.create(vals)
-            created += 1
-        return created, updated
 
 
 class Bank(models.Model):
@@ -391,91 +249,64 @@ class BankBranch(models.Model):
     bank_id = fields.Many2one("data.bank", string="Trực thuộc ngân hàng", required=True)
     code = fields.Char(string="Mã hành chính")
     active = fields.Boolean(string="Kích hoạt", default=True)
+
+    _sql_constraints = [
+        ("bank_code_unique", "UNIQUE(bank_id, code)", "Chi nhánh đã tồn tại cho ngân hàng này."),
+    ]
     address = fields.Char(string="Địa chỉ")
 
+    def _fetch_provinces(self):
+        """Lấy danh sách tỉnh/thành phố Việt Nam từ API."""
+        url = "https://provinces.open-api.vn/api/?depth=1"
+        _logger.info("Lấy danh sách tỉnh/thành phố từ: %s", url)
+
+        try:
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+        except RequestException as exc:
+            _logger.warning("Không thể gọi API tỉnh/thành: %s", exc)
+            raise UserError(_("Không thể kết nối tới API tỉnh/thành phố: %s") % exc)
+
+        try:
+            payload = response.json()
+        except ValueError as exc:
+            _logger.error("Payload tỉnh/thành không hợp lệ: %s", exc, exc_info=True)
+            raise UserError(_("Dữ liệu tỉnh/thành phố trả về không hợp lệ."))
+
+        if not isinstance(payload, list) or not payload:
+            raise UserError(_("Không tìm thấy dữ liệu tỉnh/thành phố."))
+
+        regions = []
+        for province in payload:
+            province_name = (province.get("name") or "").strip()
+            codename = (province.get("codename") or "").strip()
+            if not province_name or not codename:
+                continue
+
+            # Tạo tên chi nhánh: bỏ prefix "Tỉnh " / "Thành phố "
+            short_name = province_name
+            for prefix in ("Tỉnh ", "Thành phố "):
+                if short_name.startswith(prefix):
+                    short_name = short_name[len(prefix):]
+                    break
+
+            branch_name = f"Chi nhánh {short_name}"
+            region_code = codename.upper()
+            address = province_name
+
+            regions.append((branch_name, region_code, address))
+
+        return regions
+
     def sync_basic_branches(self):
-        """Đồng bộ chi nhánh ngân hàng toàn quốc (63 tỉnh/thành phố)."""
+        """Đồng bộ chi nhánh ngân hàng toàn quốc từ API tỉnh/thành phố."""
         Bank = self.env["data.bank"].sudo()
         banks = Bank.search([])
 
         if not banks:
             raise UserError(_("Chưa có dữ liệu ngân hàng. Vui lòng đồng bộ VietQR trước."))
 
-        # Danh sách 63 tỉnh/thành phố Việt Nam
-        regions = [
-            # 5 thành phố trực thuộc trung ương
-            ("Chi nhánh Hà Nội", "HN", "Hà Nội"),
-            ("Chi nhánh TP. Hồ Chí Minh", "HCM", "TP. Hồ Chí Minh"),
-            ("Chi nhánh Đà Nẵng", "DN", "Đà Nẵng"),
-            ("Chi nhánh Hải Phòng", "HP", "Hải Phòng"),
-            ("Chi nhánh Cần Thơ", "CT", "Cần Thơ"),
-            # Đồng bằng sông Hồng
-            ("Chi nhánh Bắc Ninh", "BN", "Bắc Ninh"),
-            ("Chi nhánh Hà Nam", "HNA", "Hà Nam"),
-            ("Chi nhánh Hải Dương", "HD", "Hải Dương"),
-            ("Chi nhánh Hưng Yên", "HY", "Hưng Yên"),
-            ("Chi nhánh Nam Định", "ND", "Nam Định"),
-            ("Chi nhánh Ninh Bình", "NB", "Ninh Bình"),
-            ("Chi nhánh Thái Bình", "TB", "Thái Bình"),
-            ("Chi nhánh Vĩnh Phúc", "VP", "Vĩnh Phúc"),
-            # Đông Bắc
-            ("Chi nhánh Bắc Giang", "BG", "Bắc Giang"),
-            ("Chi nhánh Bắc Kạn", "BK", "Bắc Kạn"),
-            ("Chi nhánh Cao Bằng", "CB", "Cao Bằng"),
-            ("Chi nhánh Hà Giang", "HG", "Hà Giang"),
-            ("Chi nhánh Lạng Sơn", "LS", "Lạng Sơn"),
-            ("Chi nhánh Phú Thọ", "PT", "Phú Thọ"),
-            ("Chi nhánh Quảng Ninh", "QN", "Quảng Ninh"),
-            ("Chi nhánh Thái Nguyên", "TN", "Thái Nguyên"),
-            ("Chi nhánh Tuyên Quang", "TQ", "Tuyên Quang"),
-            ("Chi nhánh Yên Bái", "YB", "Yên Bái"),
-            # Tây Bắc
-            ("Chi nhánh Điện Biên", "DB", "Điện Biên"),
-            ("Chi nhánh Hòa Bình", "HB", "Hòa Bình"),
-            ("Chi nhánh Lai Châu", "LC", "Lai Châu"),
-            ("Chi nhánh Lào Cai", "LCA", "Lào Cai"),
-            ("Chi nhánh Sơn La", "SL", "Sơn La"),
-            # Bắc Trung Bộ
-            ("Chi nhánh Hà Tĩnh", "HT", "Hà Tĩnh"),
-            ("Chi nhánh Nghệ An", "NA", "Nghệ An"),
-            ("Chi nhánh Quảng Bình", "QB", "Quảng Bình"),
-            ("Chi nhánh Quảng Trị", "QT", "Quảng Trị"),
-            ("Chi nhánh Thanh Hóa", "TH", "Thanh Hóa"),
-            ("Chi nhánh Thừa Thiên Huế", "TTH", "Thừa Thiên Huế"),
-            # Duyên hải Nam Trung Bộ
-            ("Chi nhánh Bình Định", "BD", "Bình Định"),
-            ("Chi nhánh Bình Thuận", "BTH", "Bình Thuận"),
-            ("Chi nhánh Khánh Hòa", "KH", "Khánh Hòa"),
-            ("Chi nhánh Ninh Thuận", "NT", "Ninh Thuận"),
-            ("Chi nhánh Phú Yên", "PY", "Phú Yên"),
-            ("Chi nhánh Quảng Nam", "QNA", "Quảng Nam"),
-            ("Chi nhánh Quảng Ngãi", "QNG", "Quảng Ngãi"),
-            # Tây Nguyên
-            ("Chi nhánh Đắk Lắk", "DL", "Đắk Lắk"),
-            ("Chi nhánh Đắk Nông", "DNO", "Đắk Nông"),
-            ("Chi nhánh Gia Lai", "GL", "Gia Lai"),
-            ("Chi nhánh Kon Tum", "KT", "Kon Tum"),
-            ("Chi nhánh Lâm Đồng", "LD", "Lâm Đồng"),
-            # Đông Nam Bộ
-            ("Chi nhánh Bà Rịa - Vũng Tàu", "VT", "Bà Rịa - Vũng Tàu"),
-            ("Chi nhánh Bình Dương", "BDU", "Bình Dương"),
-            ("Chi nhánh Bình Phước", "BP", "Bình Phước"),
-            ("Chi nhánh Đồng Nai", "DNA", "Đồng Nai"),
-            ("Chi nhánh Tây Ninh", "TNI", "Tây Ninh"),
-            # Đồng bằng sông Cửu Long
-            ("Chi nhánh An Giang", "AG", "An Giang"),
-            ("Chi nhánh Bạc Liêu", "BL", "Bạc Liêu"),
-            ("Chi nhánh Bến Tre", "BT", "Bến Tre"),
-            ("Chi nhánh Cà Mau", "CM", "Cà Mau"),
-            ("Chi nhánh Đồng Tháp", "DT", "Đồng Tháp"),
-            ("Chi nhánh Hậu Giang", "HGI", "Hậu Giang"),
-            ("Chi nhánh Kiên Giang", "KG", "Kiên Giang"),
-            ("Chi nhánh Long An", "LA", "Long An"),
-            ("Chi nhánh Sóc Trăng", "ST", "Sóc Trăng"),
-            ("Chi nhánh Tiền Giang", "TG", "Tiền Giang"),
-            ("Chi nhánh Trà Vinh", "TV", "Trà Vinh"),
-            ("Chi nhánh Vĩnh Long", "VL", "Vĩnh Long"),
-        ]
+        regions = self._fetch_provinces()
 
         created = updated = 0
         for bank in banks:
@@ -501,8 +332,8 @@ class BankBranch(models.Model):
                     created += 1
 
         _logger.info(
-            "Đồng bộ chi nhánh toàn quốc hoàn tất: created=%s updated=%s (63 tỉnh/thành × %d ngân hàng)",
-            created, updated, len(banks),
+            "Đồng bộ chi nhánh toàn quốc hoàn tất: created=%s updated=%s (%d tỉnh/thành × %d ngân hàng)",
+            created, updated, len(regions), len(banks),
         )
         return {"success": True, "created": created, "updated": updated}
 

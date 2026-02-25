@@ -222,8 +222,6 @@ docker-compose.override.yml
 *.rar
 *.7z
 
-# Except specific archives we want to keep
-!addons/stock_data.zip
 
 # Local configuration overrides
 local_settings.py

@@ -1,73 +1,44 @@
 # =============================================================================
-# FMS - Fund Management System
-# Python Requirements for Odoo 18
+# ARC-ODOO — Python Requirements for Odoo 18
+# =============================================================================
+# Chỉ liệt kê package THỰC SỰ được import trong code.
+# Odoo 18 image đã có sẵn: werkzeug, psycopg2, lxml, Jinja2, etc.
 # =============================================================================
 #pip install --ignore-installed typing_extensions
-# =============================================================================
-# CORE DEPENDENCIES
-# =============================================================================
-requests>=2.31.0              # HTTP client
-websocket-client>=1.7.0       # WebSocket connections
-Pillow>=10.0.1                # Image processing
+# -----------------------------------------------------------------------------
+# CORE
+# -----------------------------------------------------------------------------
+requests>=2.31.0                # HTTP client (ssi_gateway, controllers)
+Pillow>=10.0.1                  # Image processing (ekyc, pdf_utils)
 
-# =============================================================================
+# -----------------------------------------------------------------------------
 # SSI FASTCONNECT API (stock_data, stock_trading)
-# =============================================================================
-ssi-fc-data>=1.0.0            # SSI Market Data SDK
-ssi-fctrading>=1.0.0          # SSI Trading SDK
+# -----------------------------------------------------------------------------
+ssi-fc-data>=1.0.0              # SSI Market Data SDK
+ssi-fctrading>=1.0.0            # SSI Trading SDK
 
-# =============================================================================
-# DATA SCIENCE & ANALYSIS
-# =============================================================================
-numpy>=1.24.0                 # Numerical computing
-pandas>=2.0.0                 # Data manipulation
-pandas-ta>=0.3.14b0           # Technical analysis indicators
-scikit-learn>=1.3.0           # Machine learning
+# -----------------------------------------------------------------------------
+# DATA & ANALYSIS
+# -----------------------------------------------------------------------------
+numpy>=1.24.0                   # Numerical computing (ai_trading_assistant)
+pandas>=2.0.0                   # Data manipulation (ai_trading_assistant, reports)
 
-# =============================================================================
-# VISUALIZATION
-# =============================================================================
-plotly>=5.19.0                # Interactive charts
-matplotlib>=3.8.0             # Static charts
+# -----------------------------------------------------------------------------
+# AI TRADING (ai_trading_assistant) — optional, heavy deps
+# -----------------------------------------------------------------------------
+# Uncomment khi cần chạy AI trading module:
+# --extra-index-url https://download.pytorch.org/whl/cpu
+# finrl>=0.3.0                  # FinRL framework (includes torch, gymnasium)
+# stable-baselines3>=2.0.0      # DRL algorithms
 
-# =============================================================================
-# AI TRADING (ai_trading_assistant)
-# =============================================================================
-# Deep Reinforcement Learning
---extra-index-url https://download.pytorch.org/whl/cpu
-torch>=2.0.0                  # PyTorch (CPU version)
-stable-baselines3>=2.0.0      # DRL algorithms
-gymnasium>=0.29.0             # RL environments
+# -----------------------------------------------------------------------------
+# PDF & REPORTING (fund_management, report_list)
+# -----------------------------------------------------------------------------
+PyMuPDF>=1.23.8                 # PDF manipulation (import fitz)
+openpyxl>=3.1.2                 # Excel export (report_list controllers)
 
-# ML Algorithms
-xgboost>=2.0.0                # Gradient boosting
-lightgbm>=4.0.0               # Light gradient boosting
-catboost>=1.2.0               # Categorical boosting
-
-# Training & Monitoring
-tensorboard>=2.10.0           # Training visualization
-optuna>=2.10.0                # Hyperparameter optimization
-tqdm>=4.60.0                  # Progress bars
-rich>=10.0.0                  # Rich terminal output
-
-# AI Chatbot
-openai>=1.0.0                 # OpenAI/OpenRouter SDK
-
-# =============================================================================
-# PDF & REPORTING (report_list)
-# =============================================================================
-PyMuPDF>=1.23.8               # PDF manipulation
-pypdf>=4.0.0                  # PDF reading/writing
-reportlab>=4.0.0              # PDF generation
-pikepdf>=1.10.0               # PDF editing
-
-# =============================================================================
-# PAYMENT INTEGRATION (payos_gateway)
-# =============================================================================
-pycryptodome>=3.19.0          # Cryptographic operations
-
-# =============================================================================
+# -----------------------------------------------------------------------------
 # UTILITIES
-# =============================================================================
-python-dateutil>=2.8.2        # Date utilities
-pytz>=2023.3                  # Timezone handling
+# -----------------------------------------------------------------------------
+python-dateutil>=2.8.2          # Date parsing (dateutil)
+pytz>=2023.3                    # Timezone handling

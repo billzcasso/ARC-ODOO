@@ -253,7 +253,7 @@ export class FundCertificateWidget extends Component {
                                 </li>
                                 <t t-foreach="visiblePages" t-as="page" t-key="page_index">
                                     <li t-attf-class="page-item #{page === state.currentPage ? 'active' : ''} #{page === '...' ? 'disabled' : ''}">
-                                        <a class="page-link shadow-none" href="#" t-on-click.prevent="() => page !== '...' &amp;&amp; this.changePage(page)" t-esc="page"/>
+                                        <a class="page-link shadow-none" href="#" t-on-click.prevent="() => this.onPageClick(page)" t-esc="page"/>
                                     </li>
                                 </t>
                                 <li t-attf-class="page-item #{state.currentPage === totalPages ? 'disabled' : ''}">
@@ -502,6 +502,8 @@ export class FundCertificateWidget extends Component {
             this.state.loading = false;
         }
     }
+
+    onPageClick(page) { if (page !== '...') this.changePage(page); }
 
     changePage(newPage) {
         if (newPage > 0 && newPage <= this.totalPages && newPage !== this.state.currentPage) {

@@ -1,6 +1,7 @@
 from odoo import http
 from odoo.http import request
 import json
+from markupsafe import Markup
 import pytz
 from datetime import datetime, timedelta
 from odoo.addons.user_permission_management.utils.permission_checker import require_module_access
@@ -276,7 +277,7 @@ class OverviewFundManagementController(http.Controller):
         }
 
         return request.render('overview_fund_management.overview_fund_management_page', {
-            'all_dashboard_data': json.dumps(all_dashboard_data)
+            'all_dashboard_data': Markup(json.dumps(all_dashboard_data))
         })
     
     def _get_current_nav_price(self, ticker):

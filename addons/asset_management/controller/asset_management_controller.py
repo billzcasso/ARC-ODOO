@@ -1,6 +1,7 @@
 from odoo import http
 from odoo.http import request
 import json
+from markupsafe import Markup
 from datetime import datetime, timedelta
 from odoo.addons.user_permission_management.utils.permission_checker import require_module_access
 
@@ -374,7 +375,7 @@ class AssetManagementController(http.Controller):
                 del o['transactionDateObj']
 
         return request.render('asset_management.asset_management_page', {
-            'asset_data': json.dumps(asset_data)
+            'asset_data': Markup(json.dumps(asset_data))
         })
     
     def _get_previous_nav_price(self, fund_id):

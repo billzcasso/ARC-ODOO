@@ -128,46 +128,8 @@ class DataManagementController(http.Controller):
                 status=500,
             )
 
-    @http.route(
-        "/holiday/sync/internal",
-        type="http",
-        auth="user",
-        methods=["POST"],
-        csrf=False,
-        cors="*",
-    )
-    def holiday_sync_internal(self, **kwargs):
-        payload = {}
-        try:
-            payload = request.get_json_data(force=False, silent=True) or {}
-        except Exception as exc:  # noqa: BLE001
-            _logger.warning("Không thể parse JSON đầu vào khi đồng bộ nội bộ ngày lễ: %s", exc)
 
-        year = payload.get("year")
 
-        try:
-            result = (
-                request.env["data.holiday"].sudo().sync_local_holidays(year=year)
-            )
-            return Response(json.dumps(result), content_type="application/json")
-        except UserError as exc:
-            return Response(
-                json.dumps({"success": False, "error": str(exc)}),
-                content_type="application/json",
-                status=400,
-            )
-        except Exception as exc:  # noqa: BLE001
-            _logger.error("Lỗi đồng bộ nội bộ ngày lễ: %s", exc, exc_info=True)
-            return Response(
-                json.dumps(
-                    {
-                        "success": False,
-                        "error": _("Không thể đồng bộ nội bộ ngày lễ: %s") % str(exc),
-                    }
-                ),
-                content_type="application/json",
-                status=500,
-            )
 
     @http.route(
         "/holiday/edit/<int:holiday_id>", type="http", auth="user", website=True
@@ -435,23 +397,34 @@ class DataManagementController(http.Controller):
         csrf=False,
         cors="*",
     )
-    def get_bank_branch_data(self, page=1, limit=10, search="", **kwargs):
+    def get_bank_branch_data(self, page=1, limit=10, search="", bank_id="", **kwargs):
         domain = []
         if search:
             domain = ["|", ("name", "ilike", search), ("code", "ilike", search)]
+        if bank_id:
+            try:
+                domain.append(("bank_id", "=", int(bank_id)))
+            except (ValueError, TypeError):
+                pass
         total_records = request.env["data.bank.branch"].search_count(domain)
         offset = (int(page) - 1) * int(limit)
         branches = request.env["data.bank.branch"].search(
-            domain, limit=int(limit), offset=offset
+            domain, limit=int(limit), offset=offset, order="bank_id, code"
         )
         data = []
+        seen = set()
         for br in branches:
+            key = (br.bank_id.id, br.code)
+            if key in seen:
+                continue
+            seen.add(key)
             data.append(
                 {
                     "id": br.id,
                     "name": br.name or "",
-                    "bank_id": br.bank_id.name if br.bank_id else "",
+                    "bank_name": br.bank_id.name if br.bank_id else "",
                     "code": br.code or "",
+                    "address": br.address or "",
                     "active": br.active,
                 }
             )
@@ -459,7 +432,6 @@ class DataManagementController(http.Controller):
             json.dumps({"records": data, "total_records": total_records}),
             content_type="application/json",
         )
-
 
 
     @http.route(
@@ -490,8 +462,6 @@ class DataManagementController(http.Controller):
                 content_type="application/json",
                 status=500,
             )
-
-
 
     @http.route("/bank_branch/new", type="http", auth="user", website=True)
     def bank_branch_form_page(self, **kwargs):

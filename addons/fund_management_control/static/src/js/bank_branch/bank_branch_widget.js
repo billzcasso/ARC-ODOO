@@ -19,18 +19,13 @@ class BankBranchWidget extends Component {
                 </nav>
             </div>
             <div class="d-flex align-items-center gap-2">
-                 <button t-on-click="syncBasic" t-att-disabled="state.syncing || state.syncingAll" class="btn btn-fmc-light d-flex align-items-center gap-2">
+                 <button t-on-click="syncBasic" t-att-disabled="state.syncing" class="btn btn-fmc-light d-flex align-items-center gap-2">
                     <i t-if="state.syncing" class="fas fa-spin fa-spinner text-primary"></i>
                     <i t-else="" class="fas fa-sync text-primary"></i>
                     <span t-if="state.syncing">Đang đồng bộ...</span>
                     <span t-else="">Đồng bộ cơ bản</span>
                 </button>
-                 <button t-on-click="syncNationwide" t-att-disabled="state.syncingAll || state.syncing" class="btn btn-fmc-light d-flex align-items-center gap-2">
-                     <i t-if="state.syncingAll" class="fas fa-spin fa-spinner text-primary"></i>
-                    <i t-else="" class="fas fa-globe text-primary"></i>
-                    <span t-if="state.syncingAll">Đang đồng bộ...</span>
-                    <span t-else="">Đồng bộ toàn quốc</span>
-                </button>
+
                 <button t-on-click="createNew" class="btn btn-fmc-primary d-flex align-items-center gap-2">
                     <i class="fas fa-plus"></i>
                     <span>Tạo mới</span>
@@ -147,7 +142,7 @@ class BankBranchWidget extends Component {
                         </li>
                         <t t-foreach="visiblePages" t-as="page" t-key="page_index">
                              <li t-attf-class="page-item #{page === state.currentPage ? 'active' : ''} #{page === '...' ? 'disabled' : ''}">
-                                <a class="page-link shadow-none" href="#" t-on-click.prevent="() => page !== '...' &amp;&amp; this.changePage(page)" t-esc="page"/>
+                                <a class="page-link shadow-none" href="#" t-on-click.prevent="() => this.onPageClick(page)" t-esc="page"/>
                             </li>
                         </t>
                          <li t-attf-class="page-item #{state.currentPage === totalPages ? 'disabled' : ''}">
@@ -215,6 +210,7 @@ class BankBranchWidget extends Component {
             this.state.totalRecords = data.total_records;
         } catch (e) { console.error(e); } finally { this.state.loading = false; }
     }
+    onPageClick(page) { if (page !== '...') this.changePage(page); }
     changePage(page) { if (page > 0 && page <= this.totalPages) { this.state.currentPage = page; this.loadData(); } }
     onSearchKeyup(ev) { if (ev.key === 'Enter') this.performSearch(); }
     performSearch() { this.state.currentPage = 1; this.loadData(); }
@@ -242,31 +238,6 @@ class BankBranchWidget extends Component {
             window.alert('Có lỗi xảy ra khi đồng bộ chi nhánh.');
         } finally {
             this.state.syncing = false;
-        }
-    }
-
-    async syncNationwide() {
-        this.state.syncingAll = true;
-        try {
-            const res = await fetch('/bank_branch/sync/nationwide', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
-                window.alert(err.error || `HTTP ${res.status}`);
-                return;
-            }
-            const result = await res.json();
-            if (!result.success) {
-                window.alert(result.error || 'Đồng bộ thất bại.');
-                return;
-            }
-            window.alert(`Đã đồng bộ chi nhánh toàn quốc. Thêm mới: ${result.created || 0}, cập nhật: ${result.updated || 0}.`);
-            this.state.currentPage = 1;
-            await this.loadData();
-        } catch (e) {
-            console.error('Sync nationwide error:', e);
-            window.alert('Có lỗi xảy ra khi đồng bộ chi nhánh toàn quốc.');
-        } finally {
-            this.state.syncingAll = false;
         }
     }
 }

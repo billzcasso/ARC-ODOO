@@ -62,7 +62,9 @@
       <!-- Pass data from controller to JavaScript -->
       <script type="text/javascript">
         window.allDashboardData = <t t-out="all_dashboard_data"/>;
-        
+      </script>
+      <script type="text/javascript">
+        //<![CDATA[
         // Hàm tiện ích để hiển thị lỗi
         window.showError = function(message) {
           const errorContainer = document.getElementById('error-container');
@@ -70,7 +72,7 @@
           const loadingSpinner = document.getElementById('loading-spinner');
           const widgetContainer = document.getElementById('overview-fund-management-widget');
           
-          if (errorContainer &amp;&amp; errorMessage) {
+          if (errorContainer && errorMessage) {
             errorMessage.textContent = message || 'Có lỗi xảy ra khi tải dữ liệu';
             errorContainer.style.display = 'block';
           }
@@ -102,6 +104,7 @@
             widgetContainer.style.display = 'block';
           }
         };
+        //]]>
       </script>
 
       <!-- Import JavaScript -->
