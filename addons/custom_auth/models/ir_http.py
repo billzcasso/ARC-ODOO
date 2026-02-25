@@ -25,7 +25,7 @@ class IrHttp(models.AbstractModel):
                     "img-src 'self' data: https:",
                     "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
                     "connect-src 'self' wss: https: http:",
-                    "frame-src 'self' https://pay.payos.vn",
+                    "frame-src 'self' https://pay.payos.vn blob:",
                     "frame-ancestors 'self'",
                     "object-src 'self' blob:",
                 ]
