@@ -11,7 +11,7 @@ set -e
 
 # install system dependencies and python packages
 apt-get update && apt-get install -y git swig gcc g++
-pip3 install -r /etc/odoo/requirements.txt
+pip3 install --ignore-installed -r /etc/odoo/requirements.txt
 # sed -i 's|raise werkzeug.exceptions.BadRequest(msg)|self.jsonrequest = {}|g' /usr/lib/python3/dist-packages/odoo/http.py
 
 # Install logrotate if not already installed
