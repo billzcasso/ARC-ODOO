@@ -9,9 +9,22 @@ set -e
 : ${USER:=${DB_ENV_POSTGRES_USER:=${POSTGRES_USER:='odoo'}}}
 : ${PASSWORD:=${DB_ENV_POSTGRES_PASSWORD:=${POSTGRES_PASSWORD:='odoo18@2024'}}}
 
-# install system dependencies and python packages
-apt-get update && apt-get install -y git swig gcc g++
-pip3 install --ignore-installed -r /etc/odoo/requirements.txt
+# Cài đặt system dependencies
+apt-get update && apt-get install -y git swig gcc g++ python3-venv
+
+# Thiết lập Virtual Environment cô lập (Isolating AI environment)
+VENV_PATH="/opt/odoo_venv"
+if [ ! -d "$VENV_PATH" ]; then
+    python3 -m venv --system-site-packages "$VENV_PATH"
+fi
+source "$VENV_PATH/bin/activate"
+
+# Nâng cấp pip và cài đặt requirements
+pip install --upgrade pip
+pip install --no-cache-dir -r /etc/odoo/requirements.txt
+
+# Export PYTHONPATH để Odoo ưu tiên thư viện trong venv
+export PYTHONPATH="$VENV_PATH/lib/python$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')/site-packages:$PYTHONPATH"
 # sed -i 's|raise werkzeug.exceptions.BadRequest(msg)|self.jsonrequest = {}|g' /usr/lib/python3/dist-packages/odoo/http.py
 
 # Install logrotate if not already installed
