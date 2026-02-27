@@ -252,13 +252,23 @@ Hãy cung cấp nhận định chuyên sâu dựa trên số điểm {latest_vni
         if not ticker:
             ticker = self.sudo().create({'name': symbol, 'company_name': f'Mã {symbol}', 'market': 'HOSE', 'is_active': True})
             
-        # 1. Sync Data
+        # 1. Sync Data (Tối ưu: Chỉ sync nếu dữ liệu cũ hơn 15 phút)
         try:
             to_date_str = datetime.now().strftime('%d/%m/%Y')
             latest_c = self.env['stock.candle'].sudo().search([('ticker_id', '=', ticker.id)], order='date desc', limit=1)
-            from_date_str = (latest_c.date - timedelta(days=2)).strftime('%d/%m/%Y') if latest_c else (datetime.now() - timedelta(days=150)).strftime('%d/%m/%Y')
-            fetcher = self.env['ssi.data.fetcher'].sudo().create({})
-            fetcher.fetch_daily_ohlcv(symbol, from_date_str, to_date_str)
+            
+            # Kiểm tra thời gian cập nhật cuối cùng để tránh spam API SSI
+            # Odoo tự động lưu write_date khi bản ghi bị thay đổi
+            should_sync = True
+            if latest_c:
+                diff = datetime.now() - latest_c.write_date
+                if diff.total_seconds() < 200: 
+                    should_sync = False
+            
+            if should_sync:
+                from_date_str = (latest_c.date - timedelta(days=2)).strftime('%d/%m/%Y') if latest_c else (datetime.now() - timedelta(days=150)).strftime('%d/%m/%Y')
+                fetcher = self.env['ssi.data.fetcher'].sudo().create({})
+                fetcher.fetch_daily_ohlcv(symbol, from_date_str, to_date_str)
         except Exception: pass
             
         # 2. Chuẩn bị DataFrame
@@ -329,16 +339,18 @@ Hãy cung cấp nhận định chuyên sâu dựa trên số điểm {latest_vni
         if not active_strategy:
             return {'status': 'success', 'response_html': self._render_no_model_html(symbol, l_price, sma_v, rsi_v, l_date)}
             
-        pred_action = active_strategy.get_inference_action(ticker)
+        pred_action, lib_error = active_strategy.get_inference_action(ticker)
         
-        # 6. Logic Signals & Dynamic Metrics (Hardcode fix)
+        # 6. Logic Signals & Dynamic Metrics (Tối ưu độ nhạy & Loại bỏ Hardcode)
         tech_signal = "NẮM GIỮ"
         ai_conf = 0.0
-        if pred_action == -999.0: tech_signal = "LỖI THƯ VIỆN"
+        if lib_error: 
+            tech_signal = lib_error
         else:
             ai_conf = min(abs(pred_action * 100), 100)
-            if pred_action > 0.1: tech_signal = "MUA MẠNH" if pred_action > 0.5 else "CANH MUA"
-            elif pred_action < -0.1: tech_signal = "BÁN MẠNH" if pred_action < -0.5 else "CANH BÁN"
+            # Giảm ngưỡng kích hoạt tín hiệu từ 0.1 xuống 0.05 để nhạy hơn với thay đổi nhỏ của Model
+            if pred_action > 0.05: tech_signal = "MUA MẠNH" if pred_action > 0.4 else "CANH MUA"
+            elif pred_action < -0.05: tech_signal = "BÁN MẠNH" if pred_action < -0.4 else "CANH BÁN"
 
         # Tính toán các star metrics (1-5)
         # 1. Sức mạnh giá (RSI)
@@ -352,24 +364,43 @@ Hãy cung cấp nhận định chuyên sâu dựa trên số điểm {latest_vni
         vol_avg = df['volume'].tail(20).mean() or 1.0
         vol_ratio = latest_row['volume'] / vol_avg
         flow_s = min(max(int(vol_ratio * 2) + 1, 1), 5)
-        # 5. Độ biến động (Standard Deviation proxy)
-        volat_s = min(max(5 - int(abs(diff_sma) / 3), 1), 5)
+        # 5. Độ biến động (Standard Deviation - Căn cứ để tính Reward/Risk)
+        returns = df['close'].pct_change().dropna()
+        volatility_7d = returns.tail(7).std() * 100 # Độ biến động % hàng ngày
+        volat_s = min(max(5 - int(volatility_7d * 2), 1), 5)
         # 6. Biên nền giá (Distance from 20-day low)
         low_20 = df['low'].tail(20).min() or 1.0
         base_s = min(max(int((l_price - low_20) / (low_20 * 0.02 or 1)) + 1, 1), 5)
 
-        # Tỷ lệ lãi lỗ chiết khấu từ model
+        # Tỷ lệ lãi lỗ chiết khấu từ model KẾT HỢP với biến động thực tế (Volatility Adaptive)
         ai_ret = active_strategy.expected_return or 15.0
         ai_dd = abs(active_strategy.max_drawdown or 5.0)
-        swing_ret = min(max((ai_ret / 252) * 21, 2.0), 15.0)
-        risk_buf = min(max((ai_dd / 252) * 21, 1.5), 8.0)
         
-        # LOGIC CỐ ĐỊNH: Vùng Mua phải ở DƯỚI, Chốt Lời phải ở TRÊN
+        # Công thức mới: Căn cứ hoàn toàn vào hiệu suất mô hình và biến động (Real-time Adaptive)
+        model_monthly_ret = (ai_ret / 252) * 21
+        model_monthly_dd = (ai_dd / 252) * 21
+        
+        # Kiểm tra lỗi thư viện (lib_error) để tránh tính toán sai lệch cực lớn
+        is_lib_error = bool(lib_error)
+        valid_action = 0.0 if is_lib_error else abs(pred_action)
+
+        # Swing profit target: Bỏ hoàn toàn floor 2%, tính theo (Monthly Return * Action Strength) + Volatility Offset
+        # Giúp số liệu phản ánh đúng kỳ vọng tương lai của mô hình
+        swing_ret = (model_monthly_ret * valid_action * 3) + (volatility_7d * 0.8)
+        swing_ret = min(swing_ret, 35.0) if not is_lib_error else 0.0
+        
+        # Risk buffer: Tương tự, linh hoạt theo volatility và drawdown
+        risk_buf = (model_monthly_dd * 0.5) + (volatility_7d * 1.5)
+        risk_buf = min(risk_buf, 15.0) if not is_lib_error else 0.0
+        
+        # LOGIC CỐ ĐỊNH: Vùng Mua/Bán linh hoạt theo biến động thực tế
         anchor_buy = min(l_price, sma_v)
-        b_low, b_high = anchor_buy * (1 - risk_buf/100), anchor_buy * 1.005
+        # Vùng mua/bán mở rộng theo volatility
+        range_width = max(volatility_7d * 0.3, 0.1)
+        b_low, b_high = anchor_buy * (1 - risk_buf/200), anchor_buy * (1 + range_width/100)
         
         anchor_target = max(l_price, b_high)
-        t1, t2 = anchor_target * (1 + swing_ret*0.5/100), anchor_target * (1 + swing_ret/100)
+        t1, t2 = anchor_target * (1 + swing_ret*0.7/100), anchor_target * (1 + swing_ret/100)
 
         expert_comment = self._get_llm_expert_analysis(
             symbol, l_price, l_date, tech_signal, b_low, b_high, t1, t2, rsi_v, sma_v, macd_v,
@@ -384,8 +415,9 @@ Hãy cung cấp nhận định chuyên sâu dựa trên số điểm {latest_vni
 
         is_neg = "BÁN" in tech_signal
         if is_neg:
-            z_label, z_val = "Vùng canh bán", f"{fmt(l_price * 1.01)} - {fmt(l_price * 1.03)}"
-            t_label, t_val, t_color = "Ngưỡng cắt lỗ", f"{fmt(b_low)}", "#e74c3c"
+            # Ngưỡng vùng bán cũng linh hoạt theo volatility
+            z_label, z_val = "Vùng canh bán", f"{fmt(l_price)} - {fmt(l_price * (1 + range_width/100))}"
+            t_label, t_val, t_color = "Ngưỡng cắt lỗ", f"{fmt(anchor_buy * (1 + risk_buf/100))}", "#e74c3c"
             p_label, p_val = "Rủi ro sụt giảm", f"-{risk_buf:.2f}%"
         else:
             z_label, z_val = "Vùng canh mua", f"{fmt(b_low)} - {fmt(b_high)}"

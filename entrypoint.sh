@@ -19,9 +19,10 @@ if [ ! -d "$VENV_PATH" ]; then
 fi
 source "$VENV_PATH/bin/activate"
 
-# Nâng cấp pip và cài đặt requirements
+# Nâng cấp pip và cài đặt requirements (Xóa --ignore-installed để tránh hỏng package gốc của Odoo)
 pip install --upgrade pip
-pip install --ignore-installed --no-cache-dir -r /etc/odoo/requirements.txt
+echo "ARC-ODOO: Đang kiểm tra và cài đặt thư viện Python..."
+pip install --no-cache-dir -r /etc/odoo/requirements.txt || echo "CẢNH BÁO: pip install có lỗi/cảnh báo nhưng vẫn tiếp tục..."
 
 # Đảm bảo Odoo nhận diện được thư viện trong venv khi chạy
 export PYTHONPATH="$VENV_PATH/lib/python$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')/site-packages:$PYTHONPATH"

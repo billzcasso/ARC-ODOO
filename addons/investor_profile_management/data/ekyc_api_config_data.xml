@@ -3,9 +3,9 @@
     <!-- Default VNPT eKYC API Configuration -->
     <record id="ekyc_api_config_default" model="ekyc.api.config">
         <field name="name">Default Configuration</field>
-        <field name="token_id">4b9d7fa8-d350-4b6a-e063-62199f0ab99a</field>
-        <field name="token_key">MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAKJa4g2QDJuYXZE/LG7JVH7RcIOL0LYRGbWTMOdQrAfzPEQm3Amt9hMhViD+3GbYezEfyC4aL0jOf5Tpf+vqPckCAwEAAQ==</field>
-        <field name="public_key_ca">MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAJUGSH1d8fGoZ90b3naCqRxzJIH/Ceztg0yf/+M27pKbATH/DrzciHm79kp0slsgCeKs0YNnM7kD8k6LTnhkerECAwEAAQ==</field>
+        <field name="token_id"></field>
+        <field name="token_key"></field>
+        <field name="public_key_ca"></field>
         <field name="base_url">https://api.idg.vnpt.vn</field>
         <field name="is_active" eval="True"/>
     </record>

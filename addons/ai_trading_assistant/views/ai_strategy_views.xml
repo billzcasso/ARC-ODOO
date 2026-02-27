@@ -20,6 +20,7 @@
             <form string="AI Strategy">
                 <header>
                      <button name="action_activate" string="Sử dụng chiến lược này" type="object" class="oe_highlight" invisible="status == 'active'"/>
+                     <button name="action_debug_model" string="Debug Model (Kỹ thuật)" type="object" groups="base.group_system"/>
                      <button name="action_draft" string="Chuyển về Nháp" type="object" invisible="status == 'draft'"/>
                     <field name="status" widget="statusbar" statusbar_visible="draft,trained,active"/>
                 </header>
@@ -52,6 +53,7 @@
                         <group string="Hệ thống">
                             <field name="training_time"/>
                             <field name="framework_version"/>
+                            <field name="debug_report" groups="base.group_system"/>
                         </group>
                     </group>
                     <label for="description"/>

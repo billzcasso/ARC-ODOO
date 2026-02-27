@@ -20,16 +20,16 @@ ssi-fctrading>=1.0.0            # SSI Trading SDK
 # -----------------------------------------------------------------------------
 # DATA & ANALYSIS
 # -----------------------------------------------------------------------------
-numpy>=1.24.0                   # Numerical computing (ai_trading_assistant)
-pandas>=2.0.0                   # Data manipulation (ai_trading_assistant, reports)
+numpy>=1.24.0,<2.0.0            # Numerical computing (ai_trading_assistant)
+pandas>=2.0.0,<2.2.0            # Data manipulation (ai_trading_assistant, reports)
 
 # -----------------------------------------------------------------------------
 # AI TRADING (ai_trading_assistant)
 # -----------------------------------------------------------------------------
 --extra-index-url https://download.pytorch.org/whl/cpu
 stockstats                      # Technical indicators
-finrl @ git+https://github.com/AI4Finance-Foundation/FinRL.git
-stable-baselines3>=2.0.0        # DRL algorithms
+#finrl @ git+https://github.com/AI4Finance-Foundation/FinRL.git
+stable-baselines3==2.3.2        # DRL algorithms (Ghim phiên bản ổn định)
 gymnasium>=0.29.0               # RL environments
 scikit-learn>=1.3.0             # ML utilities
 

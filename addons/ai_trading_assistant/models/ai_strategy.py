@@ -1,5 +1,13 @@
 from odoo import models, fields, api
 
+import logging
+
+_logger = logging.getLogger(__name__)
+
+# Cache toàn cục để giữ Model trên RAM (Tránh load lại từ Disk gây chậm)
+# { strategy_id: { 'model': model_obj, 'write_date': date } }
+_MODEL_CACHE = {}
+
 class AIStrategy(models.Model):
     _name = 'ai.strategy'
     _description = 'AI Trading Strategy (FinRL Model)'
@@ -42,6 +50,7 @@ class AIStrategy(models.Model):
     # Môi trường
     framework_version = fields.Char(string='FinRL/SB3 Version')
     training_time = fields.Char(string='Thời gian huấn luyện')
+    debug_report = fields.Text(string='Báo cáo Kỹ thuật', readonly=True)
     
     # Tracking / Security
     user_id = fields.Many2one('res.users', string='Người phụ trách', default=lambda self: self.env.user)
@@ -57,12 +66,24 @@ class AIStrategy(models.Model):
             return {}
             
         try:
-            content = base64.b64decode(model_binary)
+            # Odoo Binary field trả về bytes, không cần decode nếu đã là bytes ZIP (bắt đầu bằng PK)
+            # Tuy nhiên để chắc chắn, ta thử decode. Nếu lỗi thì dùng bản gốc.
+            content = model_binary
+            if isinstance(model_binary, str):
+                try:
+                    content = base64.b64decode(model_binary)
+                except: pass
+            elif isinstance(model_binary, bytes) and not model_binary.startswith(b'PK'):
+                try:
+                    content = base64.b64decode(model_binary)
+                except: pass
+
             with zipfile.ZipFile(io.BytesIO(content)) as zf:
                 if 'metadata.json' in zf.namelist():
                     with zf.open('metadata.json') as f:
                         return json.loads(f.read().decode('utf-8'))
-        except Exception:
+        except Exception as e:
+            _logger.warning(f"Metadata parsing failed: {e}")
             pass
         return {}
         
@@ -258,6 +279,74 @@ class AIStrategy(models.Model):
                        f"Framework: {record.framework_version}",
         })
 
+    def action_debug_model(self):
+        """Action để debug cấu trúc file model trực tiếp từ giao diện Odoo."""
+        self.ensure_one()
+        if not self.model_file:
+            raise models.ValidationError("Không có file model để debug!")
+            
+        import zipfile
+        import io
+        import base64
+        
+        _logger.info(f"--- START DEBUG MODEL: {self.name} ---")
+        report = []
+        report.append(f"Algorithm field: {self.algorithm}")
+        
+        # Kiểm tra kiểu dữ liệu Odoo trả về
+        raw_data = self.model_file
+        report.append(f"Data Type from Odoo: {type(raw_data)}")
+        
+        # Thử giải mã an toàn
+        content = raw_data
+        if isinstance(raw_data, str):
+            try:
+                content = base64.b64decode(raw_data)
+                report.append("Content handling: Decoded from String (B64)")
+            except Exception as e:
+                report.append(f"Content handling: Failed to decode String ({e})")
+        elif isinstance(raw_data, bytes):
+            if raw_data.startswith(b'PK'):
+                report.append("Content handling: Raw ZIP bytes detected (PK header)")
+            else:
+                try:
+                    content = base64.b64decode(raw_data)
+                    report.append("Content handling: Decoded from Bytes (B64)")
+                except Exception as e:
+                    report.append(f"Content handling: Bytes detected, but not ZIP and B64 decode failed ({e})")
+
+        report.append(f"Total size: {len(content)} bytes")
+        if len(content) > 0:
+            report.append(f"First 20 bytes (Hex): {content[:20].hex()}")
+        
+        # Kiểm tra cấu trúc ZIP
+        try:
+            with zipfile.ZipFile(io.BytesIO(content)) as zf:
+                files = zf.namelist()
+                report.append(f"ZIP Contents: {', '.join(files)}")
+                if 'metadata.json' in files:
+                    with zf.open('metadata.json') as f:
+                        meta = f.read().decode('utf-8')
+                        report.append(f"Metadata JSON (preview): {meta[:200]}...")
+                else:
+                    report.append("CHECK: No metadata.json found (Expected for FinRL/ARC format)")
+        except Exception as e:
+            report.append(f"ZIP INTEGRITY ERROR: {e}")
+
+        for line in report:
+            _logger.info(f"AI DEBUG: {line}")
+        _logger.info(f"--- END DEBUG MODEL ---")
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Debug Model Result',
+                'message': f"Check Odoo Logs for 'AI DEBUG'. ZIP: {'OK' if 'ZIP Contents' in str(report) else 'FAILED'}",
+                'sticky': True,
+            }
+        }
+
     def get_inference_action(self, ticker_to_predict):
         """
         Thực hiện Inference (Dự đoán) thực sự dựa trên file mô hình .zip đã load.
@@ -265,11 +354,11 @@ class AIStrategy(models.Model):
         Args:
            ticker_to_predict (browse_record): Record của mã stock.ticker cần lấy action.
         Returns:
-           float: Hành động được agent đề xuất
+           tuple: (float action, str error_msg)
         """
         self.ensure_one()
         if not self.model_file:
-            return 0.0
+            return 0.0, ""
             
         import base64
         import tempfile
@@ -279,124 +368,152 @@ class AIStrategy(models.Model):
         import numpy as np
         _logger = logging.getLogger(__name__)
         
-        # 1. Kiểm tra thư viện từng bước để chẩn đoán chính xác
-        try:
-            from stable_baselines3 import PPO, A2C, DDPG
-        except ImportError as e:
-            _logger.error(f"LỖI HỆ THỐNG AI: Thiếu thư viện 'stable-baselines3'. Chi tiết: {e}")
-            return -999.0
+        # 1. Kiểm tra Cache trước khi Load từ Disk
+        global _MODEL_CACHE
+        cache_entry = _MODEL_CACHE.get(self.id)
+        if cache_entry and cache_entry['write_date'] == self.write_date:
+            loaded_model = cache_entry['model']
+        else:
+            # 1.1 Kiểm tra thư viện từng bước với LOG chi tiết
+            import sys
+            import traceback
+            _logger.info(f"AI DIAGNOSTIC: Python Executable: {sys.executable}")
+            _logger.info(f"AI DIAGNOSTIC: Python Path: {sys.path}")
             
-        try:
-            from finrl.meta.env_stock_trading.env_stocktrading import StockTradingEnv
-        except ImportError as e:
-            _logger.error(f"LỖI HỆ THỐNG AI: Thiếu thư viện 'finrl'. Chi tiết: {e}")
-            return -999.0
-
-        try:
             try:
-                from finrl.meta.preprocessor.preprocessors import FeatureEngineer
-            except ImportError:
-                from finrl.meta.preprocessor.feature_engineer import FeatureEngineer
-        except ImportError as e:
-            _logger.error(f"LỖI HỆ THỐNG AI: Thiếu FeatureEngineer của FinRL. Chi tiết: {e}")
-            return -999.0
-
-        # 2. Chuẩn bị Dữ liệu cho TOÀN BỘ các mã trong Model (bắt buộc để khớp Dimension NN)
-        # Nếu model là MULTI-STOCK, ta phải load tất cả các mã nó từng train
-        target_tickers = self.ticker_ids
-        if not target_tickers:
-           # Nếu model ALL, ta tạm thời lấy mã hiện tại (đây là giới hạn của mode ALL nếu không lưu list cũ)
-           target_tickers = ticker_to_predict
-           
-        INDICATORS = ["macd", "boll_ub", "boll_lb", "rsi_30", "cci_30", "dx_30", "close_30_sma", "close_60_sma"]
-        full_data_list = []
-        
-        for tic in target_tickers:
-            # Lấy 150 nến gần nhất để tính technical indicators
-            candles = self.env['stock.candle'].sudo().search([
-                ('ticker_id', '=', tic.id)
-            ], order='date desc', limit=150)
-            
-            if not candles: continue
-            
-            for c in candles:
-                full_data_list.append({
-                    'date': c.date.strftime('%Y-%m-%d'),
-                    'tic': tic.name,
-                    'open': float(c.open),
-                    'high': float(c.high),
-                    'low': float(c.low),
-                    'close': float(c.close),
-                    'volume': float(c.volume)
-                })
-        
-        df = pd.DataFrame(full_data_list)
-        if df.empty: return 0.0
-        
-        # Sắp xếp và xử lý giống train
-        df = df.sort_values(['date', 'tic'], ignore_index=True)
-        
-        # 3. Ghi model file ra một file tạm
-        tmp_model_path = ""
-        try:
-            fd, tmp_model_path = tempfile.mkstemp(suffix=".zip")
-            with os.fdopen(fd, 'wb') as f:
-                f.write(base64.b64decode(self.model_file))
+                from stable_baselines3 import PPO, A2C, DDPG
+            except Exception as e:
+                _logger.error(f"LỖI HỆ THỐNG AI: Không thể import 'stable-baselines3'. Chi tiết: {e}")
+                _logger.error(traceback.format_exc())
+                return 0.0, "Thiếu stable-baselines3"
                 
-            # Preprocess
-            fe = FeatureEngineer(
-                use_technical_indicator=True,
-                tech_indicator_list=INDICATORS,
-                use_vix=False,
-                use_turbulence=False,
-                user_defined_feature=False
-            )
-            processed_df = fe.preprocess_data(df)
-            processed_df = processed_df.sort_values(['date', 'tic'], ignore_index=True)
-            processed_df.index = processed_df.date.factorize()[0]
-            
-            # 4. Tạo Environment đồng nhất Dimension
-            stock_dimension = int(len(processed_df.tic.unique()))
-            state_space = int(1 + 2 * stock_dimension + len(INDICATORS) * stock_dimension)
-            
-            env_kwargs = {
-                "hmax": 100,
-                "initial_amount": 1000000,
-                "num_stock_shares": [0] * stock_dimension,
-                "buy_cost_pct": [0.001] * stock_dimension,
-                "sell_cost_pct": [0.001] * stock_dimension,
-                "state_space": state_space,
-                "stock_dim": stock_dimension,
-                "tech_indicator_list": INDICATORS,
-                "action_space": stock_dimension,
-                "reward_scaling": 1e-4
-            }
-            
-            env = StockTradingEnv(df=processed_df, **env_kwargs)
-            obs = env.reset()
-            if isinstance(obs, tuple): obs = obs[0]
+            try:
+                from stockstats import StockDataFrame
+            except Exception as e:
+                _logger.error(f"LỖI HỆ THỐNG AI: Không thể import 'stockstats'. Chi tiết: {e}")
+                _logger.error(traceback.format_exc())
+                return 0.0, "Thiếu stockstats"
+
+            # 3. Ghi model file ra một file tạm để Load
+            tmp_model_path = ""
+            try:
+                fd, tmp_model_path = tempfile.mkstemp(suffix=".zip")
+                
+                # Giải mã an toàn: Odoo Binary thường trả về bytes trực tiếp
+                model_data = self.model_file
+                if isinstance(model_data, str):
+                    try:
+                        model_data = base64.b64decode(model_data)
+                    except: pass
+                elif isinstance(model_data, bytes) and not model_data.startswith(b'PK'):
+                    # Nếu là bytes nhưng không có header ZIP 'PK', thử decode b64
+                    try:
+                        model_data = base64.b64decode(model_data)
+                    except: pass
+
+                with os.fdopen(fd, 'wb') as f:
+                    f.write(model_data)
+                
+                # Chốt chặn thuật toán: Thử đúng loại, nếu fail thì thử các loại khác (AUTO-DETECT)
+                algo = self.algorithm or 'ppo'
+                model_classes = [PPO, A2C, DDPG]
+                # Đưa class ưu tiên lên đầu
+                preferred = PPO if algo == 'ppo' else (A2C if algo == 'a2c' else DDPG)
+                model_classes.remove(preferred)
+                model_classes.insert(0, preferred)
+                
+                loaded_model = None
+                last_err = ""
+                for m_cls in model_classes:
+                    try:
+                        loaded_model = m_cls.load(tmp_model_path, device='cpu')
+                        if loaded_model:
+                            _logger.info(f"AI Model [{self.name}] nạp thành công bằng {m_cls.__name__}")
+                            break
+                    except Exception as le:
+                        last_err = str(le)
+                        continue
+                
+                if not loaded_model:
+                    peek = model_data[:10].hex() if model_data else "Empty"
+                    _logger.error(f"SB3 LOAD FAILED: Peek: {peek}. Last error: {last_err}")
+                    return 0.0, "Model ko khớp"
+                
+                # Lưu vào Cache
+                _MODEL_CACHE[self.id] = {
+                    'model': loaded_model,
+                    'write_date': self.write_date
+                }
+                _logger.info(f"AI Model [{self.name}] đã được Cache vào RAM.")
+            except Exception as e:
+                _logger.error(f"Lỗi File System: {e}")
+                _logger.error(traceback.format_exc())
+                return 0.0, "Lỗi File Model"
+            finally:
+                if tmp_model_path and os.path.exists(tmp_model_path):
+                    try:
+                        os.remove(tmp_model_path)
+                    except: pass
+
+        # 2. Xây dựng Observation Vector (Thực hiện nhanh trên RAM)
+        try:
+            target_tickers = self.ticker_ids
+            if not target_tickers:
+               target_tickers = ticker_to_predict
                
-            # 5. Load và Predict
-            algo = self.algorithm or 'ppo'
-            model_class = PPO if algo == 'ppo' else (A2C if algo == 'a2c' else DDPG)
+            INDICATORS = ["macd", "boll_ub", "boll_lb", "rsi_30", "cci_30", "dx_30", "close_30_sma", "close_60_sma"]
+            processed_dfs = []
             
-            loaded_model = model_class.load(tmp_model_path)
+            # Sắp xếp ticker để khớp dimension
+            sorted_tickers = target_tickers.sorted(key=lambda r: r.name)
+            
+            for tic in sorted_tickers:
+                candles = self.env['stock.candle'].sudo().search([
+                    ('ticker_id', '=', tic.id)
+                ], order='date desc', limit=150)
+                
+                if not candles: continue
+                
+                cand_list = []
+                for c in reversed(candles):
+                    cand_list.append({
+                        'close': float(c.close), 'open': float(c.open), 'high': float(c.high), 
+                        'low': float(c.low), 'volume': float(c.volume)
+                    })
+                
+                if not cand_list: continue
+                
+                sdf = StockDataFrame.retype(pd.DataFrame(cand_list))
+                # Trigger calculations
+                for ind in INDICATORS: sdf[ind]
+                processed_dfs.append(sdf.iloc[-1:])
+            
+            if not processed_dfs: return 0.0, "Thiếu dữ liệu"
+            
+            stock_dimension = len(processed_dfs)
+            initial_balance = 1000000.0
+            shares = [0.0] * stock_dimension
+            prices = [float(df['close'].iloc[0]) for df in processed_dfs]
+            
+            obs = [initial_balance]
+            obs.extend(prices)
+            obs.extend(shares)
+            for df in processed_dfs:
+                for ind in INDICATORS: obs.append(float(df[ind].iloc[0]))
+            
+            obs = np.array([obs], dtype=np.float32)
+            
+            # Predict (Rất nhanh vì model đã ở trên RAM)
             action, _states = loaded_model.predict(obs, deterministic=True)
             
-            # Action là một mảng ứng với danh sách TIC đã sort
-            # Tìm vị trí của ticker_to_predict trong danh sách đã sort của processed_df
-            sorted_tics = sorted(processed_df.tic.unique())
+            sorted_tics = [t.name for t in sorted_tickers]
             try:
                 tic_idx = sorted_tics.index(ticker_to_predict.name)
-                pred_action = action[tic_idx]
-                return float(pred_action)
+                pred_action = action[0][tic_idx]
+                return float(pred_action), ""
             except Exception:
-                # Nếu không tìm thấy mã trong list (hy hữu), lấy trung bình hoặc 0
-                return float(action[0]) if len(action) > 0 else 0.0
+                return (float(action[0][0]), "") if len(action[0]) > 0 else (0.0, "")
 
         except Exception as e:
-            _logger.error(f"Lỗi Inference Model (Có thể do Dimension Mismatch): {e}")
-            return 0.0
-        finally:
-            if tmp_model_path and os.path.exists(tmp_model_path):
-                os.remove(tmp_model_path)
+            _logger.error(f"Lỗi Inference Model: {e}")
+            return 0.0, "Lỗi n.mạng"
