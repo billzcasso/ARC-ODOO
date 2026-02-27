@@ -226,3 +226,5 @@ docker-compose.override.yml
 # Local configuration overrides
 local_settings.py
 config.local.py
+# Added by ggshield
+.cache_ggshield
