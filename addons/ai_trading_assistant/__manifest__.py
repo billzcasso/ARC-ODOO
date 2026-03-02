@@ -9,7 +9,7 @@
         - Tự động train AI model sử dụng Reinforcement Learning (FinRL).
         - Cung cấp Chatbot / Trợ lý ra quyết định Mua/Bán/Nắm giữ trên Odoo.
     """,
-    'author': 'Your Company',
+    'author': 'https://github.com/billzcasso',
     'website': 'https://www.yourcompany.com',
     'depends': ['base', 'mail', 'web'], # mail is used for chatter/bot features if needed
     'data': [

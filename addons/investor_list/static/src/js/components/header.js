@@ -2,8 +2,9 @@
 import { Component, xml, useState, onMounted, onPatched, onWillUnmount } from "@odoo/owl";
 
 export class Header extends Component {
-    static template = xml`
+  static template = xml`
     <div>
+    <t t-if="!state.isHeaderHidden">
     <header class="bo-header" t-att-class="state.scrolled ? 'scrolled' : ''">
       <!-- Top Bar -->
       <div class="bo-topbar">
@@ -202,212 +203,260 @@ export class Header extends Component {
       </div>
     </header>
     <div class="bo-header-spacer"></div>
+    </t>
     </div>
     `;
 
-    setup() {
-        this.listenersAttached = false;
-        this.state = useState({
-            currentPage: this.getCurrentPage(),
-            userName: '',
-            accountNo: '',
-            isLoggedIn: false,
-            isReportDropdownOpen: false,
-            isNavDropdownOpen: false,
-            isTransactionDropdownOpen: false,
-            isUserDropdownOpen: false,
-            isMobileMenuOpen: false,
-            scrolled: false,
-        });
+  setup() {
+    this.listenersAttached = false;
+    this.state = useState({
+      currentPage: this.getCurrentPage(),
+      userName: '',
+      accountNo: '',
+      isLoggedIn: false,
+      isReportDropdownOpen: false,
+      isNavDropdownOpen: false,
+      isTransactionDropdownOpen: false,
+      isUserDropdownOpen: false,
+      isMobileMenuOpen: false,
+      scrolled: false,
+      userType: '',
+      isHeaderHidden: false,
+    });
 
-        // Scroll Animation Logic
-        const handleScroll = () => {
-             const isScrolled = window.scrollY > 10;
-             if (this.state.scrolled !== isScrolled) {
-                 this.state.scrolled = isScrolled;
-             }
+    // Scroll Animation Logic
+    const handleScroll = () => {
+      const isScrolled = window.scrollY > 10;
+      if (this.state.scrolled !== isScrolled) {
+        this.state.scrolled = isScrolled;
+      }
+    };
+
+    onMounted(() => {
+      window.addEventListener('scroll', handleScroll);
+      handleScroll();
+    });
+
+    onWillUnmount(() => {
+      window.removeEventListener('scroll', handleScroll);
+      // Cleanup other listeners
+      if (this.cleanup) this.cleanup();
+      if (this.dropdownListenerAdded) document.removeEventListener('click', this.dropdownClickHandler);
+    });
+
+    this.fetchUserInfo();
+
+    // Cập nhật currentPage khi URL thay đổi
+    this.updateCurrentPage = () => {
+      this.state.currentPage = this.getCurrentPage();
+      this.checkHeaderVisibility();
+    };
+
+    // Lắng nghe sự kiện popstate (back/forward button)
+    window.addEventListener('popstate', this.updateCurrentPage);
+
+    // Cleanup function để remove event listener
+    this.cleanup = () => {
+      window.removeEventListener('popstate', this.updateCurrentPage);
+    };
+
+    onPatched(() => {
+      // Cập nhật currentPage mỗi khi component được patch
+      this.updateCurrentPage();
+
+      // Add click outside listener for dropdowns
+      if (!this.dropdownListenerAdded) {
+        this.dropdownClickHandler = (e) => {
+          const reportDropdown = document.querySelector('.bo-nav-item.dropdown:has(.bo-nav-link:nth-child(5))');
+          const navDropdown = document.querySelector('.bo-nav-item.dropdown:has(.bo-nav-link:nth-child(4))');
+          const transactionDropdown = document.querySelector('.bo-nav-item.dropdown:has(.bo-nav-link:nth-child(3))');
+          const userMenu = document.getElementById('boUserMenu');
+
+          // Close dropdowns when clicking outside
+          if (!e.target.closest('.bo-nav-item.dropdown')) {
+            this.closeAllNavDropdowns();
+          }
+          if (userMenu && !userMenu.contains(e.target)) {
+            this.state.isUserDropdownOpen = false;
+          }
         };
-        
-        onMounted(() => {
-             window.addEventListener('scroll', handleScroll);
-             handleScroll();
-        });
-        
-        onWillUnmount(() => {
-             window.removeEventListener('scroll', handleScroll);
-             // Cleanup other listeners
-             if (this.cleanup) this.cleanup();
-             if (this.dropdownListenerAdded) document.removeEventListener('click', this.dropdownClickHandler);
-        });
+        document.addEventListener('click', this.dropdownClickHandler);
+        this.dropdownListenerAdded = true;
+      }
 
-        this.fetchUserInfo();
+      if (this.state.isLoggedIn && (window.location.pathname === '/web' || window.location.pathname === '/web/')) {
+        window.location.href = '/investor_list';
+      }
+    });
+  }
 
-        // Cập nhật currentPage khi URL thay đổi
-        this.updateCurrentPage = () => {
-            this.state.currentPage = this.getCurrentPage();
-        };
+  toggleUserDropdown(e) {
+    e.stopPropagation();
+    this.state.isUserDropdownOpen = !this.state.isUserDropdownOpen;
+  }
 
-        // Lắng nghe sự kiện popstate (back/forward button)
-        window.addEventListener('popstate', this.updateCurrentPage);
+  toggleMobileMenu() {
+    this.state.isMobileMenuOpen = !this.state.isMobileMenuOpen;
+  }
 
-        // Cleanup function để remove event listener
-        this.cleanup = () => {
-            window.removeEventListener('popstate', this.updateCurrentPage);
-        };
+  closeAllNavDropdowns() {
+    this.state.isReportDropdownOpen = false;
+    this.state.isNavDropdownOpen = false;
+    this.state.isTransactionDropdownOpen = false;
+  }
 
-        onPatched(() => {
-            // Cập nhật currentPage mỗi khi component được patch
-            this.updateCurrentPage();
-            
-            // Add click outside listener for dropdowns
-            if (!this.dropdownListenerAdded) {
-                this.dropdownClickHandler = (e) => {
-                    const reportDropdown = document.querySelector('.bo-nav-item.dropdown:has(.bo-nav-link:nth-child(5))');
-                    const navDropdown = document.querySelector('.bo-nav-item.dropdown:has(.bo-nav-link:nth-child(4))');
-                    const transactionDropdown = document.querySelector('.bo-nav-item.dropdown:has(.bo-nav-link:nth-child(3))');
-                    const userMenu = document.getElementById('boUserMenu');
-                    
-                    // Close dropdowns when clicking outside
-                    if (!e.target.closest('.bo-nav-item.dropdown')) {
-                        this.closeAllNavDropdowns();
-                    }
-                    if (userMenu && !userMenu.contains(e.target)) {
-                        this.state.isUserDropdownOpen = false;
-                    }
-                };
-                document.addEventListener('click', this.dropdownClickHandler);
-                this.dropdownListenerAdded = true;
-            }
+  toggleReportDropdown(e) {
+    e.stopPropagation();
+    const wasOpen = this.state.isReportDropdownOpen;
+    this.closeAllNavDropdowns();
+    this.state.isReportDropdownOpen = !wasOpen;
+  }
 
-            if (this.state.isLoggedIn && (window.location.pathname === '/web' || window.location.pathname === '/web/')) {
-                window.location.href = '/investor_list';
-            }
-        });
-    }
+  closeReportDropdown() {
+    this.state.isReportDropdownOpen = false;
+  }
 
-    toggleUserDropdown(e) {
-        e.stopPropagation();
-        this.state.isUserDropdownOpen = !this.state.isUserDropdownOpen;
-    }
+  toggleNavDropdown(e) {
+    e.stopPropagation();
+    const wasOpen = this.state.isNavDropdownOpen;
+    this.closeAllNavDropdowns();
+    this.state.isNavDropdownOpen = !wasOpen;
+  }
 
-    toggleMobileMenu() {
-        this.state.isMobileMenuOpen = !this.state.isMobileMenuOpen;
-    }
+  closeNavDropdown() {
+    this.state.isNavDropdownOpen = false;
+  }
 
-    closeAllNavDropdowns() {
-        this.state.isReportDropdownOpen = false;
-        this.state.isNavDropdownOpen = false;
-        this.state.isTransactionDropdownOpen = false;
-    }
+  toggleTransactionDropdown(e) {
+    e.stopPropagation();
+    const wasOpen = this.state.isTransactionDropdownOpen;
+    this.closeAllNavDropdowns();
+    this.state.isTransactionDropdownOpen = !wasOpen;
+  }
 
-    toggleReportDropdown(e) {
-        e.stopPropagation();
-        const wasOpen = this.state.isReportDropdownOpen;
-        this.closeAllNavDropdowns();
-        this.state.isReportDropdownOpen = !wasOpen;
-    }
+  closeTransactionDropdown() {
+    this.state.isTransactionDropdownOpen = false;
+  }
 
-    closeReportDropdown() {
-        this.state.isReportDropdownOpen = false;
-    }
+  async fetchUserInfo() {
+    try {
+      const response = await fetch('/web/session/get_session_info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}'
+      });
+      const data = await response.json();
+      if (data.result && data.result.uid) {
+        this.state.userName = data.result.name;
+        // Gọi API lấy số tài khoản từ status.info
+        const soTk = await this.fetchStatusInfo();
+        this.state.accountNo = soTk || '';
+        this.state.isLoggedIn = true;
 
-    toggleNavDropdown(e) {
-        e.stopPropagation();
-        const wasOpen = this.state.isNavDropdownOpen;
-        this.closeAllNavDropdowns();
-        this.state.isNavDropdownOpen = !wasOpen;
-    }
-
-    closeNavDropdown() {
-        this.state.isNavDropdownOpen = false;
-    }
-
-    toggleTransactionDropdown(e) {
-        e.stopPropagation();
-        const wasOpen = this.state.isTransactionDropdownOpen;
-        this.closeAllNavDropdowns();
-        this.state.isTransactionDropdownOpen = !wasOpen;
-    }
-
-    closeTransactionDropdown() {
-        this.state.isTransactionDropdownOpen = false;
-    }
-
-    async fetchUserInfo() {
         try {
-            const response = await fetch('/web/session/get_session_info', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: '{}'
-            });
-            const data = await response.json();
-            if (data.result && data.result.uid) {
-                this.state.userName = data.result.name;
-                // Gọi API lấy số tài khoản từ status.info
-                const soTk = await this.fetchStatusInfo();
-                this.state.accountNo = soTk || '';
-                this.state.isLoggedIn = true;
-            } else {
-                this.state.userName = '';
-                this.state.accountNo = '';
-                this.state.isLoggedIn = false;
-            }
-        } catch (e) {
-            this.state.userName = '';
-            this.state.accountNo = '';
-            this.state.isLoggedIn = false;
-        }
-    }
-
-    async fetchStatusInfo() {
-        try {
-            const response = await fetch('/get_status_info', {
-                method: 'GET',
-                headers: {'Content-Type': 'application/json'}
-            });
-            const data = await response.json();
-            if (data && Array.isArray(data) && data.length > 0) {
-                return data[0].so_tk || '';
-            } else if (data && data.so_tk) {
-                return data.so_tk;
-            }
-            return '';
-        } catch (e) {
-            return '';
-        }
-    }
-
-    async logout() {
-        await fetch('/web/session/destroy', {
+          const typeRes = await fetch('/api/user-permission/check-user-type', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: '{}'
-        });
-        window.location.href = '/web/login';
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            body: JSON.stringify({ jsonrpc: '2.0', method: 'call', params: {} })
+          });
+          const typeData = await typeRes.json();
+          if (typeData && (typeData.result || typeData).success) {
+            this.state.userType = (typeData.result || typeData).user_type;
+          }
+        } catch (err) {
+          console.error('Lỗi khi lấy user_type', err);
+        }
+        this.checkHeaderVisibility();
+      } else {
+        this.state.userName = '';
+        this.state.accountNo = '';
+        this.state.userType = '';
+        this.state.isLoggedIn = false;
+        this.checkHeaderVisibility();
+      }
+    } catch (e) {
+      this.state.userName = '';
+      this.state.accountNo = '';
+      this.state.userType = '';
+      this.state.isLoggedIn = false;
+      this.checkHeaderVisibility();
     }
+  }
 
-
-
-    getCurrentPage() {
-        const path = window.location.pathname;
-        
-        // Xác định trang hiện tại theo thứ tự ưu tiên
-        if (path.includes('/investor_list')) return 'investor';
-        if (path.includes('/fund-management-dashboard')) return 'dashboard';
-        if (path.includes('/order-book')) return 'order-book';
-        if (path.includes('/transaction-list')) return 'transaction';
-        if (path.includes('/nav_management/nav_transaction')) return 'nav-transaction';
-        if (path.includes('/fund_widget') || path.includes('/nav')) return 'nav';
-        if (path.includes('/report-balance')) return 'report-balance';
-        if (path.includes('/report-transaction')) return 'report-transaction';
-        if (path.includes('/investor_report')) return 'investor-report';
-        if (path.includes('/list_tenors_interest_rates')) return 'list-tenors-interest-rates';
-        if (path.includes('/asset-management')) return 'report';
-        if (path.includes('/personal_profile')) return 'utils';
-        
-        // Mặc định về trang investor nếu không khớp với bất kỳ trang nào
-        return 'investor';
+  async fetchStatusInfo() {
+    try {
+      const response = await fetch('/get_status_info', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await response.json();
+      if (data && Array.isArray(data) && data.length > 0) {
+        return data[0].so_tk || '';
+      } else if (data && data.so_tk) {
+        return data.so_tk;
+      }
+      return '';
+    } catch (e) {
+      return '';
     }
+  }
+
+  async logout() {
+    await fetch('/web/session/destroy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}'
+    });
+    window.location.href = '/web/login';
+  }
+
+
+
+  getCurrentPage() {
+    const path = window.location.pathname;
+
+    // Xác định trang hiện tại theo thứ tự ưu tiên
+    if (path.includes('/investor_list')) return 'investor';
+    if (path.includes('/fund-management-dashboard')) return 'dashboard';
+    if (path.includes('/order-book')) return 'order-book';
+    if (path.includes('/transaction-list')) return 'transaction';
+    if (path.includes('/nav_management/nav_transaction')) return 'nav-transaction';
+    if (path.includes('/fund_widget') || path.includes('/nav')) return 'nav';
+    if (path.includes('/report-balance')) return 'report-balance';
+    if (path.includes('/report-transaction')) return 'report-transaction';
+    if (path.includes('/investor_report')) return 'investor-report';
+    if (path.includes('/list_tenors_interest_rates')) return 'list-tenors-interest-rates';
+    if (path.includes('/asset-management')) return 'report';
+    if (path.includes('/personal_profile')) return 'utils';
+
+    // Mặc định về trang investor nếu không khớp với bất kỳ trang nào
+    return 'investor';
+  }
+
+  checkHeaderVisibility() {
+    // Hàm này xử lý ẩn header tự động chỉ đối với quyền system admin
+    // trong 3 module lớn: dashboard, fund_management_control, user_permission_management
+    const path = window.location.pathname;
+    const isDashboard = path.startsWith('/fund-management-dashboard');
+    const isUserMgmt = path.startsWith('/user-management') || path.startsWith('/user_permission');
+    const isFundCtl = ['/fund_certificate', '/holiday_list', '/bank_list', '/bank_branch', '/term_rate']
+      .some(p => path.startsWith(p));
+
+    const isTargetModule = isDashboard || isUserMgmt || isFundCtl;
+    const isSysAdmin = this.state.userType === 'system_admin';
+
+    this.state.isHeaderHidden = isSysAdmin && isTargetModule;
+
+    // Xử lý ẩn/hiện navbar chuẩn của Odoo (thanh đen ngang trên cùng) cho system_admin
+    const odooNavbar = document.querySelector('.o_main_navbar, .o_navbar');
+    if (this.state.isHeaderHidden) {
+      if (odooNavbar) odooNavbar.style.setProperty('display', 'none', 'important');
+      document.body.classList.add('hide-header-for-sysadmin');
+    } else {
+      if (odooNavbar) odooNavbar.style.display = '';
+      document.body.classList.remove('hide-header-for-sysadmin');
+    }
+  }
 }
 
 window.Header = Header;

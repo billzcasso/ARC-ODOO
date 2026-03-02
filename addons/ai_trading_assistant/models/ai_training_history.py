@@ -7,6 +7,7 @@ class AITrainingHistory(models.Model):
 
     name = fields.Char(string='Tên Phiên Huấn Luyện', required=True)
     algorithm = fields.Char(string='Thuật toán')
+    evaluated_algorithms = fields.Char(string='Các Thuật toán Đã Thử nghiệm')
     tickers = fields.Char(string='Mã Chứng Khoán')
     epochs = fields.Integer(string='Tổng Epochs')
     

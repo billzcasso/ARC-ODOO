@@ -12,8 +12,8 @@ class SSIConfig(models.TransientModel):
     llm_provider = fields.Selection([
         ('openrouter', 'OpenRouter')
     ], string="Nhà cung cấp AI (Cổng kết nối)", default='openrouter', config_parameter='ai_trading.llm_provider')
-    
     llm_api_key = fields.Char(string='LLM API Key', config_parameter='ai_trading.llm_api_key')
+    llm_model_name = fields.Char(string='Mã AI Model (OpenRouter ID)', default='arcee-ai/trinity-large-preview:free', config_parameter='ai_trading.llm_model_name')
     
     def get_values(self):
         res = super(SSIConfig, self).get_values()
@@ -59,7 +59,7 @@ class SSIConfig(models.TransientModel):
                 "Content-Type": "application/json"
             }
             payload = {
-                "model": "arcee-ai/trinity-large-preview:free",
+                "model": self.env['ir.config_parameter'].sudo().get_param('ai_trading.llm_model_name', 'arcee-ai/trinity-large-preview:free'),
                 "messages": [{"role": "user", "content": "Kiểm tra kết nối"}]
             }
             response = requests.post(url, headers=headers, json=payload, timeout=10)

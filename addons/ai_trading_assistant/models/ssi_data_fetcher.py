@@ -128,10 +128,6 @@ class SSIDataFetcher(models.TransientModel):
         if from_date_obj and to_date_obj:
             domain.extend([('date', '>=', from_date_obj), ('date', '<=', to_date_obj)])
             
-        existing_candles = self.env['stock.candle'].search(domain)
-        # Tạo Hashtable mapping {trading_date: candle_record}
-        existing_map = {c.date: c for c in existing_candles}
-            
         req = model.daily_ohlc(ticker_symbol, from_date_str, to_date_str, 1, 1000, True)
         res = client.daily_ohlc(config, req)
         
@@ -140,15 +136,12 @@ class SSIDataFetcher(models.TransientModel):
             if str(data.get('status')) == '200' or data.get('message', '').lower() == 'success':
                 candles = data.get('data', [])
                 
-                new_vals_list = []
-                update_count = 0
-                
+                all_vals = []
                 for c in candles:
                     trading_date_str = c.get('TradingDate')
                     if trading_date_str:
                         trading_date = datetime.strptime(trading_date_str, '%d/%m/%Y').date()
-                        
-                        vals = {
+                        all_vals.append({
                             'ticker_id': ticker.id,
                             'date': trading_date,
                             'open': c.get('Open', 0.0),
@@ -156,20 +149,24 @@ class SSIDataFetcher(models.TransientModel):
                             'low': c.get('Low', 0.0),
                             'close': c.get('Close', 0.0),
                             'volume': c.get('Volume', 0.0),
-                        }
-                        
-                        existing = existing_map.get(trading_date)
-                        if existing:
-                            existing.write(vals)
-                            update_count += 1
-                        else:
-                            new_vals_list.append(vals)
+                        })
                             
-                # Bulk Insert (1 Query duy nhất cho hàng trăm nến)
-                if new_vals_list:
-                    self.env['stock.candle'].create(new_vals_list)
+                # Bulk SQL Upsert cực nhanh so với ORM
+                if all_vals:
+                    query = """
+                        INSERT INTO stock_candle (ticker_id, date, "open", high, low, "close", volume)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (ticker_id, date) DO UPDATE SET
+                            "open" = EXCLUDED.open,
+                            high = EXCLUDED.high,
+                            low = EXCLUDED.low,
+                            "close" = EXCLUDED.close,
+                            volume = EXCLUDED.volume;
+                    """
+                    params = [(v['ticker_id'], v['date'], v['open'], v['high'], v['low'], v['close'], v['volume']) for v in all_vals]
+                    self.env.cr.executemany(query, params)
                     
-                return len(new_vals_list) + update_count
+                return len(all_vals)
             else:
                 _logger.error(f"API Error fetching OHLCV for {ticker_symbol}: {data.get('message')}")
                 return 0

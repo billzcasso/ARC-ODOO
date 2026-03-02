@@ -8,6 +8,7 @@
                 <field name="create_date" string="Ngày Train"/>
                 <field name="name"/>
                 <field name="algorithm"/>
+                <field name="evaluated_algorithms" optional="show"/>
                 <field name="tickers"/>
                 <field name="epochs"/>
                 <field name="sharpe_ratio"/>
@@ -33,6 +34,7 @@
                     <group>
                         <group string="Cấu hình Model">
                             <field name="algorithm" readonly="1"/>
+                            <field name="evaluated_algorithms" readonly="1" invisible="not evaluated_algorithms"/>
                             <field name="tickers" readonly="1"/>
                             <field name="epochs" readonly="1"/>
                             <field name="create_date" string="Ngày Train" readonly="1"/>

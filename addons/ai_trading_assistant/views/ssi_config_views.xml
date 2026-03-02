@@ -27,8 +27,11 @@
                         <setting string="Trạng thái" help="Sử dụng Trinity Large Preview (Free) qua OpenRouter.">
                             <field name="llm_provider" readonly="1"/>
                         </setting>
-                        <setting string="API Key" help="Lấy mã khóa API từ OpenRouter.ai để kích hoạt Robot Trinity.">
+                        <setting string="API Key" help="Lấy mã khóa API từ OpenRouter.ai để kích hoạt Model AI.">
                             <field name="llm_api_key" password="1"/>
+                        </setting>
+                        <setting string="Mã Model ID" help="Ví dụ: arcee-ai/trinity-large-preview:free hoặc anthropic/claude-3.5-sonnet">
+                            <field name="llm_model_name"/>
                         </setting>
                         <setting>
                             <button name="action_test_llm_connection" type="object" string="Kiểm tra Kết nối OpenRouter" class="btn-primary"/>

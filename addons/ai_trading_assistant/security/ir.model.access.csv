@@ -4,3 +4,4 @@ access_stock_candle,stock.candle,model_stock_candle,,1,1,1,1
 access_ssi_data_fetcher,ssi.data.fetcher,model_ssi_data_fetcher,,1,1,1,1
 access_ai_strategy,ai.strategy,model_ai_strategy,,1,1,1,1
 access_ai_training_history,ai.training.history,model_ai_training_history,base.group_system,1,1,1,1
+access_ai_chatbot_service,ai.chatbot.service,model_ai_chatbot_service,,1,1,1,1

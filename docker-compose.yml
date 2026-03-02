@@ -18,7 +18,7 @@ services:
       - db
     ports:
       - "8070:8069"
-      - "8072:8072" # live chat
+      - "8073:8072" # live chat (Changed from 8072 to 8073 to avoid conflict with HDC-FMS)
     tty: true
     command: --
     environment:
