@@ -166,6 +166,10 @@ class TransactionController(http.Controller):
                     ('fund_id', '=', tx.fund_id.id),
                 ], limit=1)
                 
+                # Force T+2 recomputation (stored compute doesn't re-trigger on date change)
+                if investment:
+                    investment._compute_units_breakdown()
+                
                 remaining_units = investment.units if investment else 0
                 if remaining_units <= 0:
                     continue
@@ -180,6 +184,7 @@ class TransactionController(http.Controller):
                 maturity_date_str = tx.nav_maturity_date.strftime('%d/%m/%Y') if tx.nav_maturity_date else ''
                 
                 # Use centralized logic from Investment model to get Negotiated Available
+                # (already recomputed above with _compute_units_breakdown)
                 negotiated_available_total = investment.negotiated_available_units
                 
                 # Available for THIS Contract = min(Contract Size, Total Negotiated Available)

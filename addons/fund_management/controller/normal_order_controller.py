@@ -158,16 +158,27 @@ class NormalOrderController(http.Controller):
                 if not investment:
                     return {'success': False, 'message': 'Bạn không sở hữu CCQ của quỹ này'}
                 
+                # Force T+2 recomputation (stored compute doesn't re-trigger on date change)
+                investment._compute_units_breakdown()
+                
                 # Use T+2 aware available_units from Investment model
-                # STRICT VALIDATION: Use normal_available_units (Normal Only)
-                available = investment.normal_available_units
+                # Route to correct pool based on sell type
                 pending_t2 = investment.pending_t2_units
+                
+                if is_contract_sell:
+                    # Contract sell → validate against negotiated pool
+                    available = investment.negotiated_available_units
+                    pool_label = 'CCQ thỏa thuận khả dụng'
+                else:
+                    # Normal sell → validate against normal pool
+                    available = investment.normal_available_units
+                    pool_label = 'CCQ thường khả dụng'
                 
                 if units > available:
                     if debug_mode:
-                         _logger.warning(f"[DEBUG MODE] Bypassing Normal Sell Limit: Selling {units:,.0f} > Available {available:,.0f}")
+                         _logger.warning(f"[DEBUG MODE] Bypassing Sell Limit: Selling {units:,.0f} > Available {available:,.0f} ({pool_label})")
                     else:
-                        msg = f'Số lượng bán ({units:,.0f}) vượt quá CCQ thường khả dụng ({available:,.0f}).'
+                        msg = f'Số lượng bán ({units:,.0f}) vượt quá {pool_label} ({available:,.0f}).'
                         if pending_t2 > 0:
                             msg += f' Còn {pending_t2:,.0f} CCQ đang chờ về (T+2).'
                         return {'success': False, 'message': msg}
@@ -217,7 +228,7 @@ class NormalOrderController(http.Controller):
                 'amount': amount,
                 'price': price,
                 'current_nav': current_nav,
-                'order_mode': constants.ORDER_MODE_NORMAL,
+                'order_mode': constants.ORDER_MODE_NEGOTIATED if is_contract_sell else constants.ORDER_MODE_NORMAL,
                 'order_type_detail': order_type_detail,
                 'market': market,
                 'order_session': order_session,
@@ -838,6 +849,9 @@ class NormalOrderController(http.Controller):
                 if for_sell and fund.id in user_holdings:
                     inv = investments.filtered(lambda i: i.fund_id.id == fund.id)[:1]
                     if inv:
+                        # Force T+2 recomputation (stored compute doesn't re-trigger on date change)
+                        inv._compute_units_breakdown()
+                        
                         fund_info['holdings'] = inv.units
                         fund_info['available_units'] = inv.available_units
                         fund_info['pending_t2_units'] = inv.pending_t2_units

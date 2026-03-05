@@ -5,7 +5,7 @@
 
             <t t-call-assets="web.assets_frontend" t-js="true"/>
             <t t-set="head">
-                <script src="/fund_management/static/src/js/fund/fund_sell/fund_sell.js?v=debug5"></script>
+                <!-- fund_sell.js is already loaded via web.assets_frontend bundle (__manifest__.py) -->
                 <link rel="preconnect" href="https://fonts.googleapis.com"/>
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
                 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>

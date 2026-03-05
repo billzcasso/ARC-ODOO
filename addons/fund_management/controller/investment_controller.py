@@ -241,6 +241,9 @@ class NegotiatedOrderController(http.Controller):
             user_id = request.env.user.id
             fund = investment.fund_id
             
+            # Force T+2 recomputation (stored compute doesn't re-trigger on date change)
+            investment._compute_units_breakdown()
+
             # DEBUG MODE validation
             if debug_mode:
                 _logger.warning(f'[Fund Sell DEBUG] User {user_id} - Bypassing quantity check.')

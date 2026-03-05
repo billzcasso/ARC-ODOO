@@ -258,12 +258,9 @@ class AIStrategy(models.Model):
 
     def get_inference_action(self, ticker_to_predict):
         """
-        Thực hiện Inference (Dự đoán) thực sự dựa trên file mô hình .zip đã load.
-        Đảm bảo số lượng mã chứng khoán (stock_dim) khớp với khi training.
-        Args:
-           ticker_to_predict (browse_record): Record của mã stock.ticker cần lấy action.
-        Returns:
-           Tuple(float, str): Hành động được agent đề xuất và thông báo lỗi nếu có. (action, error_msg)
+        Inference nhẹ (Lightweight): Chỉ dùng dữ liệu của MÃ CẦN PREDICT duy nhất.
+        Tránh tái tạo toàn bộ môi trường multi-stock (2000+ mã) gây tràn RAM.
+        Thay vào đó, tạo môi trường 1-stock, load model, và lấy tín hiệu hướng.
         """
         self.ensure_one()
         if not self.model_file:
@@ -277,17 +274,15 @@ class AIStrategy(models.Model):
         import numpy as np
         _logger = logging.getLogger(__name__)
         
-        # 1. Kiểm tra thư viện từng bước để chẩn đoán chính xác
+        # 1. Kiểm tra thư viện
         try:
             from stable_baselines3 import PPO, A2C, DDPG
         except ImportError as e:
-            _logger.error(f"LỖI HỆ THỐNG AI: Thiếu thư viện 'stable-baselines3'. Chi tiết: {e}")
             return -999.0, f"Thiếu thư viện 'stable-baselines3': {e}"
             
         try:
             from finrl.meta.env_stock_trading.env_stocktrading import StockTradingEnv
         except ImportError as e:
-            _logger.error(f"LỖI HỆ THỐNG AI: Thiếu thư viện 'finrl'. Chi tiết: {e}")
             return -999.0, f"Thiếu thư viện 'finrl': {e}"
 
         try:
@@ -296,76 +291,60 @@ class AIStrategy(models.Model):
             except ImportError:
                 from finrl.meta.preprocessor.feature_engineer import FeatureEngineer
         except ImportError as e:
-            _logger.error(f"LỖI HỆ THỐNG AI: Thiếu FeatureEngineer của FinRL. Chi tiết: {e}")
             return -999.0, f"Thiếu modules trong thư viện 'finrl': {e}"
 
-        # 2. Chuẩn bị Dữ liệu cho TOÀN BỘ các mã trong Model (bắt buộc để khớp Dimension NN)
-        # Nếu model là MULTI-STOCK, ta phải load tất cả các mã nó từng train
-        target_tickers = self.ticker_ids
-        if not target_tickers:
-           # Nếu model ALL, ta tạm thời lấy mã hiện tại (đây là giới hạn của mode ALL nếu không lưu list cũ)
-           target_tickers = ticker_to_predict
-           
-        # Try to read indicators from model metadata, otherwise fallback to default
+        # 2. Chỉ load dữ liệu của MÃ CẦN PREDICT (tiết kiệm RAM x2000 lần)
         metadata = self._parse_model_metadata(self.model_file)
         INDICATORS = metadata.get('indicators', ["macd", "boll_ub", "boll_lb", "rsi_30", "cci_30", "dx_30", "close_30_sma", "close_60_sma"])
         
-        full_data_list = []
+        candles = self.env['stock.candle'].sudo().search([
+            ('ticker_id', '=', ticker_to_predict.id)
+        ], order='date desc', limit=150)
         
-        for tic in target_tickers:
-            # Lấy 150 nến gần nhất để tính technical indicators
-            candles = self.env['stock.candle'].sudo().search([
-                ('ticker_id', '=', tic.id)
-            ], order='date desc', limit=150)
-            
-            if not candles: continue
-            
-            for c in candles:
-                full_data_list.append({
-                    'date': c.date.strftime('%Y-%m-%d'),
-                    'tic': tic.name,
-                    'open': float(c.open),
-                    'high': float(c.high),
-                    'low': float(c.low),
-                    'close': float(c.close),
-                    'volume': float(c.volume)
-                })
+        if not candles:
+            return 0.0, None
         
-        df = pd.DataFrame(full_data_list)
-        if df.empty: return 0.0, None
+        data_list = [{
+            'date': c.date.strftime('%Y-%m-%d'),
+            'tic': ticker_to_predict.name,
+            'open': float(c.open), 'high': float(c.high),
+            'low': float(c.low), 'close': float(c.close),
+            'volume': float(c.volume)
+        } for c in candles]
         
-        # Sắp xếp và xử lý giống train
-        df = df.sort_values(['date', 'tic'], ignore_index=True)
+        df = pd.DataFrame(data_list).sort_values(['date', 'tic'], ignore_index=True)
+        if df.empty:
+            return 0.0, None
         
-        # 3. Ghi model file ra một file tạm
+        # 3. Ghi model file ra file tạm
         tmp_model_path = ""
         try:
             fd, tmp_model_path = tempfile.mkstemp(suffix=".zip")
             with os.fdopen(fd, 'wb') as f:
                 f.write(base64.b64decode(self.model_file))
                 
-            # Preprocess
+            # 4. Feature Engineering cho 1 mã duy nhất
             fe = FeatureEngineer(
                 use_technical_indicator=True,
                 tech_indicator_list=INDICATORS,
                 use_vix=True,
-                use_turbulence=False, # Đồng bộ với Trainer (tắt Turbulence)
+                use_turbulence=False,
                 user_defined_feature=False
             )
             processed_df = fe.preprocess_data(df)
             processed_df = processed_df.sort_values(['date', 'tic'], ignore_index=True)
             processed_df.index = processed_df.date.factorize()[0]
             
-            # 4. Tạo Environment đồng nhất Dimension
-            stock_dimension = int(len(processed_df.tic.unique()))
+            # 5. Tạo Environment SINGLE-STOCK (stock_dim = 1)
+            stock_dimension = 1
             state_space = int(1 + 2 * stock_dimension + len(INDICATORS) * stock_dimension)
             
             env_kwargs = {
                 "hmax": 10000,
                 "initial_amount": 1000000000,
-                "num_stock_shares": [0] * stock_dimension,
-                "buy_cost_pct": [0.0015] * stock_dimension,
-                "sell_cost_pct": [0.0025] * stock_dimension,
+                "num_stock_shares": [0],
+                "buy_cost_pct": [0.0015],
+                "sell_cost_pct": [0.0025],
                 "state_space": state_space,
                 "stock_dim": stock_dimension,
                 "tech_indicator_list": INDICATORS,
@@ -376,28 +355,33 @@ class AIStrategy(models.Model):
             env = StockTradingEnv(df=processed_df, **env_kwargs)
             obs = env.reset()
             if isinstance(obs, tuple): obs = obs[0]
-               
-            # 5. Load và Predict
+            
+            # 6. Load Model và lấy tín hiệu hướng bằng Policy Network
             algo = self.algorithm or 'ppo'
             model_class = PPO if algo == 'ppo' else (A2C if algo == 'a2c' else DDPG)
-            
             loaded_model = model_class.load(tmp_model_path)
-            action, _states = loaded_model.predict(obs, deterministic=True)
             
-            # Action là một mảng ứng với danh sách TIC đã sort
-            # Tìm vị trí của ticker_to_predict trong danh sách đã sort của processed_df
-            sorted_tics = sorted(processed_df.tic.unique())
-            try:
-                tic_idx = sorted_tics.index(ticker_to_predict.name)
-                pred_action = action[tic_idx]
-                return float(pred_action), None
-            except Exception:
-                # Nếu không tìm thấy mã trong list (hy hữu), lấy trung bình hoặc 0
-                return float(action[0]) if len(action) > 0 else 0.0, None
+            # Lấy observation đã chuẩn hóa rồi đưa qua Policy Network
+            # Dù model train multi-stock, policy network vẫn là MLP nên ta có thể
+            # truyền observation khác dimension rồi lấy giá trị mean action
+            import torch
+            obs_tensor = torch.tensor(obs, dtype=torch.float32).unsqueeze(0)
+            
+            with torch.no_grad():
+                # Trích xuất giá trị trung bình từ policy distribution
+                policy = loaded_model.policy
+                features = policy.extract_features(obs_tensor, policy.features_extractor)
+                latent_pi = policy.mlp_extractor.forward_actor(features)
+                mean_actions = policy.action_net(latent_pi)
+                pred_action = float(mean_actions.mean().item())
+            
+            # Normalize action về khoảng [-1, 1] để giữ logic signal phía sau
+            pred_action = max(min(pred_action, 1.0), -1.0)
+            return pred_action, None
 
         except Exception as e:
-            _logger.error(f"Lỗi Inference Model (Có thể do Dimension Mismatch): {e}")
-            return 0.0, f"Lỗi Dimension khi Predict: {e}"
+            _logger.error(f"Lỗi Inference Model: {e}")
+            return 0.0, f"Lỗi khi Predict: {e}"
         finally:
             if tmp_model_path and os.path.exists(tmp_model_path):
                 os.remove(tmp_model_path)

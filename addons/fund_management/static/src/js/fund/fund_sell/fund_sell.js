@@ -24,6 +24,7 @@ let currentSellMode = 'normal';
 let normalSellFundData = [];
 let contractSellData = [];
 let currentNavPrice = 0;
+let _sellSubmitting = false; // Global lock to prevent duplicate submissions
 
 // =============================================================================
 // ORDER MODE TABS
@@ -146,7 +147,10 @@ async function initNormalSellForm() {
     }
 
     if (confirmBtn) {
-      confirmBtn.addEventListener('click', handleNormalSellSubmit);
+      // Remove any previous listeners by cloning the button
+      const freshBtn = confirmBtn.cloneNode(true);
+      confirmBtn.parentNode.replaceChild(freshBtn, confirmBtn);
+      freshBtn.addEventListener('click', handleNormalSellSubmit);
     }
 
     // Update summary date
@@ -631,7 +635,10 @@ async function initContractSellForm() {
     }
 
     if (confirmBtn) {
-      confirmBtn.addEventListener('click', handleContractSellSubmit);
+      // Remove any previous listeners by cloning the button
+      const freshBtn = confirmBtn.cloneNode(true);
+      confirmBtn.parentNode.replaceChild(freshBtn, confirmBtn);
+      freshBtn.addEventListener('click', handleContractSellSubmit);
     }
 
   } catch (err) {
@@ -759,6 +766,8 @@ async function handleContractSellSubmit() {
     return;
   }
 
+  const maxUnits = selected.available_units !== undefined ? selected.available_units : (selected.units || 0);
+
   // Validate against Available
   if (sellQty <= 0 || sellQty > maxUnits) {
     Swal.fire({ icon: 'warning', title: 'Số lượng không hợp lệ', text: `Số lượng bán không được vượt quá ${maxUnits.toLocaleString('vi-VN')} CCQ (Khả dụng).` });
@@ -840,6 +849,9 @@ async function triggerSmartOTPForSell(orderParams, onSuccess, onCleanup) {
           timer: 2000,
           showConfirmButton: false
         });
+
+        // Clear sessionStorage to prevent re-submit on back navigation
+        sessionStorage.removeItem('fund_sell_data');
 
         // Callback or Direct Redirect
         if (onSuccess) onSuccess(result);
@@ -997,6 +1009,10 @@ async function initSellConfirmPage() {
   // Handle Submit
   if (finalBtn) {
     finalBtn.addEventListener('click', async () => {
+      // Prevent duplicate submissions
+      if (_sellSubmitting) return;
+      _sellSubmitting = true;
+
       finalBtn.disabled = true;
       finalBtn.textContent = '';
       finalBtn.insertAdjacentHTML('beforeend', '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...');
@@ -1016,7 +1032,8 @@ async function initSellConfirmPage() {
         params,
         null, // Success handles redirect internally
         () => {
-          // Cleanup / Error
+          // Cleanup / Error - allow retry
+          _sellSubmitting = false;
           finalBtn.disabled = false;
           finalBtn.textContent = '';
           finalBtn.insertAdjacentHTML('beforeend', 'Xác nhận bán <i class="fas fa-check ms-2"></i>');
